@@ -28,7 +28,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  late Future<UserProfile> profile;
+  //late Future<UserProfile> profile;
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _emailController;
@@ -58,7 +58,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
   @override
   void initState() {
     super.initState();
-    profile = UserProfileService.getUserProfile();
+    // profile = UserProfileService.getUserProfile();
     _initializeControllers();
     _loadUserData();
 
