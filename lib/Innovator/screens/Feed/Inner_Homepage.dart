@@ -5745,7 +5745,19 @@ extension FeedContentNewApi on FeedContent {
     final id = post['id']?.toString() ?? '';
     final username = post['username']?.toString() ?? 'Unknown';
     final content = post['content']?.toString() ?? '';
-    final imageUrl = post['image']?.toString(); // full URL or null
+
+    // ── Extract media files ──
+    final mediaList =
+        (post['media'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final files = <String>[];
+
+    for (final media in mediaList) {
+      var fileUrl = media['file']?.toString();
+      if (fileUrl != null && fileUrl.isNotEmpty) {
+        files.add(fileUrl);
+      }
+    }
+
     final categories =
         (post['category_names'] as List?)?.map((c) => c.toString()).toList() ??
         [];
@@ -5756,22 +5768,9 @@ extension FeedContentNewApi on FeedContent {
         DateTime.tryParse(post['created_at']?.toString() ?? '') ??
         DateTime.now();
 
-    // Use first category as post "type" for color/badge display
     final type = categories.isNotEmpty ? categories.first : 'post';
 
-    // Build author from username only (no picture/email in new API)
-    final author = Author(
-      id: username, // use username as id (no user id in feed response)
-      name: username,
-      picture: '', // no profile picture in feed response
-      email: '',
-    );
-
-    // Build files list from image URL
-    final files = <String>[];
-    if (imageUrl != null && imageUrl.isNotEmpty) {
-      files.add(imageUrl);
-    }
+    final author = Author(id: username, name: username, picture: '', email: '');
 
     return FeedContent(
       id: id,

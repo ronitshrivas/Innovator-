@@ -113,14 +113,14 @@ class FeedContent {
 
   // ── NEW factory: maps GET /api/posts/ response ────────────────────────────
   // New API fields:
-  //   id, username, content, image (full URL | null),
+  //   id, username, content,
+  //   media[]  → [{id, file (URL), media_type}]   (supports multiple files)
   //   category_names[], reactions_count, current_user_reaction,
   //   comments_count, comments[], created_at, updated_at
   factory FeedContent.fromNewApiPost(Map<String, dynamic> post) {
     final id = post['id']?.toString() ?? '';
     final username = post['username']?.toString() ?? 'Unknown';
     final content = post['content']?.toString() ?? '';
-    final imageUrl = post['image']?.toString();
     final categories =
         (post['category_names'] as List<dynamic>?)
             ?.map((c) => c.toString())
@@ -137,16 +137,24 @@ class FeedContent {
     final type = categories.isNotEmpty ? categories.first : 'post';
 
     // Author — new API has only username, no id/picture/email
-    final author = Author(
-      id: username, // username used as unique id
-      name: username,
-      picture: '',
-      email: '',
-    );
+    final author = Author(id: username, name: username, picture: '', email: '');
 
-    // Files / mediaUrls — only image field exists in new API
+    // ── Media: new API returns media[] [{id, file, media_type}] ──────────
+    // Old API had a single 'image' field — both are supported for fallback.
     final files = <String>[];
-    if (imageUrl != null && imageUrl.isNotEmpty) files.add(imageUrl);
+    final rawMedia = post['media'];
+    if (rawMedia is List && rawMedia.isNotEmpty) {
+      for (final m in rawMedia) {
+        if (m is Map) {
+          final fileUrl = m['file']?.toString() ?? '';
+          if (fileUrl.isNotEmpty) files.add(fileUrl);
+        }
+      }
+    } else {
+      // Fallback: old single 'image' field
+      final imageUrl = post['image']?.toString();
+      if (imageUrl != null && imageUrl.isNotEmpty) files.add(imageUrl);
+    }
 
     return FeedContent(
       id: id,

@@ -9,7 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Login.dart';
 import 'package:innovator/Innovator/models/Feed_Content_Model.dart';
-import 'package:innovator/Innovator/screens/Add_Content/Create_post.dart';
+import 'package:innovator/Innovator/screens/CreatePost/createpost.dart';
 import 'package:innovator/Innovator/screens/Feed/Inner_Homepage.dart';
 import 'package:innovator/Innovator/screens/Feed/Video_Feed.dart'
     show VideoFeedPage;
@@ -269,7 +269,7 @@ class UserProfileService {
     }
 
     final filename = path.basename(imageFile.path);
-    final url = Uri.parse('$baseUrl/set-avatar?filename=avatar.png');
+    final url = Uri.parse('http://182.93.94.220:8005/api/users/me/avatar');
 
     try {
       var request = http.MultipartRequest('POST', url);
@@ -300,12 +300,15 @@ class UserProfileService {
 
       log('Avatar upload response: ${response.body}');
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final data = json.decode(response.body);
-        if (data['status'] == 200 && data['data'] != null) {
-          return data['data']['picture'] ?? '';
+        // Updated to handle new API response format
+        if (data['success'] == true && data['data'] != null) {
+          return data['data']['avatar'] ?? data['data']['picture'] ?? '';
+        } else if (data['data'] != null) {
+          return data['data']['avatar'] ?? data['data']['picture'] ?? '';
         } else {
-          throw Exception('Failed to get picture URL from response');
+          throw Exception('Failed to get avatar URL from response');
         }
       } else {
         throw Exception('Failed to upload avatar: ${response.statusCode}');

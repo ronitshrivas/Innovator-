@@ -5,12 +5,12 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/screens/Course/home.dart';
+import 'package:innovator/Innovator/screens/CreatePost/createpost.dart';
 import 'package:innovator/Innovator/screens/Events/Events.dart';
 import 'package:innovator/Innovator/screens/Shop/CardIconWidget/cart_state_manager.dart';
 import 'package:innovator/Innovator/utils/Drawer/custom_drawer.dart';
 import 'package:innovator/Innovator/Notification/FCM_Services.dart';
 import 'package:innovator/innovator_home.dart';
-import 'package:innovator/Innovator/screens/Add_Content/Create_post.dart';
 import 'package:innovator/Innovator/screens/Search/Searchpage.dart';
 import 'package:innovator/Innovator/screens/Shop/Shop_Page.dart';
 
@@ -28,8 +28,15 @@ class FloatingMenuOverlay {
 
   static void show(BuildContext context) {
     if (_entry != null) return;
-    _entry = OverlayEntry(builder: (_) => const FloatingMenuWidget());
-    Overlay.of(context, rootOverlay: true).insert(_entry!);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        final overlay = Overlay.of(context, rootOverlay: true);
+        _entry = OverlayEntry(builder: (_) => const FloatingMenuWidget());
+        overlay.insert(_entry!);
+      } catch (e) {
+        developer.log('Error showing FloatingMenuOverlay: $e');
+      }
+    });
   }
 
   static void remove() {
