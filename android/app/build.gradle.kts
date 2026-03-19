@@ -11,8 +11,8 @@ plugins {
 import java.io.FileInputStream
 import java.util.Properties
 
-val keystorePropertiesFile = rootProject.file("key.properties")
 val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
@@ -58,14 +58,13 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now,
             // so `flutter run --release` works.
-            //signingConfig = signingConfigs.debug
+            signingConfig = signingConfigs.getByName("release")
             isDebuggable = false
             isMinifyEnabled = false  // Change this to false
             isShrinkResources = false  // Add this line            // Enable generation of native debug symbols
             ndk {
                 debugSymbolLevel = "FULL"
             }
-            signingConfig = signingConfigs.getByName("release")
         }
     }
 }

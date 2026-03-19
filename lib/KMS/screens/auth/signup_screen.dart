@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; 
 import 'package:innovator/KMS/core/constants/app_style.dart';
 import 'package:innovator/KMS/core/constants/mediaquery.dart';
 import 'package:innovator/KMS/provider/auth_provider.dart';
-import 'package:innovator/KMS/screens/auth/login_screen.dart';
+import 'package:innovator/KMS/screens/auth/login_screen.dart'; 
 
 final obscureProvider = StateProvider.family<bool, String>((ref, id) => true);
 
@@ -122,7 +122,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
                               // Full Name
                               _buildTextField(
-                                formFieldTopText: 'USERNAME',
+                                formFieldTopText: 'FULL NAME',
                                 controller: nameController,
                                 icon: Icons.person_outline,
                               ),
@@ -300,8 +300,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                         () => Navigator.pushReplacement(
                                           context,
                                           MaterialPageRoute(
-                                            builder:
-                                                (_) => const KmsLoginScreen(),
+                                            builder: (_) => const KmsLoginScreen(),
                                           ),
                                         ),
                                     child: const Text(

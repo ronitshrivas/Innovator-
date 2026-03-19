@@ -473,7 +473,7 @@ class _CoordinatorSessionDetailScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // teacher info card
+              // teacher info
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),

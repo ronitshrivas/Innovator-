@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:innovator/Innovator/screens/Shop/CardIconWidget/cart_state_manager.dart';
 import 'package:innovator/Innovator/screens/Shop/Shop_Page.dart';
+import 'package:innovator/Innovator/screens/Splash_Screen/splash_screen.dart';
 import 'package:innovator/KMS/screens/auth/login_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/admin_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/student_dashboard_screen.dart';
@@ -462,6 +463,8 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
   //   }
   // }
 
+  // Ronit
+
   @override
   Widget build(BuildContext context) {
     mq = MediaQuery.of(context).size;
@@ -469,7 +472,7 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
     return GetMaterialApp(
       //  FIX: Use the global navigator key for InAppNotificationService
       navigatorKey: navigatorKey,
-      home: Homepage(),
+      home: SplashScreen(),
 
       routes: {
         '/kms/login': (_) => KmsLoginScreen(),
