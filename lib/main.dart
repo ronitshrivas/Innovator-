@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:innovator/Innovator/screens/Shop/CardIconWidget/cart_state_manager.dart';
 import 'package:innovator/Innovator/screens/Shop/Shop_Page.dart';
@@ -342,6 +343,9 @@ void main() async {
     () async {
       try {
         developer.log('App starting...');
+
+        // Load environment variables
+        await dotenv.load(fileName: ".env");
 
         // Ensure Flutter is initialized
         WidgetsFlutterBinding.ensureInitialized();
