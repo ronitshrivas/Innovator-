@@ -42,11 +42,18 @@ class _CreatePostScreenState extends State<CreatePostScreen>
 
   static const String _baseUrl = 'http://182.93.94.220:8005';
 
-  // GROQ API
-  static const String _groqApiKey =
-      '***REMOVED***';
+  // GROQ API - Load from environment variables
   static const String _groqApiUrl =
       'https://api.groq.com/openai/v1/chat/completions';
+  
+  static String get _groqApiKey {
+    // This will be loaded from .env file via flutter_dotenv
+    const key = String.fromEnvironment('GROQ_API_KEY');
+    if (key.isEmpty) {
+      throw Exception('GROQ_API_KEY not configured in environment');
+    }
+    return key;
+  }
 
   // Categories
   List<Map<String, dynamic>> _categories = [];
