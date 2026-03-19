@@ -2,37 +2,25 @@ import 'dart:convert';
 import 'dart:developer' as developer;
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Single source of truth for auth state.
-///
-/// Key contract (must match Login.dart & ApiService):
-///   'access_token'  — JWT access token
-///   'refresh_token' — JWT refresh token
-///   'user_data'     — JSON-encoded user object from login response
 class AppData {
   static final AppData _instance = AppData._internal();
   factory AppData() => _instance;
   AppData._internal();
 
-  // ── In-memory cache ──────────────────────────────────────────────────────
   String? _accessToken;
   String? _refreshToken;
   Map<String, dynamic>? _currentUser;
   bool _isInitialized = false;
   SharedPreferences? _prefs;
 
-  // ── SharedPreferences keys ───────────────────────────────────────────────
-  // These MUST match the keys used in Login.dart and ApiService._getToken()
   static const String keyAccessToken = 'access_token';
   static const String keyRefreshToken = 'refresh_token';
   static const String keyUserData = 'user_data';
 
-  // ── Getters ──────────────────────────────────────────────────────────────
   bool get isAuthenticated => _accessToken != null && _accessToken!.isNotEmpty;
   String? get accessToken => _accessToken;
   String? get refreshToken => _refreshToken;
 
-  /// The full user map saved at login (keys: id, username, full_name,
-  /// email, role, gender, date_of_birth, address, phone_number)
   Map<String, dynamic>? get currentUser => _currentUser;
 
   String? get currentUserId => _currentUser?['id']?.toString();
@@ -41,8 +29,6 @@ class AppData {
       _currentUser?['username']?.toString();
   String? get currentUserEmail => _currentUser?['email']?.toString();
   String? get currentUserRole => _currentUser?['role']?.toString();
-
-  // ── Initialisation ───────────────────────────────────────────────────────
 
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -134,7 +120,6 @@ class AppData {
     developer.log('AppData: current user set ✓');
   }
 
-  /// Clears only the user data from memory and prefs.
   Future<void> clearCurrentUser() async {
     _currentUser = null;
     _prefs ??= await SharedPreferences.getInstance();
