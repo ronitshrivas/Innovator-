@@ -969,6 +969,7 @@ class _SpecificUserProfilePageState extends State<SpecificUserProfilePage>
                     initialFollowStatus: profileData['followed'] ?? false,
                     onFollowSuccess: () => _refreshProfile(),
                     onUnfollowSuccess: () => _refreshProfile(),
+                    targetUserId: profileData['_id'],
                   ),
                 ),
               ],

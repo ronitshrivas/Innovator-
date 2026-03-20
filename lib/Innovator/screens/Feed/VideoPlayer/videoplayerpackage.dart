@@ -12,26 +12,16 @@ class NetworkSpeedMonitor {
   Timer? _speedTestTimer;
   final List<double> _speedHistory = [];
   final int _maxHistorySize = 5;
-  
+
   double get currentSpeed => _currentSpeed;
   double get averageSpeed {
     if (_speedHistory.isEmpty) return _currentSpeed;
     return _speedHistory.reduce((a, b) => a + b) / _speedHistory.length;
   }
 
-  
-
   void stopMonitoring() {
     _speedTestTimer?.cancel();
   }
-
-  
-
-  
-
-  
-
-  
 }
 
 // Video Quality Enum (Keep existing)
@@ -71,7 +61,7 @@ class VideoQualityManager {
     }
 
     final speed = _speedMonitor.averageSpeed;
-    
+
     if (speed >= 6.0) return VideoQuality.high720p;
     if (speed >= 3.0) return VideoQuality.medium480p;
     if (speed >= 1.5) return VideoQuality.medium360p;
@@ -81,13 +71,20 @@ class VideoQualityManager {
 
   String getQualityLabel(VideoQuality quality) {
     switch (quality) {
-      case VideoQuality.auto: return 'Auto';
-      case VideoQuality.low144p: return '144p';
-      case VideoQuality.low240p: return '240p';
-      case VideoQuality.medium360p: return '360p';
-      case VideoQuality.medium480p: return '480p';
-      case VideoQuality.high720p: return '720p';
-      case VideoQuality.high1080p: return '1080p';
+      case VideoQuality.auto:
+        return 'Auto';
+      case VideoQuality.low144p:
+        return '144p';
+      case VideoQuality.low240p:
+        return '240p';
+      case VideoQuality.medium360p:
+        return '360p';
+      case VideoQuality.medium480p:
+        return '480p';
+      case VideoQuality.high720p:
+        return '720p';
+      case VideoQuality.high1080p:
+        return '1080p';
     }
   }
 
@@ -107,10 +104,10 @@ class FrontendVideoUrlGenerator {
   // Generate quality-specific URLs by adding parameters
   static String generateQualityUrl(String originalUrl, VideoQuality quality) {
     if (originalUrl.isEmpty) return originalUrl;
-    
+
     final uri = Uri.parse(originalUrl);
     final queryParams = Map<String, String>.from(uri.queryParameters);
-    
+
     // Add quality-specific parameters that many video services recognize
     switch (quality) {
       case VideoQuality.low144p:
@@ -152,24 +149,24 @@ class FrontendVideoUrlGenerator {
       default:
         return originalUrl;
     }
-    
+
     // Add a unique identifier to prevent caching issues
     queryParams['q'] = quality.index.toString();
     queryParams['_t'] = DateTime.now().millisecondsSinceEpoch.toString();
-    
+
     return uri.replace(queryParameters: queryParams).toString();
   }
 
   // Generate multiple quality URLs from a single original URL
   static Map<VideoQuality, String> generateAllQualityUrls(String originalUrl) {
     final qualityUrls = <VideoQuality, String>{};
-    
+
     for (VideoQuality quality in VideoQuality.values) {
       if (quality != VideoQuality.auto) {
         qualityUrls[quality] = generateQualityUrl(originalUrl, quality);
       }
     }
-    
+
     return qualityUrls;
   }
 }

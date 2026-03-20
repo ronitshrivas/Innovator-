@@ -11,13 +11,8 @@ class DrawerProfile extends HiveObject {
   @HiveField(2)
   final String? picturePath;
 
-  DrawerProfile({
-    required this.name,
-    required this.email,
-    this.picturePath,
-  });
+  DrawerProfile({required this.name, required this.email, this.picturePath});
 }
-
 
 // Manual adapter class
 class DrawerProfileAdapter extends TypeAdapter<DrawerProfile> {
