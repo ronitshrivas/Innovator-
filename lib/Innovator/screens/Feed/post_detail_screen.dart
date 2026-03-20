@@ -426,6 +426,7 @@ class _SpecificPostScreenState extends State<SpecificPostScreen>
                                 content!.engagement.following = false;
                               });
                             },
+                            targetUserId: content!.author.id,
                           ),
                       ],
                     ],

@@ -1139,6 +1139,7 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> {
                     });
                     widget.onFollowToggled?.call(false);
                   },
+                  targetUserId: widget.content.author.id,
                 ),
               ],
             ],
