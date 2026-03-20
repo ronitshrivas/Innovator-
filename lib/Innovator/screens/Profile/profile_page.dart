@@ -587,6 +587,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                             onFollowSuccess: onRefresh,
                             onUnfollowSuccess: onRefresh,
                             size: 36,
+                            targetUserId: '${person.id}',
                           ),
                 );
               },

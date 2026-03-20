@@ -1,13 +1,16 @@
+// comment_section.dart
+// Inline comment section used inside feed cards.
+// Features: list comments, add comment, reply to comment, edit, delete.
+// All API calls updated to http://182.93.94.220:8005
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:innovator/Innovator/App_data/App_data.dart';
-import 'package:innovator/Innovator/screens/chatrrom/sound/soundplayer.dart';
-import 'package:innovator/Innovator/screens/comment/JWT_Helper.dart';
 import 'package:innovator/Innovator/models/comment_Model.dart';
 import 'package:innovator/Innovator/screens/comment/comment_services.dart';
 
 class CommentSection extends StatefulWidget {
-  final String contentId;
+  final String contentId; // = postId in new API
   final VoidCallback? onCommentAdded;
 
   const CommentSection({Key? key, required this.contentId, this.onCommentAdded})
@@ -18,123 +21,173 @@ class CommentSection extends StatefulWidget {
 }
 
 class _CommentSectionState extends State<CommentSection> {
-  final CommentService _commentService = CommentService();
-  final TextEditingController _commentController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
+  final CommentService _service = CommentService();
+  final TextEditingController _inputCtrl = TextEditingController();
+  final ScrollController _scrollCtrl = ScrollController();
+  final FocusNode _focusNode = FocusNode();
+
   List<Comment> _comments = [];
   bool _isLoading = false;
-  int _currentPage = 0;
+  bool _isSending = false;
+  int _page = 0;
   bool _hasMore = true;
-  String? _editingCommentId;
-  String? _currentUserId;
 
+  // Edit state
+  String? _editingCommentId;
+
+  // Reply state
+  String? _replyToCommentId;
+  String? _replyToUsername;
+
+  // Which comments have their replies expanded
+  final Set<String> _expandedReplies = {};
+
+  // Loaded replies keyed by commentId
+  final Map<String, List<Comment>> _replies = {};
+  final Set<String> _loadingReplies = {};
+
+  String? get _myUsername => AppData().currentUser?['username']?.toString();
+
+  // ── Lifecycle ──────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
     _loadComments();
-    _scrollController.addListener(_scrollListener);
-    _getCurrentUserId(); // Get current user ID on initialization
+    _scrollCtrl.addListener(_scrollListener);
   }
 
-  // Get current user ID using JwtHelper
-  void _getCurrentUserId() {
-    final authToken = AppData().accessToken;
-    if (authToken != null) {
-      _currentUserId = JwtHelper.extractUserId(authToken);
-      debugPrint('Current user ID: $_currentUserId');
-    }
+  @override
+  void dispose() {
+    _inputCtrl.dispose();
+    _scrollCtrl.dispose();
+    _focusNode.dispose();
+    super.dispose();
   }
 
   void _scrollListener() {
-    if (_scrollController.position.pixels ==
-            _scrollController.position.maxScrollExtent &&
+    if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent &&
         !_isLoading &&
         _hasMore) {
-      _loadMoreComments();
+      _loadMore();
     }
   }
 
-  Future<void> _loadComments() async {
+  // ── Data ───────────────────────────────────────────────────────────────────
+  Future<void> _loadComments({bool refresh = false}) async {
+    if (_isLoading) return;
     setState(() => _isLoading = true);
     try {
-      final comments = await _commentService.getComments(widget.contentId);
+      if (refresh) {
+        _page = 0;
+        _hasMore = true;
+      }
+      final loaded = await _service.getComments(widget.contentId, page: _page);
       setState(() {
-        _comments = comments.map((c) => Comment.fromJson(c)).toList();
+        if (refresh) _comments.clear();
+        _comments.addAll(loaded);
+        _page++;
+        _hasMore = loaded.length >= 10;
         _isLoading = false;
-        _currentPage = 1;
-        _hasMore = comments.length >= 10;
       });
     } catch (e) {
-      setState(() => _isLoading = false);
-      _showErrorSnackbar('Failed to load comments: $e');
+      if (mounted) setState(() => _isLoading = false);
+      _err('Failed to load comments');
     }
   }
 
-  Future<void> _loadMoreComments() async {
-    if (!_hasMore) return;
-    setState(() => _isLoading = true);
+  Future<void> _loadMore() => _loadComments();
+
+  Future<void> _toggleReplies(String commentId) async {
+    if (_expandedReplies.contains(commentId)) {
+      setState(() => _expandedReplies.remove(commentId));
+      return;
+    }
+
+    setState(() {
+      _expandedReplies.add(commentId);
+      _loadingReplies.add(commentId);
+    });
+
     try {
-      final comments = await _commentService.getComments(
-        widget.contentId,
-        page: _currentPage,
-      );
-      setState(() {
-        _comments.addAll(comments.map((c) => Comment.fromJson(c)));
-        _isLoading = false;
-        _currentPage++;
-        _hasMore = comments.length >= 10;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
-      _showErrorSnackbar('Failed to load more comments: $e');
+      final replies = await _service.getReplies(commentId);
+      if (mounted) {
+        setState(() {
+          _replies[commentId] = replies;
+          _loadingReplies.remove(commentId);
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingReplies.remove(commentId));
     }
   }
 
-  Future<void> _submitComment() async {
-    final commentText = _commentController.text.trim();
-    if (commentText.isEmpty) return;
+  // ── Send / edit ────────────────────────────────────────────────────────────
+  Future<void> _submit() async {
+    final text = _inputCtrl.text.trim();
+    if (text.isEmpty || _isSending) return;
 
-    setState(() => _isLoading = true);
+    setState(() => _isSending = true);
     try {
       if (_editingCommentId != null) {
-        // This is an edit operation
-        await _commentService.updateComment(
+        // ── Edit existing comment ────────────────────────────────────────────
+        final updated = await _service.updateComment(
           commentId: _editingCommentId!,
-          newComment: commentText,
+          content: text,
         );
-        // Reload comments to show the edited comment
-        await _loadComments();
+        setState(() {
+          final idx = _comments.indexWhere((c) => c.id == _editingCommentId);
+          if (idx != -1) _comments[idx] = updated;
+        });
+        _ok('Comment updated');
+      } else if (_replyToCommentId != null) {
+        // ── Reply to a comment ───────────────────────────────────────────────
+        final reply = await _service.addReply(
+          parentCommentId: _replyToCommentId!,
+          content: text,
+        );
+        // Add to loaded replies if expanded
+        setState(() {
+          _replies[_replyToCommentId!] = [
+            ...(_replies[_replyToCommentId!] ?? []),
+            reply,
+          ];
+          _expandedReplies.add(_replyToCommentId!);
+          // Update reply count visually by patching the parent comment's
+          // replies list (used only for count badge)
+        });
         widget.onCommentAdded?.call();
-        _showSuccessSnackbar('Comment updated successfully!');
-
-        // Clear edit state
-        _editingCommentId = null;
-        _commentController.clear();
+        _ok('Reply posted');
       } else {
-        // This is a new comment
-        await _commentService.addComment(
-          contentId: widget.contentId,
-          commentText: commentText,
+        // ── New top-level comment ────────────────────────────────────────────
+        final comment = await _service.addComment(
+          postId: widget.contentId,
+          content: text,
         );
-        _showSuccessSnackbar('Comment added successfully!');
-        _commentController.clear();
-        await _loadComments();
+        setState(() => _comments.insert(0, comment));
         widget.onCommentAdded?.call();
+        _ok('Comment posted');
       }
     } catch (e) {
-      _showErrorSnackbar('Error: ${e.toString()}');
+      _err('Failed: $e');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isSending = false;
+          _editingCommentId = null;
+          _replyToCommentId = null;
+          _replyToUsername = null;
+        });
+        _inputCtrl.clear();
+        _focusNode.unfocus();
+      }
     }
-    SoundPlayer player = SoundPlayer();
-    player.playlikeSound();
   }
 
-  Future<void> _deleteComment(String commentId) async {
-    final confirmed = await showDialog<bool>(
+  Future<void> _delete(String commentId) async {
+    final ok = await showDialog<bool>(
       context: context,
       builder:
-          (context) => AlertDialog(
+          (_) => AlertDialog(
             title: const Text('Delete Comment'),
             content: const Text(
               'Are you sure you want to delete this comment?',
@@ -154,160 +207,116 @@ class _CommentSectionState extends State<CommentSection> {
             ],
           ),
     );
+    if (ok != true) return;
 
-    if (confirmed != true) return;
-
-    setState(() => _isLoading = true);
     try {
-      await _commentService.deleteComment(commentId);
-      _showSuccessSnackbar('Comment deleted successfully!');
-      await _loadComments();
+      await _service.deleteComment(commentId);
+      setState(() {
+        _comments.removeWhere((c) => c.id == commentId);
+        // Also remove from any replies lists
+        for (final key in _replies.keys) {
+          _replies[key]?.removeWhere((r) => r.id == commentId);
+        }
+      });
       widget.onCommentAdded?.call();
+      _ok('Comment deleted');
     } catch (e) {
-      _showErrorSnackbar('Failed to delete comment: $e');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+      _err('Failed to delete');
     }
   }
 
-  void _startEditingComment(Comment comment) {
+  void _startEdit(Comment comment) {
     setState(() {
-      _commentController.text = comment.comment;
       _editingCommentId = comment.id;
+      _replyToCommentId = null;
+      _replyToUsername = null;
+      _inputCtrl.text = comment.content;
     });
-    // Focus the text field
-    FocusScope.of(context).requestFocus(FocusNode());
+    _focusNode.requestFocus();
   }
 
-  void _cancelEditing() {
+  void _startReply(Comment comment) {
     setState(() {
-      _commentController.clear();
+      _replyToCommentId = comment.id;
+      _replyToUsername = comment.username;
       _editingCommentId = null;
+      _inputCtrl.clear();
     });
+    _focusNode.requestFocus();
   }
 
-  void _showSuccessSnackbar(String message) {
-    Get.snackbar(
-      'Success',
-      message,
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
-    );
-    // ScaffoldMessenger.of(context).showSnackBar(
-    //   SnackBar(content: Text(message), backgroundColor: Colors.green),
-    // );
+  void _cancelAction() {
+    setState(() {
+      _editingCommentId = null;
+      _replyToCommentId = null;
+      _replyToUsername = null;
+      _inputCtrl.clear();
+    });
+    _focusNode.unfocus();
   }
 
-  void _showErrorSnackbar(String message) {
-    Get.snackbar(
-      'Error',
-      message,
-      backgroundColor: Colors.red,
-      colorText: Colors.white,
-    );
+  // ── Snackbars ─────────────────────────────────────────────────────────────
+  void _ok(String msg) => Get.snackbar(
+    'Success',
+    msg,
+    backgroundColor: Colors.green,
+    colorText: Colors.white,
+    duration: const Duration(seconds: 2),
+  );
 
-    // ScaffoldMessenger.of(context).showSnackBar(
-    //   SnackBar(content: Text(message), backgroundColor: Colors.red),
-    // );
-  }
+  void _err(String msg) => Get.snackbar(
+    'Error',
+    msg,
+    backgroundColor: Colors.red,
+    colorText: Colors.white,
+    duration: const Duration(seconds: 3),
+  );
 
+  // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _commentController,
-                  decoration: InputDecoration(
-                    hintText:
-                        _editingCommentId != null
-                            ? 'Edit your comment...'
-                            : 'Add a comment...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(20.0),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                      vertical: 8.0,
-                    ),
-                    suffixIcon: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (_editingCommentId != null)
-                          IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed: _cancelEditing,
-                            tooltip: 'Cancel editing',
-                          ),
-                        IconButton(
-                          icon:
-                              _editingCommentId != null
-                                  ? const Icon(Icons.save)
-                                  : const Icon(Icons.send),
-                          onPressed: _isLoading ? null : _submitComment,
-                          tooltip:
-                              _editingCommentId != null
-                                  ? 'Save edit'
-                                  : 'Send comment',
-                        ),
-                      ],
-                    ),
-                  ),
-                  onSubmitted: (_) => _submitComment(),
-                ),
-              ),
-            ],
-          ),
-        ),
+        // ── Input bar ──────────────────────────────────────────────────────
+        _buildInputBar(),
 
-        if (_editingCommentId != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              children: [
-                const Icon(Icons.edit, size: 12, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text(
-                  'Editing comment',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ],
-            ),
-          ),
+        // ── Action hint (editing / replying) ──────────────────────────────
+        if (_editingCommentId != null || _replyToCommentId != null)
+          _buildActionHint(),
 
+        // ── Comments list ──────────────────────────────────────────────────
         Container(
           constraints: BoxConstraints(
-            maxHeight: 300,
+            maxHeight: 320,
             minWidth: MediaQuery.of(context).size.width,
           ),
           child:
               _isLoading && _comments.isEmpty
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
+                  : _comments.isEmpty
+                  ? _buildEmptyState()
                   : ListView.builder(
-                    controller: _scrollController,
+                    controller: _scrollCtrl,
                     shrinkWrap: true,
-                    physics: const AlwaysScrollableScrollPhysics(),
+                    physics: const ClampingScrollPhysics(),
                     itemCount: _comments.length + (_hasMore ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index == _comments.length) {
+                    itemBuilder: (ctx, i) {
+                      if (i == _comments.length) {
                         return _hasMore
                             ? const Padding(
-                              padding: EdgeInsets.all(16.0),
+                              padding: EdgeInsets.all(12),
                               child: Center(child: CircularProgressIndicator()),
                             )
-                            : const SizedBox();
+                            : const SizedBox.shrink();
                       }
-
-                      final comment = _comments[index];
-                      return _buildCommentTile(comment);
+                      return _buildCommentTile(_comments[i]);
                     },
                   ),
         ),
@@ -315,101 +324,336 @@ class _CommentSectionState extends State<CommentSection> {
     );
   }
 
-  Widget _buildCommentTile(Comment comment) {
-    final isCurrentUser =
-        _currentUserId != null && _currentUserId == comment.user.id;
-
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 8.0),
-      leading: CircleAvatar(
-        backgroundImage: NetworkImage(
-          'http://182.93.94.210:3067${comment.user.picture}',
-        ),
-        radius: 20,
-      ),
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  // ── Input bar ──────────────────────────────────────────────────────────────
+  Widget _buildInputBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: Row(
         children: [
-          Text(
-            comment.user.name,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-          ),
-          Text(comment.comment, style: const TextStyle(fontSize: 14)),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Text(
-                _formatTimeAgo(comment.createdAt),
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          // Avatar
+          CircleAvatar(
+            radius: 16,
+            backgroundColor: const Color.fromRGBO(244, 135, 6, 0.15),
+            child: Text(
+              (_myUsername?.isNotEmpty == true ? _myUsername![0] : '?')
+                  .toUpperCase(),
+              style: const TextStyle(
+                color: Color.fromRGBO(244, 135, 6, 1),
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
               ),
-              if (comment.edited)
-                Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
-                  child: Text(
-                    '(edited)',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                      fontStyle: FontStyle.italic,
-                    ),
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // Text field
+          Expanded(
+            child: TextField(
+              controller: _inputCtrl,
+              focusNode: _focusNode,
+              minLines: 1,
+              maxLines: 4,
+              textInputAction: TextInputAction.send,
+              onSubmitted: (_) => _submit(),
+              decoration: InputDecoration(
+                hintText:
+                    _replyToUsername != null
+                        ? 'Reply to @$_replyToUsername…'
+                        : _editingCommentId != null
+                        ? 'Edit your comment…'
+                        : 'Add a comment…',
+                hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(22),
+                  borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(22),
+                  borderSide: const BorderSide(
+                    color: Color.fromRGBO(244, 135, 6, 1),
+                    width: 1.5,
                   ),
                 ),
-            ],
+                suffixIcon:
+                    _editingCommentId != null || _replyToCommentId != null
+                        ? IconButton(
+                          icon: const Icon(Icons.close, size: 18),
+                          onPressed: _cancelAction,
+                          color: Colors.grey,
+                        )
+                        : null,
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+
+          // Send button
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child:
+                _isSending
+                    ? const SizedBox(
+                      width: 36,
+                      height: 36,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                    : IconButton(
+                      key: const ValueKey('send'),
+                      icon: Icon(
+                        _editingCommentId != null
+                            ? Icons.check_circle_outline
+                            : Icons.send_rounded,
+                        color: const Color.fromRGBO(244, 135, 6, 1),
+                      ),
+                      onPressed: _submit,
+                    ),
           ),
         ],
       ),
-      trailing:
-          isCurrentUser
-              ? PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, size: 16),
-                itemBuilder:
-                    (context) => [
-                      const PopupMenuItem<String>(
-                        value: 'edit',
-                        child: Text('Edit'),
-                      ),
-                      const PopupMenuItem<String>(
-                        value: 'delete',
-                        child: Text(
-                          'Delete',
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      ),
-                    ],
-                onSelected: (value) async {
-                  if (value == 'edit') {
-                    _startEditingComment(comment);
-                  } else if (value == 'delete') {
-                    await _deleteComment(comment.id);
-                  }
-                },
-              )
-              : null,
     );
   }
 
-  String _formatTimeAgo(DateTime dateTime) {
-    final difference = DateTime.now().difference(dateTime);
-
-    if (difference.inDays > 365) {
-      return '${(difference.inDays / 365).floor()}y';
-    } else if (difference.inDays > 30) {
-      return '${(difference.inDays / 30).floor()}mo';
-    } else if (difference.inDays > 0) {
-      return '${difference.inDays}d';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours}h';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m';
-    } else {
-      return 'Just now';
-    }
+  // ── Action hint strip ──────────────────────────────────────────────────────
+  Widget _buildActionHint() {
+    final isEditing = _editingCommentId != null;
+    return Padding(
+      padding: const EdgeInsets.only(left: 52, bottom: 4),
+      child: Row(
+        children: [
+          Icon(
+            isEditing ? Icons.edit : Icons.reply,
+            size: 12,
+            color: const Color.fromRGBO(244, 135, 6, 1),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            isEditing ? 'Editing comment' : 'Replying to @$_replyToUsername',
+            style: const TextStyle(
+              fontSize: 11,
+              color: Color.fromRGBO(244, 135, 6, 1),
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    _commentController.dispose();
-    super.dispose();
+  // ── Empty state ────────────────────────────────────────────────────────────
+  Widget _buildEmptyState() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 16),
+      child: Center(
+        child: Text(
+          'No comments yet. Be the first!',
+          style: TextStyle(color: Colors.grey, fontSize: 13),
+        ),
+      ),
+    );
+  }
+
+  // ── Single comment tile ────────────────────────────────────────────────────
+  Widget _buildCommentTile(Comment comment, {bool isReply = false}) {
+    final isOwn = _myUsername != null && _myUsername == comment.username;
+    final avatarUrl = comment.avatar;
+    final replies = _replies[comment.id] ?? [];
+    final isExpanded = _expandedReplies.contains(comment.id);
+    final loadingReplies = _loadingReplies.contains(comment.id);
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: isReply ? 44 : 8,
+        right: 8,
+        top: 4,
+        bottom: isReply ? 0 : 2,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Avatar
+          CircleAvatar(
+            radius: isReply ? 14 : 18,
+            backgroundColor: const Color.fromRGBO(244, 135, 6, 0.12),
+            backgroundImage:
+                avatarUrl != null && avatarUrl.isNotEmpty
+                    ? NetworkImage(avatarUrl)
+                    : null,
+            child:
+                avatarUrl == null || avatarUrl.isEmpty
+                    ? Text(
+                      comment.username.isNotEmpty
+                          ? comment.username[0].toUpperCase()
+                          : '?',
+                      style: TextStyle(
+                        fontSize: isReply ? 11 : 13,
+                        color: const Color.fromRGBO(244, 135, 6, 1),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )
+                    : null,
+          ),
+          const SizedBox(width: 8),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Bubble
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '@${comment.username}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        comment.content,
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Action row below bubble
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, top: 4),
+                  child: Row(
+                    children: [
+                      Text(
+                        _timeAgo(comment.createdAt),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                      if (!isReply) ...[
+                        const SizedBox(width: 12),
+                        GestureDetector(
+                          onTap: () => _startReply(comment),
+                          child: const Text(
+                            'Reply',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color.fromRGBO(244, 135, 6, 1),
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (isOwn) ...[
+                        const SizedBox(width: 12),
+                        GestureDetector(
+                          onTap: () => _startEdit(comment),
+                          child: const Text(
+                            'Edit',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.blueGrey,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        GestureDetector(
+                          onTap: () => _delete(comment.id),
+                          child: const Text(
+                            'Delete',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                // View/hide replies toggle (top-level only)
+                if (!isReply)
+                  GestureDetector(
+                    onTap: () => _toggleReplies(comment.id),
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 4, top: 4),
+                      child:
+                          loadingReplies
+                              ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                              : Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    isExpanded
+                                        ? Icons.keyboard_arrow_up
+                                        : Icons.keyboard_arrow_down,
+                                    size: 14,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    isExpanded
+                                        ? 'Hide replies'
+                                        : replies.isNotEmpty
+                                        ? 'View ${replies.length} repl${replies.length == 1 ? 'y' : 'ies'}'
+                                        : 'View replies',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                    ),
+                  ),
+
+                // Replies
+                if (!isReply && isExpanded)
+                  Column(
+                    children:
+                        replies
+                            .map((r) => _buildCommentTile(r, isReply: true))
+                            .toList(),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _timeAgo(DateTime dt) {
+    final d = DateTime.now().difference(dt);
+    if (d.inDays > 365) return '${(d.inDays / 365).floor()}y';
+    if (d.inDays > 30) return '${(d.inDays / 30).floor()}mo';
+    if (d.inDays > 0) return '${d.inDays}d';
+    if (d.inHours > 0) return '${d.inHours}h';
+    if (d.inMinutes > 0) return '${d.inMinutes}m';
+    return 'now';
   }
 }

@@ -115,14 +115,14 @@ class _FloatingMenuWidgetState extends State<FloatingMenuWidget>
         _buttonY = size.height * 0.5;
       });
     });
-    _fetchUnreadNotificationCount();
+    //_fetchUnreadNotificationCount();
     _setupPeriodicRefresh();
   }
 
   void _setupPeriodicRefresh() {
     Future.delayed(const Duration(seconds: 30), () {
       if (mounted) {
-        _fetchUnreadNotificationCount();
+        // _fetchUnreadNotificationCount();
         _setupPeriodicRefresh();
       }
     });
@@ -251,7 +251,7 @@ class _FloatingMenuWidgetState extends State<FloatingMenuWidget>
         await _nav.push(
           MaterialPageRoute(builder: (_) => const NotificationListScreen()),
         );
-        _fetchUnreadNotificationCount();
+        // _fetchUnreadNotificationCount();
         break;
       case 'drawer':
         SmoothDrawerService.showLeftDrawer(context);
