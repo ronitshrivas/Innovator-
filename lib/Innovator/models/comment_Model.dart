@@ -1,57 +1,51 @@
+// comment_Model.dart
+// Maps the new API response from http://182.93.94.220:8005/api/comments/
+
 class Comment {
   final String id;
-  final String type;
-  final String contentId;
-  final CommentUser user;
-  final String comment;
-  final bool edited;
+  final String username;
+  final String? avatar;
+  final String postId;
+  final String? parentId; // non-null = this is a reply
+  final String content;
   final DateTime createdAt;
-  final DateTime updatedAt;
+  // Replies are loaded separately via /api/replies/ but stored here after fetch
+  List<Comment> replies;
 
   Comment({
     required this.id,
-    required this.type,
-    required this.contentId,
-    required this.user,
-    required this.comment,
-    required this.edited,
+    required this.username,
+    this.avatar,
+    required this.postId,
+    this.parentId,
+    required this.content,
     required this.createdAt,
-    required this.updatedAt,
+    this.replies = const [],
   });
+
+  bool get isReply => parentId != null;
 
   factory Comment.fromJson(Map<String, dynamic> json) {
     return Comment(
-      id: json['_id'] ?? '',
-      type: json['type'] ?? '',
-      contentId: json['uid'] ?? '',
-      user: CommentUser.fromJson(json['user'] ?? {}),
-      comment: json['comment'] ?? '',
-      edited: json['edited'] ?? false,
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: DateTime.parse(json['updatedAt']),
+      id: json['id']?.toString() ?? '',
+      username: json['username']?.toString() ?? 'Unknown',
+      avatar: json['avatar']?.toString(),
+      postId: json['post']?.toString() ?? '',
+      parentId: json['parent']?.toString(),
+      content: json['content']?.toString() ?? '',
+      createdAt:
+          DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+          DateTime.now(),
     );
   }
-}
 
-class CommentUser {
-  final String id;
-  final String name;
-  final String email;
-  final String picture;
-
-  CommentUser({
-    required this.id,
-    required this.name,
-    required this.email,
-    required this.picture,
-  });
-
-  factory CommentUser.fromJson(Map<String, dynamic> json) {
-    return CommentUser(
-      id: json['_id'] ?? '',
-      name: json['name'] ?? '',
-      email: json['email'] ?? '',
-      picture: json['picture'] ?? '',
-    );
-  }
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'username': username,
+    'avatar': avatar,
+    'post': postId,
+    'parent': parentId,
+    'content': content,
+    'created_at': createdAt.toIso8601String(),
+  };
 }

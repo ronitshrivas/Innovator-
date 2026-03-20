@@ -1,6 +1,7 @@
 // Feed_Content_Model.dart
 // Adds FeedContent.fromNewApiPost() to map the new API response.
 // All existing fields and constructors are preserved.
+// Now with Flutter Riverpod support via copyWith method.
 
 class Author {
   final String id;
@@ -31,6 +32,15 @@ class Author {
     'picture': picture,
     'email': email,
   };
+
+  Author copyWith({String? id, String? name, String? picture, String? email}) {
+    return Author(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      picture: picture ?? this.picture,
+      email: email ?? this.email,
+    );
+  }
 }
 
 class FeedContent {
@@ -201,4 +211,41 @@ class FeedContent {
     'createdAt': createdAt.toIso8601String(),
     'tags': tags,
   };
+
+  // ── Copy with method for Riverpod state updates ─────────────────────────
+  FeedContent copyWith({
+    String? id,
+    Author? author,
+    String? status,
+    String? description,
+    String? type,
+    List<String>? files,
+    List<String>? mediaUrls,
+    List<Map<String, dynamic>>? optimizedFiles,
+    String? thumbnailUrl,
+    int? likes,
+    bool? isLiked,
+    int? comments,
+    bool? isFollowed,
+    DateTime? createdAt,
+    List<String>? tags,
+  }) {
+    return FeedContent(
+      id: id ?? this.id,
+      author: author ?? this.author,
+      status: status ?? this.status,
+      description: description ?? this.description,
+      type: type ?? this.type,
+      files: files ?? this.files,
+      mediaUrls: mediaUrls ?? this.mediaUrls,
+      optimizedFiles: optimizedFiles ?? this.optimizedFiles,
+      thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+      likes: likes ?? this.likes,
+      isLiked: isLiked ?? this.isLiked,
+      comments: comments ?? this.comments,
+      isFollowed: isFollowed ?? this.isFollowed,
+      createdAt: createdAt ?? this.createdAt,
+      tags: tags ?? this.tags,
+    );
+  }
 }

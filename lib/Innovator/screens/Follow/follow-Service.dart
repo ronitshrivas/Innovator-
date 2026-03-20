@@ -1,200 +1,207 @@
+// follow-Service.dart
+// Follow:   POST http://182.93.94.220:8005/api/users/<userId>/follow/
+// Unfollow: POST http://182.93.94.220:8005/api/users/<userId>/unfollow/
+// Lookup:   GET  http://182.93.94.220:8005/api/users/?username=<username>
+//
+// Accepts both UUID and username as input.
+// If a username is passed, it is resolved to a UUID first via the lookup API.
+
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
-import 'package:flutter/foundation.dart';
 
 class FollowService {
-  static const String _baseUrl = 'http://182.93.94.210:3067/api/v1';
-  static const String _checkUrl = 'http://182.93.94.210:3067/api/v1/check';
+  static const String _base = 'http://182.93.94.220:8005';
 
-  static Future<Map<String, dynamic>> sendFollowRequest(String email) async {
-    try {
-      final authToken = AppData().accessToken;
-      if (authToken == null || authToken.isEmpty) {
-        throw Exception('User not authenticated');
-      }
+  // UUID v4 pattern
+  static final _uuidRegex = RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}'
+    r'-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  );
 
-      final url = Uri.parse('$_baseUrl/follow');
-      final headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'authorization': 'Bearer $authToken',
-      };
-      final body = jsonEncode({'email': email});
+  // In-memory username → UUID cache (avoids redundant API calls)
+  static final Map<String, String> _usernameToUuidCache = {};
 
-      debugPrint(' Sending follow request to: $email');
-      debugPrint(' Follow API URL: $url');
+  static bool _isUuid(String value) => _uuidRegex.hasMatch(value.trim());
 
-      final response = await http
-          .post(url, headers: headers, body: body)
-          .timeout(const Duration(seconds: 30));
-
-      debugPrint(' Follow API Response: ${response.statusCode}');
-      debugPrint(' Follow Response body: ${response.body}');
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final responseData = jsonDecode(response.body);
-        debugPrint('Follow request successful');
-        return responseData;
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please login again.');
-      } else if (response.statusCode == 409) {
-        throw Exception('You are already following this user.');
-      } else {
-        final errorBody =
-            response.body.isNotEmpty ? response.body : 'Unknown error';
-        throw Exception(
-          'Failed to send follow request (${response.statusCode}): $errorBody',
-        );
-      }
-    } catch (e) {
-      debugPrint(' Follow request error: $e');
-      if (e.toString().contains('SocketException') ||
-          e.toString().contains('TimeoutException')) {
-        throw Exception('Network error. Please check your connection.');
-      }
-      rethrow;
-    }
+  static Map<String, String> _headers() {
+    final token = AppData().accessToken ?? '';
+    return {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+    };
   }
 
-  static Future<Map<String, dynamic>> unfollowUser(String email) async {
-    try {
-      final authToken = AppData().accessToken;
-      if (authToken == null || authToken.isEmpty) {
-        throw Exception('User not authenticated');
-      }
+  // ── Resolve username → UUID ─────────────────────────────────────────────
+  // If the value is already a UUID it is returned as-is.
+  // Otherwise GET /api/users/?username=<value> is called to fetch the UUID.
+  static Future<String> resolveToUuid(String usernameOrUuid) async {
+    final value = usernameOrUuid.trim();
+    if (_isUuid(value)) return value;
 
-      final url = Uri.parse('$_baseUrl/follow');
-      final headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'authorization': 'Bearer $authToken',
-      };
-      final body = jsonEncode({'email': email, 'action': 'unfollow'});
-
-      debugPrint(' Sending unfollow request to: $email');
-      debugPrint(' Unfollow API URL: $url');
-
-      final response = await http
-          .post(url, headers: headers, body: body)
-          .timeout(const Duration(seconds: 30));
-
-      debugPrint(' Unfollow API Response: ${response.statusCode}');
-      debugPrint(' Unfollow Response body: ${response.body}');
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final responseData = jsonDecode(response.body);
-        debugPrint('Unfollow request successful');
-        return responseData;
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please login again.');
-      } else if (response.statusCode == 404) {
-        throw Exception('User not found or not following.');
-      } else {
-        final errorBody =
-            response.body.isNotEmpty ? response.body : 'Unknown error';
-        throw Exception(
-          'Failed to unfollow user (${response.statusCode}): $errorBody',
-        );
-      }
-    } catch (e) {
-      debugPrint(' Unfollow request error: $e');
-      if (e.toString().contains('SocketException') ||
-          e.toString().contains('TimeoutException')) {
-        throw Exception('Network error. Please check your connection.');
-      }
-      rethrow;
+    // Check in-memory cache first
+    if (_usernameToUuidCache.containsKey(value)) {
+      return _usernameToUuidCache[value]!;
     }
-  }
 
-  static Future<bool> checkFollowStatus(String email) async {
+    debugPrint('[FollowService] Resolving username "$value" → UUID...');
+
     try {
-      final authToken = AppData().accessToken;
-      if (authToken == null || authToken.isEmpty) {
-        throw Exception('User not authenticated');
-      }
-
-      final url = Uri.parse('$_checkUrl?email=${Uri.encodeComponent(email)}');
-      final headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'authorization': 'Bearer $authToken',
-      };
-
-      debugPrint(' Checking follow status for: $email');
-      debugPrint(' Check API URL: $url');
-
+      final uri = Uri.parse(
+        '$_base/api/users/',
+      ).replace(queryParameters: {'username': value});
       final response = await http
-          .get(url, headers: headers)
+          .get(uri, headers: _headers())
           .timeout(const Duration(seconds: 15));
 
-      debugPrint(' Check API Response: ${response.statusCode}');
-      debugPrint(' Check Response body: ${response.body}');
+      debugPrint(
+        '[FollowService] Lookup ${response.statusCode}: ${response.body}',
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final isFollowing = data['data']?['isFollowing'] ?? false;
-        debugPrint('Follow status check successful: $isFollowing');
-        return isFollowing;
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please login again.');
-      } else {
-        debugPrint(' Failed to check follow status: ${response.statusCode}');
-        return false; // Default to not following on error
+
+        // Handle both list response and single-object response
+        Map<String, dynamic>? user;
+        if (data is List && data.isNotEmpty) {
+          user = data.first as Map<String, dynamic>;
+        } else if (data is Map<String, dynamic>) {
+          // Could be { results: [...] } or direct object
+          if (data.containsKey('results') &&
+              (data['results'] as List).isNotEmpty) {
+            user = (data['results'] as List).first as Map<String, dynamic>;
+          } else if (data.containsKey('id') || data.containsKey('user_id')) {
+            user = data;
+          }
+        }
+
+        if (user != null) {
+          final uuid =
+              user['id']?.toString() ?? user['user_id']?.toString() ?? '';
+          if (_isUuid(uuid)) {
+            _usernameToUuidCache[value] = uuid;
+            debugPrint('[FollowService] Resolved "$value" → "$uuid"');
+            return uuid;
+          }
+        }
       }
     } catch (e) {
-      debugPrint(' Check follow status error: $e');
-      if (e.toString().contains('SocketException') ||
-          e.toString().contains('TimeoutException')) {
-        debugPrint(
-          ' Network error checking follow status, defaulting to false',
-        );
-        return false;
-      }
-      return false; // Default to not following on error
+      debugPrint('[FollowService] Username lookup error: $e');
+    }
+
+    // Could not resolve — return the original value and let the API return 404
+    debugPrint('[FollowService] Could not resolve "$value" to UUID');
+    return value;
+  }
+
+  // ── Follow ──────────────────────────────────────────────────────────────
+  // POST /api/users/<UUID>/follow/
+  static Future<Map<String, dynamic>> sendFollowRequest(
+    String userIdOrUsername,
+  ) async {
+    _assertAuth();
+
+    final userId = await resolveToUuid(userIdOrUsername);
+    final url = Uri.parse('$_base/api/users/$userId/follow/');
+    debugPrint('[FollowService] POST $url');
+
+    final response = await http
+        .post(url, headers: _headers())
+        .timeout(const Duration(seconds: 30));
+
+    debugPrint(
+      '[FollowService] follow ${response.statusCode}: ${response.body}',
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else if (response.statusCode == 401) {
+      throw Exception('Authentication failed. Please login again.');
+    } else if (response.statusCode == 400) {
+      final body =
+          response.body.isNotEmpty
+              ? jsonDecode(response.body) as Map<String, dynamic>
+              : <String, dynamic>{};
+      return {
+        'message': body['detail'] ?? 'Already following',
+        'followers_count': 0,
+      };
+    } else {
+      throw Exception(
+        'Failed to follow (${response.statusCode}): ${response.body}',
+      );
     }
   }
 
-  /// Batch check follow status for multiple users
-  static Future<Map<String, bool>> checkMultipleFollowStatus(
-    List<String> emails,
+  // ── Unfollow ────────────────────────────────────────────────────────────
+  // POST /api/users/<UUID>/unfollow/
+  static Future<Map<String, dynamic>> unfollowUser(
+    String userIdOrUsername,
   ) async {
-    try {
-      final authToken = AppData().accessToken;
-      if (authToken == null || authToken.isEmpty) {
-        throw Exception('User not authenticated');
-      }
+    _assertAuth();
 
-      final url = Uri.parse('$_baseUrl/follow/check-multiple');
-      final headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'authorization': 'Bearer $authToken',
+    final userId = await resolveToUuid(userIdOrUsername);
+    final url = Uri.parse('$_base/api/users/$userId/unfollow/');
+    debugPrint('[FollowService] POST $url');
+
+    final response = await http
+        .post(url, headers: _headers())
+        .timeout(const Duration(seconds: 30));
+
+    debugPrint(
+      '[FollowService] unfollow ${response.statusCode}: ${response.body}',
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else if (response.statusCode == 401) {
+      throw Exception('Authentication failed. Please login again.');
+    } else if (response.statusCode == 400) {
+      final body =
+          response.body.isNotEmpty
+              ? jsonDecode(response.body) as Map<String, dynamic>
+              : <String, dynamic>{};
+      return {
+        'message': body['detail'] ?? 'Not following',
+        'followers_count': 0,
       };
-      final body = jsonEncode({'emails': emails});
-
-      debugPrint(' Checking follow status for ${emails.length} users');
-
-      final response = await http
-          .post(url, headers: headers, body: body)
-          .timeout(const Duration(seconds: 30));
-
-      debugPrint(' Batch check API Response: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final followStatuses = Map<String, bool>.from(data['data'] ?? {});
-        debugPrint('Batch follow status check successful');
-        return followStatuses;
-      } else {
-        debugPrint(
-          ' Failed to batch check follow status: ${response.statusCode}',
-        );
-        return {}; // Return empty map on error
-      }
-    } catch (e) {
-      debugPrint(' Batch check follow status error: $e');
-      return {}; // Return empty map on error
+    } else {
+      throw Exception(
+        'Failed to unfollow (${response.statusCode}): ${response.body}',
+      );
     }
+  }
+
+  // ── Check follow status ─────────────────────────────────────────────────
+  static Future<bool> checkFollowStatus(String targetUserIdOrUsername) async {
+    final ids = _localFollowingIds();
+    if (ids == null) return false;
+    // Check both UUID and username matches
+    if (ids.contains(targetUserIdOrUsername)) return true;
+    final cached = _usernameToUuidCache[targetUserIdOrUsername];
+    if (cached != null) return ids.contains(cached);
+    return false;
+  }
+
+  // ── Clear cache (call on logout) ─────────────────────────────────────────
+  static void clearCache() => _usernameToUuidCache.clear();
+
+  // ── Helpers ─────────────────────────────────────────────────────────────
+
+  static void _assertAuth() {
+    final token = AppData().accessToken;
+    if (token == null || token.isEmpty) {
+      throw Exception('User not authenticated');
+    }
+  }
+
+  static List<String>? _localFollowingIds() {
+    final profile = AppData().currentUser?['profile'] as Map<String, dynamic>?;
+    final raw =
+        profile?['following_usernames'] as List<dynamic>? ??
+        AppData().currentUser?['following_usernames'] as List<dynamic>?;
+    return raw?.map((e) => e.toString()).toList();
   }
 }

@@ -345,7 +345,7 @@ void main() async {
         developer.log('App starting...');
 
         // Load environment variables
-        await dotenv.load(fileName: ".env");
+        //await dotenv.load(fileName: ".env");
 
         // Ensure Flutter is initialized
         WidgetsFlutterBinding.ensureInitialized();
