@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:innovator/Innovator/screens/Profile/profile_page.dart';
+import 'package:innovator/Innovator/utils/Drawer/custom_drawer.dart';
 import 'package:innovator/innovator_home.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -22,12 +23,13 @@ class CreatePostScreen extends StatefulWidget {
 class _CreatePostScreenState extends State<CreatePostScreen>
     with SingleTickerProviderStateMixin {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
+  late String _cachedUserName;
+  late String? _cachedUserPicture;
   bool _isLoading = true;
   Map<String, dynamic>? _userData;
   String? _errorMessage;
 
-  // ── Multi-file support (uploaded_media accepts multiple files) ────────────
+  // ── Multi-file support ────────────────────────────────────────────────────
   List<PlatformFile> _selectedFiles = [];
   List<XFile> _selectedImages = [];
 
@@ -42,18 +44,12 @@ class _CreatePostScreenState extends State<CreatePostScreen>
 
   static const String _baseUrl = 'http://182.93.94.220:8005';
 
-  // GROQ API - Load from environment variables
+  // ── GROQ API ──────────────────────────────────────────────────────────────
   static const String _groqApiUrl =
       'https://api.groq.com/openai/v1/chat/completions';
-  
-  static String get _groqApiKey {
-    // This will be loaded from .env file via flutter_dotenv
-    const key = String.fromEnvironment('GROQ_API_KEY');
-    if (key.isEmpty) {
-      throw Exception('GROQ_API_KEY not configured in environment');
-    }
-    return key;
-  }
+
+  static const String _groqApiKey =
+      '';
 
   // Categories
   List<Map<String, dynamic>> _categories = [];
@@ -73,7 +69,9 @@ class _CreatePostScreenState extends State<CreatePostScreen>
     _checkAuthStatus();
     _fetchUserProfile();
     _fetchCategories();
-
+    InstantCache.init();
+    _loadCachedProfile();
+    InstantCache.version.addListener(_onCacheUpdated);
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -83,6 +81,22 @@ class _CreatePostScreenState extends State<CreatePostScreen>
       curve: Curves.easeInOut,
     );
     _descriptionController.addListener(_updateButtonState);
+  }
+
+  void _loadCachedProfile() {
+    final cachedData = InstantCache.get();
+    setState(() {
+      _cachedUserName = cachedData['name'] ?? 'User';
+      _cachedUserPicture = cachedData['picture'];
+    });
+  }
+
+  void _onCacheUpdated() {
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _loadCachedProfile();
+    });
   }
 
   void _updateButtonState() {
@@ -98,6 +112,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
 
   @override
   void dispose() {
+    InstantCache.version.removeListener(_onCacheUpdated);
     _descriptionController.dispose();
     _animationController.dispose();
     super.dispose();
@@ -140,7 +155,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
     }
   }
 
-  // ── Media pickers — now support multiple files (uploaded_media) ───────────
+  // ── Media pickers ─────────────────────────────────────────────────────────
 
   Future<void> _captureImage() async {
     try {
@@ -252,7 +267,8 @@ class _CreatePostScreenState extends State<CreatePostScreen>
                     'You are ELIZA, an AI assistant created by Innovator. '
                     'Always respond as ELIZA and never mention Groq, Llama, Meta, Google, Gemini, '
                     'or any other AI system. Enhance the user\'s input to create a polished, '
-                    'engaging post for an innovation platform. Keep to exactly 50 words or less.',
+                    'engaging post for an innovation platform. Keep to exactly 50 words or less. '
+                    'Never wrap your response in quotation marks.',
               },
               {'role': 'user', 'content': message},
             ],
@@ -267,7 +283,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
     if (response.statusCode == 200) {
       return jsonDecode(response.body)['choices'][0]['message']['content'];
     }
-    throw Exception('API Error: ${response.statusCode}');
+    throw Exception('Groq API Error ${response.statusCode}: ${response.body}');
   }
 
   String _validateWordCount(String r) {
@@ -281,33 +297,45 @@ class _CreatePostScreenState extends State<CreatePostScreen>
         : '$trimmed...';
   }
 
-  String _processElizaResponse(String r) => _validateWordCount(
-    r
-        .replaceAllMapped(
-          RegExp(r'\bGemini\b', caseSensitive: false),
-          (_) => 'ELIZA',
-        )
-        .replaceAllMapped(
-          RegExp(r'\bGoogle\b', caseSensitive: false),
-          (_) => 'Innovator',
-        )
-        .replaceAllMapped(
-          RegExp(r'\bBard\b', caseSensitive: false),
-          (_) => 'ELIZA',
-        )
-        .replaceAllMapped(
-          RegExp(r'\bGroq\b', caseSensitive: false),
-          (_) => 'Innovator',
-        )
-        .replaceAllMapped(
-          RegExp(r'\bLlama\b', caseSensitive: false),
-          (_) => 'ELIZA',
-        )
-        .replaceAllMapped(
-          RegExp(r'\bMeta\b', caseSensitive: false),
-          (_) => 'Innovator',
-        ),
-  );
+  // Strips leading/trailing quote characters (straight " ' and curly \u201C \u201D \u2018 \u2019)
+  // then replaces AI brand names, then enforces the 50-word limit.
+  String _processElizaResponse(String r) {
+    // Step 1: trim whitespace
+    String result = r.trim();
+
+    // Step 2: strip surrounding quotes — straight (") single (') and curly (\u201C\u201D\u2018\u2019)
+    result =
+        result
+            .replaceAll(
+              RegExp(
+                r'^["\u201C\u2018'
+                "'"
+                r']+',
+              ),
+              '',
+            )
+            .replaceAll(
+              RegExp(
+                r'["\u201D\u2019'
+                "'"
+                r']+$',
+              ),
+              '',
+            )
+            .trim();
+
+    // Step 3: replace AI brand names
+    result = result
+        .replaceAll(RegExp(r'\bGemini\b', caseSensitive: false), 'ELIZA')
+        .replaceAll(RegExp(r'\bGoogle\b', caseSensitive: false), 'Innovator')
+        .replaceAll(RegExp(r'\bBard\b', caseSensitive: false), 'ELIZA')
+        .replaceAll(RegExp(r'\bGroq\b', caseSensitive: false), 'Innovator')
+        .replaceAll(RegExp(r'\bLlama\b', caseSensitive: false), 'ELIZA')
+        .replaceAll(RegExp(r'\bMeta\b', caseSensitive: false), 'Innovator');
+
+    // Step 4: enforce 50-word limit
+    return _validateWordCount(result);
+  }
 
   Future<void> _enhancePostWithAI() async {
     if (_descriptionController.text.trim().isEmpty || _isProcessingAI) {
@@ -328,7 +356,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
       );
       _updateButtonState();
     } catch (e) {
-      _showError('Error enhancing post: $e');
+      _showError('ELIZA enhancement failed: $e');
       setState(() => _isProcessingAI = false);
     }
   }
@@ -357,12 +385,6 @@ class _CreatePostScreenState extends State<CreatePostScreen>
   }
 
   // ── Create post ───────────────────────────────────────────────────────────
-  // POST http://182.93.94.220:8005/api/posts/   multipart/form-data
-  //
-  // Fields (from Postman screenshot):
-  //   content          — text
-  //   uploaded_media   — file (repeated for multiple files)
-  //   catagory_ids     — text  ⚠️ typo in API — must match exactly
 
   Future<void> _createPost() async {
     if (_descriptionController.text.trim().isEmpty && _selectedFiles.isEmpty) {
@@ -376,27 +398,23 @@ class _CreatePostScreenState extends State<CreatePostScreen>
       final uri = Uri.parse('$_baseUrl/api/posts/');
       final request = http.MultipartRequest('POST', uri);
 
-      // Auth
       if (_appData.accessToken != null) {
         request.headers['Authorization'] = 'Bearer ${_appData.accessToken}';
       }
 
-      // content
       request.fields['content'] = _descriptionController.text.trim();
 
-      // catagory_ids — NOTE: intentional typo to match API field name
       if (_selectedCategoryIds.isNotEmpty) {
         request.fields['catagory_ids'] = _selectedCategoryIds.join(',');
       }
 
-      // uploaded_media — multiple files, each added with the same field name
       for (final file in _selectedFiles) {
         if (file.path == null) continue;
         final mimeType =
             lookupMimeType(file.path!) ?? 'application/octet-stream';
         request.files.add(
           await http.MultipartFile.fromPath(
-            'uploaded_media', // ← new field name (was 'image')
+            'uploaded_media',
             file.path!,
             contentType: MediaType.parse(mimeType),
             filename: path.basename(file.path!),
@@ -493,7 +511,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
               children: [
                 const SizedBox(height: 15),
 
-                // ── Compose area ───────────────────────────────────────────────
+                // ── Compose area ─────────────────────────────────────────────
                 Container(
                   constraints: const BoxConstraints(minHeight: 400),
                   color: _cardColor,
@@ -519,15 +537,17 @@ class _CreatePostScreenState extends State<CreatePostScreen>
                               radius: 40,
                               backgroundColor: Colors.grey[200],
                               backgroundImage:
-                                  picturePath != null && picturePath.isNotEmpty
+                                  _cachedUserPicture != null &&
+                                          _cachedUserPicture!.isNotEmpty
                                       ? NetworkImage(
-                                        picturePath.startsWith('http')
-                                            ? picturePath
-                                            : '$_baseUrl$picturePath',
+                                        _cachedUserPicture!.startsWith('http')
+                                            ? _cachedUserPicture!
+                                            : '$_baseUrl$_cachedUserPicture?v=${InstantCache.version.value}',
                                       )
                                       : null,
                               child:
-                                  (picturePath == null || picturePath.isEmpty)
+                                  (_cachedUserPicture == null ||
+                                          _cachedUserPicture!.isEmpty)
                                       ? const Icon(
                                         Icons.person,
                                         size: 40,
@@ -605,7 +625,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
 
                 const SizedBox(height: 8),
 
-                // ── Media buttons ──────────────────────────────────────────────
+                // ── Media buttons ────────────────────────────────────────────
                 Container(
                   color: _cardColor,
                   padding: const EdgeInsets.all(16),
@@ -654,7 +674,6 @@ class _CreatePostScreenState extends State<CreatePostScreen>
                         ),
                       ),
 
-                      // Uploading indicator
                       if (_selectedFiles.isNotEmpty && _isUploading) ...[
                         const SizedBox(height: 20),
                         Row(
@@ -679,7 +698,6 @@ class _CreatePostScreenState extends State<CreatePostScreen>
                         ),
                       ],
 
-                      // Selected files preview
                       if (_selectedFiles.isNotEmpty && !_isUploading) ...[
                         const SizedBox(height: 20),
                         Text(
@@ -886,7 +904,6 @@ class _CreatePostScreenState extends State<CreatePostScreen>
       );
     }
 
-    // Auto-select first on load
     if (_selectedCategoryIds.isEmpty && _categories.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _selectedCategoryIds.isEmpty) {

@@ -34,6 +34,8 @@ class _CommentSectionState extends State<CommentSection> {
 
   // Edit state
   String? _editingCommentId;
+  bool _editingIsReply =
+      false; // ← track whether the comment being edited is a reply
 
   // Reply state
   String? _replyToCommentId;
@@ -129,31 +131,48 @@ class _CommentSectionState extends State<CommentSection> {
     setState(() => _isSending = true);
     try {
       if (_editingCommentId != null) {
-        // ── Edit existing comment ────────────────────────────────────────────
-        final updated = await _service.updateComment(
-          commentId: _editingCommentId!,
-          content: text,
-        );
-        setState(() {
-          final idx = _comments.indexWhere((c) => c.id == _editingCommentId);
-          if (idx != -1) _comments[idx] = updated;
-        });
-        _ok('Comment updated');
+        // ── Route to the correct endpoint based on whether it's a reply ──
+        final Comment updated;
+        if (_editingIsReply) {
+          updated = await _service.updateReply(
+            replyId: _editingCommentId!,
+            content: text,
+          );
+          // Update inside the replies map
+          setState(() {
+            for (final key in _replies.keys) {
+              final idx = _replies[key]?.indexWhere(
+                (r) => r.id == _editingCommentId,
+              );
+              if (idx != null && idx != -1) {
+                _replies[key]![idx] = updated;
+                break;
+              }
+            }
+          });
+        } else {
+          updated = await _service.updateComment(
+            commentId: _editingCommentId!,
+            content: text,
+          );
+          setState(() {
+            final idx = _comments.indexWhere((c) => c.id == _editingCommentId);
+            if (idx != -1) _comments[idx] = updated;
+          });
+        }
+        _ok('${_editingIsReply ? 'Reply' : 'Comment'} updated');
       } else if (_replyToCommentId != null) {
         // ── Reply to a comment ───────────────────────────────────────────────
         final reply = await _service.addReply(
           parentCommentId: _replyToCommentId!,
           content: text,
         );
-        // Add to loaded replies if expanded
         setState(() {
           _replies[_replyToCommentId!] = [
             ...(_replies[_replyToCommentId!] ?? []),
             reply,
           ];
           _expandedReplies.add(_replyToCommentId!);
-          // Update reply count visually by patching the parent comment's
-          // replies list (used only for count badge)
         });
         widget.onCommentAdded?.call();
         _ok('Reply posted');
@@ -174,6 +193,7 @@ class _CommentSectionState extends State<CommentSection> {
         setState(() {
           _isSending = false;
           _editingCommentId = null;
+          _editingIsReply = false;
           _replyToCommentId = null;
           _replyToUsername = null;
         });
@@ -183,7 +203,7 @@ class _CommentSectionState extends State<CommentSection> {
     }
   }
 
-  Future<void> _delete(String commentId) async {
+  Future<void> _delete(Comment comment) async {
     final ok = await showDialog<bool>(
       context: context,
       builder:
@@ -210,12 +230,17 @@ class _CommentSectionState extends State<CommentSection> {
     if (ok != true) return;
 
     try {
-      await _service.deleteComment(commentId);
+      // ── Route to the correct delete endpoint ──────────────────────────────
+      if (comment.isReply) {
+        await _service.deleteReply(comment.id);
+      } else {
+        await _service.deleteComment(comment.id);
+      }
+
       setState(() {
-        _comments.removeWhere((c) => c.id == commentId);
-        // Also remove from any replies lists
+        _comments.removeWhere((c) => c.id == comment.id);
         for (final key in _replies.keys) {
-          _replies[key]?.removeWhere((r) => r.id == commentId);
+          _replies[key]?.removeWhere((r) => r.id == comment.id);
         }
       });
       widget.onCommentAdded?.call();
@@ -225,9 +250,10 @@ class _CommentSectionState extends State<CommentSection> {
     }
   }
 
-  void _startEdit(Comment comment) {
+  void _startEdit(Comment comment, {required bool isReply}) {
     setState(() {
       _editingCommentId = comment.id;
+      _editingIsReply = isReply; // ← capture reply flag
       _replyToCommentId = null;
       _replyToUsername = null;
       _inputCtrl.text = comment.content;
@@ -240,6 +266,7 @@ class _CommentSectionState extends State<CommentSection> {
       _replyToCommentId = comment.id;
       _replyToUsername = comment.username;
       _editingCommentId = null;
+      _editingIsReply = false;
       _inputCtrl.clear();
     });
     _focusNode.requestFocus();
@@ -248,6 +275,7 @@ class _CommentSectionState extends State<CommentSection> {
   void _cancelAction() {
     setState(() {
       _editingCommentId = null;
+      _editingIsReply = false;
       _replyToCommentId = null;
       _replyToUsername = null;
       _inputCtrl.clear();
@@ -360,7 +388,7 @@ class _CommentSectionState extends State<CommentSection> {
                     _replyToUsername != null
                         ? 'Reply to @$_replyToUsername…'
                         : _editingCommentId != null
-                        ? 'Edit your comment…'
+                        ? 'Edit your ${_editingIsReply ? 'reply' : 'comment'}…'
                         : 'Add a comment…',
                 hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade500),
                 isDense: true,
@@ -432,7 +460,9 @@ class _CommentSectionState extends State<CommentSection> {
           ),
           const SizedBox(width: 4),
           Text(
-            isEditing ? 'Editing comment' : 'Replying to @$_replyToUsername',
+            isEditing
+                ? 'Editing ${_editingIsReply ? 'reply' : 'comment'}'
+                : 'Replying to @$_replyToUsername',
             style: const TextStyle(
               fontSize: 11,
               color: Color.fromRGBO(244, 135, 6, 1),
@@ -562,7 +592,11 @@ class _CommentSectionState extends State<CommentSection> {
                       if (isOwn) ...[
                         const SizedBox(width: 12),
                         GestureDetector(
-                          onTap: () => _startEdit(comment),
+                          onTap:
+                              () => _startEdit(
+                                comment,
+                                isReply: isReply,
+                              ), // ← pass isReply
                           child: const Text(
                             'Edit',
                             style: TextStyle(
@@ -574,7 +608,7 @@ class _CommentSectionState extends State<CommentSection> {
                         ),
                         const SizedBox(width: 12),
                         GestureDetector(
-                          onTap: () => _delete(comment.id),
+                          onTap: () => _delete(comment), // ← pass full comment
                           child: const Text(
                             'Delete',
                             style: TextStyle(

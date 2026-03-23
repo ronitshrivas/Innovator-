@@ -321,7 +321,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
         _userController.updateUserName(_fullNameCtrl.text.trim());
 
         _showSuccess('Profile updated successfully');
-        Navigator.pop(context);
+        Navigator.push(context, MaterialPageRoute(builder: (_) => Homepage()));
       } else {
         final errBody = jsonDecode(response.body);
         final msg =
@@ -430,13 +430,24 @@ class _EditProfileScreenState extends State<EditProfileScreen>
             onPressed: () => Navigator.pop(context),
           ),
           title: const Text(
-            'Edit Profile',
+            'Update Profile',
             style: TextStyle(
               color: Colors.black87,
               fontWeight: FontWeight.bold,
             ),
           ),
           centerTitle: true,
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => Homepage()),
+                );
+              },
+              child: const Text('Skip', style: TextStyle(color: _primary)),
+            ),
+          ],
         ),
         body: Stack(
           children: [
