@@ -41,7 +41,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
           return const AdminDashboardScreen();
         case 'teacher':
           return const TeacherDashboardScreen();
-        case 'coordiantor':
+        case 'coordinator':
           return const CoordinatorDashboardScreen();
         case 'student':
           return const StudentDashboardScreen();

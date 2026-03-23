@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/KMS/core/constants/app_style.dart';
@@ -103,7 +104,7 @@ class CoordinatorSessionsScreen extends ConsumerWidget {
                       loading: () => const Center(
                           child: CircularProgressIndicator()),
                       error: (e, _) => Center(
-                        child: Text('Error: $e',
+                        child: Text(e is DioException ? e.error.toString() : e.toString(),
                             style: const TextStyle(fontFamily: 'Inter')),
                       ),
                       data: (data) {

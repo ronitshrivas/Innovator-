@@ -11,7 +11,7 @@ final teacherServiceProvider = Provider<TeacherService>(
 );
 
 final teacherProfileProvider = FutureProvider<TeacherProfileModel>((ref) {
-  return ref.watch(teacherServiceProvider).teacherProfile();
+  return ref.read(teacherServiceProvider).teacherProfile();
 });
 
 final checkInProvider = FutureProvider.family<Map<String, dynamic>, String>(
@@ -38,7 +38,7 @@ final kycUploadProvider =
           ),
     );
 final kycStatusProvider = FutureProvider<KycModel>((ref) {
-  return ref.watch(teacherServiceProvider).checkKycStatus();
+  return ref.read(teacherServiceProvider).checkKycStatus();
 });
 
 final studentsProvider = FutureProvider<List<StudentModel>>((ref) {
@@ -65,5 +65,5 @@ final createStudentProvider =
 );
 
 final salarySlipsProvider = FutureProvider<SalarySlipResponse>((ref) {
-  return ref.watch(teacherServiceProvider).getSalarySlips();
+  return ref.read(teacherServiceProvider).getSalarySlips();
 });
