@@ -48,8 +48,11 @@ class _CreatePostScreenState extends State<CreatePostScreen>
   static const String _groqApiUrl =
       'https://api.groq.com/openai/v1/chat/completions';
 
-  static const String _groqApiKey =
-      '';
+  // API key should be loaded from environment variables (.env file)
+  static String get _groqApiKey => String.fromEnvironment(
+    'GROQ_API_KEY',
+    defaultValue: '',
+  ); // Use flutter run --dart-define=GROQ_API_KEY=your_key
 
   // Categories
   List<Map<String, dynamic>> _categories = [];
