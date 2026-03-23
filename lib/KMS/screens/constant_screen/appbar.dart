@@ -92,20 +92,20 @@ class AppbarScreen extends ConsumerWidget {
                 icon: Icon(Icons.keyboard_arrow_down, color: Colors.white),
                 itemBuilder:
                     (BuildContext context) => <PopupMenuEntry>[
-                      PopupMenuItem(
-                        value: 'profile',
-                        child: Text(
-                          'Profile',
-                          style: TextStyle(color: Colors.black),
-                        ),
-                      ),
-                      PopupMenuItem(
-                        value: 'settings',
-                        child: Text(
-                          'Settings',
-                          style: TextStyle(color: Colors.black),
-                        ),
-                      ),
+                      // PopupMenuItem(
+                      //   value: 'profile',
+                      //   child: Text(
+                      //     'Profile',
+                      //     style: TextStyle(color: Colors.black),
+                      //   ),
+                      // ),
+                      // PopupMenuItem(
+                      //   value: 'settings',
+                      //   child: Text(
+                      //     'Settings',
+                      //     style: TextStyle(color: Colors.black),
+                      //   ),
+                      // ),
                       PopupMenuItem(
                         value: 'logout',
                         child: Text(

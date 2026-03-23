@@ -114,7 +114,7 @@ flutter:
     - assets/icon/multi-pop-5-188168.mp3
     - assets/kms/   
     - assets/kms/drawer/
-    - .env
+    # - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

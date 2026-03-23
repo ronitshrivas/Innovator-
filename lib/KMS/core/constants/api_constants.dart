@@ -12,8 +12,8 @@ class ApiConstants {
 
   //teacher endpoints
   static String get teacherProfile => '$baseUrl/teacher/profile/';
-  static String get teacherKyc => '$baseUrl/teacher/kyc/upload/';
-  static String get teacherKycStatus => '$baseUrl/teacher/kyc/status/';
+  static String get teacherKyc => '$baseUrl/teacher/kyc/uploa/';
+  static String get teacherKycStatus => '$baseUrl/teacher/kyc/statu/';
   static String get teacherCheckIn => '$baseUrl/teacher/attendance/check-in/';
   static String teacherCheckOut(String id) =>
       '$baseUrl/teacher/attendance/$id/check-out/';

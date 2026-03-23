@@ -11,6 +11,8 @@ import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Login.dart';
 import 'package:innovator/Innovator/controllers/user_controller.dart';
+import 'package:innovator/KMS/core/constants/navigator_key.dart';
+import 'package:innovator/KMS/core/constants/network/dio_client.dart';
 import 'package:innovator/KMS/core/constants/service/auth_wrapper.dart';
 import 'package:innovator/KMS/screens/auth/login_screen.dart';
 import 'package:innovator/KMS/screens/auth/signup_screen.dart';
@@ -437,15 +439,22 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
                     const SizedBox(width: 8),
                     Switch(
                       value: _KMSEnabled,
-                      onChanged: (value) {
-                        setState(() => _KMSEnabled = value);
-                        if (value) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => AuthWrapper()),
-                          );
-                        }
-                      },
+                onChanged: (value) {
+  setState(() => _KMSEnabled = value);
+  if (value) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Navigator(
+          key: kmsNavigatorKey,
+          onGenerateRoute: (_) => MaterialPageRoute(
+            builder: (_) => const AuthWrapper(),
+          ),
+        ),
+      ),
+    );
+  }
+},
                       // activeColor: Colors.white,
                       //activeTrackColor: Colors.green,
                       inactiveTrackColor: Colors.white.withAlpha(20),

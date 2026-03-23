@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/KMS/core/constants/app_style.dart';
 import 'package:innovator/KMS/core/constants/mediaquery.dart';
+import 'package:innovator/KMS/provider/auth_provider.dart';
 import 'package:innovator/KMS/provider/teacher_provider.dart';
 import 'package:innovator/KMS/provider/user_provider.dart';
 import 'package:innovator/KMS/screens/auth/login_screen.dart';
@@ -266,11 +267,9 @@ class AppDrawer extends ConsumerWidget {
                   color: Colors.white.withValues(alpha: 0.2), thickness: 1),
               const SizedBox(height: 12),
 
-              // ── Drawer Items ──
+      
               ...List.generate(items.length, (index) {
                 final item = items[index];
-                // Coordinators: only highlight Dashboard (index 0)
-                // Others: highlight current selected index
                 final isSelected = isCoord
                     ? index == 0 && selectedIndex == 0
                     : selectedIndex == index;
@@ -304,7 +303,71 @@ class AppDrawer extends ConsumerWidget {
                   backgroundColor: Colors.white,
                   elevation: 0,
                 ),
-                onPressed: () => _showLogoutDialog(context),
+                onPressed: (){
+showAdaptiveDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppStyle.alertDialogColor,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Icon(Icons.logout_rounded, size: 50, color: Colors.red),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Text('Comeback Soon!', style: AppStyle.heading2),
+            const SizedBox(height: 12),
+            const Text(
+              'Are you sure you want to Logout?',
+              style: TextStyle(
+                  color: Colors.black45, fontSize: 15, fontFamily: 'Inter'),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Cancel', style: AppStyle.errorText),
+                ),
+                const SizedBox(width: 16),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    minimumSize: const Size(110, 44),
+                    backgroundColor: AppStyle.buttonColor,
+                  ),
+                    onPressed: () async {
+                                        Navigator.pop(context);
+                                        await ref.read(authProvider).logout();
+                                         ref.invalidate(authProvider);
+                                        if (context.mounted) {
+                                          Navigator.pushAndRemoveUntil(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => KmsLoginScreen(),
+                                            ),
+                                            (route) => false,
+                                          );
+                                        }
+                                      },
+                  child: const Text(
+                    'Yes, Logout',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontFamily: 'Inter'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+                },
                 label: const Text(
                   'Log Out',
                   style: TextStyle(
@@ -418,66 +481,7 @@ class AppDrawer extends ConsumerWidget {
     );
   }
 
-  void _showLogoutDialog(BuildContext context) {
-    showAdaptiveDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppStyle.alertDialogColor,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Icon(Icons.logout_rounded, size: 50, color: Colors.red),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            Text('Comeback Soon!', style: AppStyle.heading2),
-            const SizedBox(height: 12),
-            const Text(
-              'Are you sure you want to Logout?',
-              style: TextStyle(
-                  color: Colors.black45, fontSize: 15, fontFamily: 'Inter'),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('Cancel', style: AppStyle.errorText),
-                ),
-                const SizedBox(width: 16),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    minimumSize: const Size(110, 44),
-                    backgroundColor: AppStyle.buttonColor,
-                  ),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const KmsLoginScreen()),
-                      (route) => false,
-                    );
-                  },
-                  child: const Text(
-                    'Yes, Logout',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontFamily: 'Inter'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+
 
   void _handleKycTap(BuildContext context, WidgetRef ref) {
     final kycAsync = ref.read(kycStatusProvider);

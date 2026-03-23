@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/KMS/core/constants/app_style.dart';
@@ -101,8 +102,16 @@ class CoordinatorEmptyState extends StatelessWidget {
 // ─── Error box ────────────────────────────────────────────────────────────────
 
 class CoordinatorErrorBox extends StatelessWidget {
-  final String message;
-  const CoordinatorErrorBox({super.key, required this.message});
+  final Object? error;
+  final String? message;
+
+  const CoordinatorErrorBox({super.key, this.error, this.message});
+
+  String get _message {
+    if (message != null) return message!;
+    if (error is DioException) return (error as DioException).error.toString();
+    return error?.toString() ?? 'Something went wrong';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -111,7 +120,7 @@ class CoordinatorErrorBox extends StatelessWidget {
       decoration: BoxDecoration(
           color: Colors.red.shade50,
           borderRadius: BorderRadius.circular(12)),
-      child: Text(message,
+      child: Text(_message,
           style: TextStyle(
               fontFamily: 'Inter',
               color: Colors.red.shade400,
