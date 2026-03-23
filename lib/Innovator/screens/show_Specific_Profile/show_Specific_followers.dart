@@ -243,7 +243,7 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
       return;
     }
 
-    debugPrint('🚀 Navigating with userId: $userId');
+    debugPrint('Navigating with userId: $userId');
 
     try {
       Navigator.push(
@@ -809,7 +809,7 @@ class _FollowersFollowingContentState extends State<FollowersFollowingContent>
       );
     }
 
-    debugPrint('🚀 Navigating to SpecificUserProfilePage with userId: $userId');
+    debugPrint('Navigating to SpecificUserProfilePage with userId: $userId');
 
     try {
       // Close the dialog first (if in dialog version)

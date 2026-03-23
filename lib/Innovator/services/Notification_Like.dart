@@ -298,7 +298,7 @@ class NotificationService {
   void _handleNotificationNavigation(Map<String, dynamic> data) {
     final type = data['type']?.toString().toLowerCase() ?? '';
 
-    developer.log('🚀 Navigating - Type: $type');
+    developer.log('Navigating - Type: $type');
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       switch (type) {

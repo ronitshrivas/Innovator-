@@ -17,6 +17,10 @@ class LikeButton extends StatefulWidget {
   final ContentLikeService likeService;
   final Function(bool)? onLikeToggled;
 
+  /// Actual reaction type string from API ('like','love','angry',etc.)
+  /// Restores the correct emoji on first render
+  final String? initialReactionType;
+
   /// Optional: display the reaction label + count inline
   final bool showLabel;
   final int initialCount;
@@ -27,6 +31,7 @@ class LikeButton extends StatefulWidget {
     required this.initialLikeStatus,
     required this.likeService,
     this.onLikeToggled,
+    this.initialReactionType,
     this.showLabel = false,
     this.initialCount = 0,
   }) : super(key: key);
@@ -54,7 +59,17 @@ class _LikeButtonState extends State<LikeButton>
   @override
   void initState() {
     super.initState();
-    _currentReaction = widget.initialLikeStatus ? ReactionType.like : null;
+    // Restore actual reaction type from API (e.g. 'angry', 'love', 'like')
+    // Falls back to generic 'like' if type string is missing
+    if (widget.initialLikeStatus) {
+      _currentReaction =
+          widget.initialReactionType != null
+              ? ReactionTypeExtension.fromValue(widget.initialReactionType) ??
+                  ReactionType.like
+              : ReactionType.like;
+    } else {
+      _currentReaction = null;
+    }
     _count = widget.initialCount;
 
     _bounceCtrl = AnimationController(
@@ -150,9 +165,15 @@ class _LikeButtonState extends State<LikeButton>
   void _setReaction(ReactionType? newType, ReactionType? previous) {
     if (!mounted) return;
     setState(() {
-      if (newType != null && previous == null) _count++;
-      if (newType == null && previous != null)
+      // Presence change only:
+      //   null → type  → +1  (first reaction)
+      //   type → null  → -1  (removed reaction)
+      //   typeA → typeB → 0  (switching 👍→❤️: same count)
+      if (newType != null && previous == null) {
+        _count++;
+      } else if (newType == null && previous != null) {
         _count = (_count - 1).clamp(0, 999999);
+      }
       _currentReaction = newType;
     });
     _bounceCtrl.forward(from: 0);
@@ -342,7 +363,7 @@ class _ReactionPickerOverlayState extends State<_ReactionPickerOverlay>
           link: widget.layerLink,
           showWhenUnlinked: false,
           // Offset: shift up by 64dp + some padding so it floats above the row
-          offset: const Offset(-16, -72),
+          offset: const Offset(-16, -58),
           child: FadeTransition(
             opacity: _fadeAnim,
             child: ScaleTransition(
@@ -352,8 +373,8 @@ class _ReactionPickerOverlayState extends State<_ReactionPickerOverlay>
                 color: Colors.transparent,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 8,
+                    horizontal: 8,
+                    vertical: 6,
                   ),
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -367,10 +388,14 @@ class _ReactionPickerOverlayState extends State<_ReactionPickerOverlay>
                       ),
                     ],
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children:
-                        _reactions.map((r) => _buildReactionItem(r)).toList(),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const NeverScrollableScrollPhysics(),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children:
+                          _reactions.map((r) => _buildReactionItem(r)).toList(),
+                    ),
                   ),
                 ),
               ),
@@ -385,51 +410,68 @@ class _ReactionPickerOverlayState extends State<_ReactionPickerOverlay>
     final isActive = widget.currentReaction == r;
     final isHovered = _hovered == r;
 
+    final targetScale = isHovered ? 1.5 : (isActive ? 1.15 : 1.0);
+    final targetY = isHovered ? -10.0 : (isActive ? -3.0 : 0.0);
+
     return GestureDetector(
       onTap: () => widget.onSelect(r),
       onTapDown: (_) => setState(() => _hovered = r),
       onTapCancel: () => setState(() => _hovered = null),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        curve: Curves.easeOutBack,
-        margin: const EdgeInsets.symmetric(horizontal: 1),
-        padding: const EdgeInsets.all(2),
-        transform:
-            Matrix4.identity()
-              ..scale(isHovered ? 1.3 : (isActive ? 1.1 : 1.0))
-              ..translate(
-                isHovered ? -2.0 : 0.0,
-                isHovered ? -8.0 : (isActive ? -2.0 : 0.0),
-              ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              r.emoji,
-              style: TextStyle(fontSize: isHovered ? 24 : (isActive ? 20 : 18)),
-            ),
-            AnimatedOpacity(
-              opacity: isHovered ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 120),
-              child: Container(
-                margin: const EdgeInsets.only(top: 3),
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.black87,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  r.label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.3,
+      child: TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: 1.0, end: targetScale),
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.elasticOut,
+        builder: (context, scale, child) {
+          return TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0.0, end: targetY),
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutBack,
+            builder: (context, dy, _) {
+              return Transform.translate(
+                offset: Offset(0, dy),
+                child: Transform.scale(scale: scale, child: child),
+              );
+            },
+          );
+        },
+        child: Container(
+          margin: EdgeInsets.zero,
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+          child: Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
+            children: [
+              Text(r.emoji, style: TextStyle(fontSize: isActive ? 20 : 18)),
+              if (isHovered)
+                Positioned(
+                  bottom: 30,
+                  left: -10,
+                  right: -10,
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black87,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        r.label,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.3,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

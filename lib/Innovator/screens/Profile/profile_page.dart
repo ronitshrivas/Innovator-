@@ -16,6 +16,7 @@ import 'package:innovator/Innovator/screens/Follow/follow_Button.dart';
 import 'package:innovator/Innovator/screens/Follow/follow-Service.dart';
 import 'package:innovator/Innovator/screens/Profile/Edit_Profile.dart';
 import 'package:innovator/Innovator/screens/SHow_Specific_Profile/Show_Specific_Profile.dart';
+import 'package:innovator/Innovator/utils/Drawer/custom_drawer.dart';
 import 'package:path/path.dart' as path;
 import 'package:http_parser/http_parser.dart';
 import 'package:get/get.dart';
@@ -120,49 +121,45 @@ class FollowerFollowing {
   final String name;
   final String email;
   final String? picture;
+  final String? username;
 
   FollowerFollowing({
     required this.id,
     required this.name,
     required this.email,
     this.picture,
+    this.username,
   });
 
-  factory FollowerFollowing.fromJson(Map<String, dynamic> json) {
-    if (json.containsKey('follower')) {
-      final f = json['follower'] as Map<String, dynamic>;
-      return FollowerFollowing(
-        id: f['_id']?.toString() ?? '',
-        name: f['name']?.toString() ?? '',
-        email: f['email']?.toString() ?? '',
-        picture: f['picture']?.toString(),
-      );
-    } else if (json.containsKey('following')) {
-      final f = json['following'] as Map<String, dynamic>;
-      return FollowerFollowing(
-        id: f['_id']?.toString() ?? '',
-        name: f['name']?.toString() ?? '',
-        email: f['email']?.toString() ?? '',
-        picture: f['picture']?.toString(),
-      );
-    }
+  /// Parses a single entry from the new API's followers[] / following[] array
+  factory FollowerFollowing.fromNewApi(Map<String, dynamic> json) {
+    final profile = json['profile'] as Map<String, dynamic>? ?? {};
+
+    // avatar lives in profile.avatar (relative path)
+    final avatar = profile['avatar']?.toString();
+
+    // full_name can be null in new API (e.g. ronit12345 has null full_name)
+    final fullName = json['full_name']?.toString() ?? '';
+    final username = json['username']?.toString() ?? '';
+
     return FollowerFollowing(
-      id: json['_id']?.toString() ?? '',
-      name: json['name']?.toString() ?? '',
+      id: json['id']?.toString() ?? '',
+      name: fullName.isNotEmpty ? fullName : username, // fallback to username
       email: json['email']?.toString() ?? '',
-      picture: json['picture']?.toString(),
+      picture: avatar,
+      username: username,
     );
   }
 
+  /// Resolves the avatar to a full URL
   String? get fullPictureUrl {
     if (picture == null || picture!.isEmpty) return null;
     if (picture!.startsWith('http://') || picture!.startsWith('https://')) {
       return picture;
     }
-    return '$_legacyApiBase$picture';
+    return '$_newApiBase$picture'; // e.g. http://182.93.94.220:8005/media/avatars/IMG.jpg
   }
 }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Exceptions
 // ─────────────────────────────────────────────────────────────────────────────
@@ -259,20 +256,20 @@ class UserProfileService {
     if (token == null || token.isEmpty) throw AuthException('No token');
 
     final response = await http.get(
-      Uri.parse('$_legacyApiBase/list-followers'),
+      Uri.parse('$_newApiBase/api/users/followers/'), // ← new endpoint
       headers: _authHeaders(token),
     );
 
-    log('Followers API response: ${response.body}');
+    log('Followers API [${response.statusCode}]: ${response.body}');
 
     if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      if (data['data'] is List) {
-        return (data['data'] as List)
-            .map((e) => FollowerFollowing.fromJson(e as Map<String, dynamic>))
-            .toList();
-      }
-      return [];
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      // New shape: { "followers_count": 1, "followers": [...] }
+      final list = data['followers'] as List<dynamic>? ?? [];
+      return list
+          .whereType<Map<String, dynamic>>()
+          .map(FollowerFollowing.fromNewApi)
+          .toList();
     } else if (response.statusCode == 401) {
       await AppData().clearAuthToken();
       throw AuthException('Authentication token expired or invalid');
@@ -286,20 +283,20 @@ class UserProfileService {
     if (token == null || token.isEmpty) throw AuthException('No token');
 
     final response = await http.get(
-      Uri.parse('$_legacyApiBase/list-followings'),
+      Uri.parse('$_newApiBase/api/users/following/'), // ← new endpoint
       headers: _authHeaders(token),
     );
 
-    log('Following API response: ${response.body}');
+    log('Following API [${response.statusCode}]: ${response.body}');
 
     if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      if (data['data'] is List) {
-        return (data['data'] as List)
-            .map((e) => FollowerFollowing.fromJson(e as Map<String, dynamic>))
-            .toList();
-      }
-      return [];
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      // New shape: { "following_count": 1, "following": [...] }
+      final list = data['following'] as List<dynamic>? ?? [];
+      return list
+          .whereType<Map<String, dynamic>>()
+          .map(FollowerFollowing.fromNewApi)
+          .toList();
     } else if (response.statusCode == 401) {
       await AppData().clearAuthToken();
       throw AuthException('Authentication token expired or invalid');
@@ -422,10 +419,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       _userController.updateProfilePicture(newAvatarPath);
       await AppData().updateProfilePicture(newAvatarPath);
 
+      // ← ADD THIS: tells the drawer to re-read from AppData
+      InstantCache.invalidate();
+
       imageCache.evict(NetworkImage(newAvatarPath));
       _userController.profilePictureVersion.value++;
 
-      // Reload profile to reflect server state
       setState(() {
         _isUploading = false;
         _loadProfile();
@@ -433,13 +432,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     } catch (e) {
       setState(() {
         _isUploading = false;
-        _errorMessage = 'Failed to upload image: $e';
+        _errorMessage = e.toString();
       });
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to upload image: $e')));
-      }
     }
   }
 
@@ -540,57 +534,52 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           itemCount: list.length,
           itemBuilder: (context, index) {
             final person = list[index];
-            return FutureBuilder<bool>(
-              future: FollowService.checkFollowStatus(person.email),
-              builder: (context, followSnap) {
-                final isFollowing = followSnap.data ?? initialFollowStatus;
-                final pictureUrl = person.fullPictureUrl;
+            final pictureUrl = person.fullPictureUrl;
 
-                return ListTile(
-                  leading: CircleAvatar(
-                    radius: 24,
-                    backgroundColor: const Color.fromRGBO(235, 111, 70, 0.2),
-                    backgroundImage:
-                        pictureUrl != null ? NetworkImage(pictureUrl) : null,
-                    child:
-                        pictureUrl == null
-                            ? const Icon(
-                              Icons.person,
-                              color: Color.fromRGBO(244, 135, 6, 1),
-                            )
-                            : null,
-                  ),
-                  title: GestureDetector(
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder:
-                              (_) => SpecificUserProfilePage(userId: person.id),
-                        ),
-                      );
-                    },
-                    child: Text(person.name),
-                  ),
-                  subtitle: Text(person.email),
-                  trailing:
-                      followSnap.connectionState == ConnectionState.waiting
-                          ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                          : FollowButton(
-                            targetUserEmail: person.email,
-                            initialFollowStatus: isFollowing,
-                            onFollowSuccess: onRefresh,
-                            onUnfollowSuccess: onRefresh,
-                            size: 36,
-                            targetUserId: '${person.id}',
-                          ),
-                );
-              },
+            // Display name: full_name if available, else @username
+            final displayName =
+                person.name.isNotEmpty
+                    ? person.name
+                    : '@${person.username ?? ''}';
+
+            return ListTile(
+              leading: CircleAvatar(
+                radius: 24,
+                backgroundColor: const Color.fromRGBO(235, 111, 70, 0.2),
+                backgroundImage:
+                    pictureUrl != null ? NetworkImage(pictureUrl) : null,
+                child:
+                    pictureUrl == null
+                        ? const Icon(
+                          Icons.person,
+                          color: Color.fromRGBO(244, 135, 6, 1),
+                        )
+                        : null,
+              ),
+              title: GestureDetector(
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (_) => SpecificUserProfilePage(userId: person.id),
+                    ),
+                  );
+                },
+                child: Text(displayName),
+              ),
+              subtitle: Text(
+                person.username != null ? '@${person.username}' : person.email,
+              ),
+              trailing: FollowButton(
+                targetUserEmail: person.email,
+                initialFollowStatus: initialFollowStatus,
+                onFollowSuccess: onRefresh,
+                onUnfollowSuccess: onRefresh,
+                size: 36,
+                targetUserId: person.id,
+              ),
             );
           },
         );
@@ -1059,7 +1048,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text('My Profile'),
-        backgroundColor: const Color.fromRGBO(244, 135, 6, 1),
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),

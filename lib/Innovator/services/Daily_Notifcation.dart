@@ -27,7 +27,7 @@
 //   // Engaging thoughts for innovators
 //   static final List<String> _innovatorThoughts = [
 //     "💡 Every problem is an opportunity for innovation waiting to be discovered!",
-//     "🚀 Today's crazy idea could be tomorrow's breakthrough technology.",
+//     "Today's crazy idea could be tomorrow's breakthrough technology.",
 //     "🌟 Innovation starts with questioning 'What if we did this differently?'",
 //     "🔥 The best time to plant a tree was 20 years ago. The second best time is now!",
 //     "💎 Your unique perspective is your superpower in the innovation game.",

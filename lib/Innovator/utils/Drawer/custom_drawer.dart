@@ -1,5 +1,6 @@
 import 'dart:developer' as developer;
 import 'dart:math' as math;
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
@@ -11,10 +12,9 @@ import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Login.dart';
 import 'package:innovator/Innovator/controllers/user_controller.dart';
+import 'package:innovator/Innovator/screens/Course/home.dart';
+import 'package:innovator/Innovator/screens/Shop/Shop_Page.dart';
 import 'package:innovator/KMS/core/constants/service/auth_wrapper.dart';
-import 'package:innovator/KMS/screens/auth/login_screen.dart';
-import 'package:innovator/KMS/screens/auth/signup_screen.dart';
-import 'package:innovator/main.dart';
 import 'package:innovator/Innovator/screens/Eliza_ChatBot/Elizahomescreen.dart';
 import 'package:innovator/Innovator/screens/Events/Events.dart';
 import 'package:innovator/Innovator/screens/F&Q/F&Qscreen.dart';
@@ -23,54 +23,95 @@ import 'package:innovator/Innovator/screens/Profile/profile_page.dart';
 import 'package:innovator/Innovator/screens/Report/Report_screen.dart';
 import 'package:innovator/Innovator/screens/Settings/settings.dart';
 import 'package:innovator/Innovator/utils/Drawer/drawer_cache_manager.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-// Synchronous-only cache for instant access
+// ─────────────────────────────────────────────────────────────────────────────
+// InstantCache — synchronous cache with change notifications
+// ─────────────────────────────────────────────────────────────────────────────
 class InstantCache {
   static Map<String, dynamic>? _data;
   static bool _isInitialized = false;
 
-  // Initialize with current AppData - called once at app start
+  /// Bump this whenever data changes so open drawers can react instantly.
+  static final ValueNotifier<int> version = ValueNotifier(0);
+
   static void init() {
     if (!_isInitialized) {
-      final appData = AppData().currentUser;
-      if (appData != null) {
-        _data = Map<String, dynamic>.from(appData);
-      }
+      _reloadFromAppData();
       _isInitialized = true;
     }
   }
 
-  // Get data synchronously (never null - returns default if empty)
+  static void _reloadFromAppData() {
+    final userData = AppData().currentUser;
+    if (userData == null) return;
+
+    final photoUrl = userData['photo_url']?.toString() ?? '';
+    final profileAvatar =
+        (userData['profile'] as Map<String, dynamic>?)?['avatar']?.toString() ??
+        '';
+    final legacyPicture = userData['picture']?.toString() ?? '';
+
+    _data = {
+      'name':
+          userData['full_name']?.toString()?.isNotEmpty == true
+              ? userData['full_name'].toString()
+              : userData['username']?.toString()?.isNotEmpty == true
+              ? userData['username'].toString()
+              : userData['name']?.toString() ?? 'User',
+      'email': userData['email']?.toString() ?? '',
+      'picture':
+          photoUrl.isNotEmpty
+              ? photoUrl
+              : profileAvatar.isNotEmpty
+              ? profileAvatar
+              : legacyPicture.isNotEmpty
+              ? legacyPicture
+              : null,
+    };
+  }
+
+  /// Get data synchronously — never null.
   static Map<String, dynamic> get() {
-    init(); // Ensure initialized
+    init();
     return _data ?? {'name': 'User', 'email': '', 'picture': null};
   }
 
+  /// Called after a successful avatar upload anywhere in the app.
+  /// Re-reads AppData and notifies all open drawer instances.
+  static void invalidate() {
+    _isInitialized = false;
+    _reloadFromAppData();
+    _isInitialized = true;
+    version.value++;
+  }
+
+  /// Manual update (e.g. from network fetch).
   static void update(Map<String, dynamic> newData) {
     _data = Map<String, dynamic>.from(newData);
+    version.value++;
   }
 
   static void clear() {
     _data = null;
     _isInitialized = false;
+    version.value++;
   }
 }
 
-// INSTANT drawer service - zero async operations
+// ─────────────────────────────────────────────────────────────────────────────
+// InstantDrawerService
+// ─────────────────────────────────────────────────────────────────────────────
 class InstantDrawerService {
   static void show(BuildContext context) {
-    // Pre-initialize cache before showing drawer
     InstantCache.init();
-
     Navigator.of(context).push(
       PageRouteBuilder(
         opaque: false,
         barrierDismissible: true,
         barrierColor: Colors.black54,
-        transitionDuration: const Duration(milliseconds: 120), // Even faster
+        transitionDuration: const Duration(milliseconds: 120),
         reverseTransitionDuration: const Duration(milliseconds: 80),
         pageBuilder: (context, animation, _) {
           return _InstantDrawerOverlay(
@@ -86,6 +127,9 @@ class InstantDrawerService {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// _InstantDrawerOverlay
+// ─────────────────────────────────────────────────────────────────────────────
 class _InstantDrawerOverlay extends StatelessWidget {
   final Animation<double> animation;
   final double drawerWidth;
@@ -114,7 +158,7 @@ class _InstantDrawerOverlay extends StatelessWidget {
                     color: Colors.black.withOpacity(0.5 * animation.value),
                   ),
             ),
-            // Drawer
+            // Drawer panel
             AnimatedBuilder(
               animation: animation,
               builder:
@@ -151,7 +195,9 @@ class _InstantDrawerOverlay extends StatelessWidget {
   }
 }
 
-// Truly instant drawer - no async operations in initState or build
+// ─────────────────────────────────────────────────────────────────────────────
+// TrueInstantDrawer
+// ─────────────────────────────────────────────────────────────────────────────
 class TrueInstantDrawer extends StatefulWidget {
   const TrueInstantDrawer({super.key});
 
@@ -160,40 +206,99 @@ class TrueInstantDrawer extends StatefulWidget {
 }
 
 class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
-  // Display data - populated synchronously
   late String _userName;
   late String _userEmail;
   late String? _userPicture;
   bool _isRefreshing = false;
-  bool _KMSEnabled = false; // Move here and initialize to false
+  bool _KMSEnabled = false;
 
   @override
   void initState() {
     super.initState();
-    // CRITICAL: Only synchronous operations here
     _loadDataSynchronously();
-    _KMSEnabled = false; // Explicitly set to false on init
+    _KMSEnabled = false;
 
-    // Start background refresh AFTER drawer is shown
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _refreshInBackground();
+    // React to avatar/profile changes from anywhere in the app
+    InstantCache.version.addListener(_onCacheUpdated);
+
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) _refreshInBackground();
     });
   }
 
-  void _loadDataSynchronously() {
-    // Get cached data instantly - never blocks
+  @override
+  void dispose() {
+    InstantCache.version.removeListener(_onCacheUpdated);
+    super.dispose();
+  }
+
+  // ── Cache listener ──────────────────────────────────────────────────────────
+
+  void _onCacheUpdated() {
+    if (!mounted) return;
     final data = InstantCache.get();
-    _userName = data['name'] ?? 'User';
-    _userEmail = data['email'] ?? '';
-    _userPicture = data['picture'];
+
+    // Evict old URL from image cache before applying new one
+    if (_userPicture != null && _userPicture!.isNotEmpty) {
+      final oldUrl =
+          _userPicture!.startsWith('http')
+              ? _userPicture!
+              : 'http://182.93.94.220:8005$_userPicture';
+      imageCache.evict(CachedNetworkImageProvider(oldUrl));
+    }
+
+    setState(() {
+      _userName = data['name'] ?? 'User';
+      _userEmail = data['email'] ?? '';
+      _userPicture = data['picture'];
+    });
+  }
+
+  // ── Data loading ────────────────────────────────────────────────────────────
+
+  void _loadDataSynchronously() {
+    final appData = AppData();
+    final userData = appData.currentUser;
+
+    _userName =
+        userData?['full_name']?.toString()?.isNotEmpty == true
+            ? userData!['full_name'].toString()
+            : userData?['username']?.toString()?.isNotEmpty == true
+            ? userData!['username'].toString()
+            : userData?['name']?.toString() ?? 'User';
+
+    _userEmail = userData?['email']?.toString() ?? '';
+
+    final photoUrl = userData?['photo_url']?.toString() ?? '';
+    final profileAvatar =
+        (userData?['profile'] as Map<String, dynamic>?)?['avatar']
+            ?.toString() ??
+        '';
+    final legacyPicture = userData?['picture']?.toString() ?? '';
+
+    _userPicture =
+        photoUrl.isNotEmpty
+            ? photoUrl
+            : profileAvatar.isNotEmpty
+            ? profileAvatar
+            : legacyPicture.isNotEmpty
+            ? legacyPicture
+            : null;
+
+    // Seed cache so version listener has fresh data
+    // InstantCache.update({
+    //   'name': _userName,
+    //   'email': _userEmail,
+    //   'picture': _userPicture,
+    // });
   }
 
   void _refreshInBackground() async {
-    // This runs AFTER the drawer is already open
+    if (mounted) setState(() => _isRefreshing = true);
     try {
-      setState(() => _isRefreshing = true);
+      //setState(() => _isRefreshing = true);
 
-      // Try persistent cache first
+      // Layer 1: Hive persistent cache
       final persistentCache = await DrawerProfileCache.getCachedProfile();
       if (persistentCache != null && mounted) {
         final data = {
@@ -201,29 +306,26 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
           'email': persistentCache.email,
           'picture': persistentCache.picturePath,
         };
-        _updateData(data);
+        _updateDisplayData(data);
         InstantCache.update(data);
       }
 
-      // Then try network
+      // Layer 2: Network
       await _fetchFromNetwork();
     } catch (e) {
       developer.log('Background refresh failed: $e');
     } finally {
-      if (mounted) {
-        setState(() => _isRefreshing = false);
-      }
+      if (mounted && _isRefreshing) setState(() => _isRefreshing = false);
     }
   }
 
-  void _updateData(Map<String, dynamic> data) {
-    if (mounted) {
-      setState(() {
-        _userName = data['name'] ?? 'User';
-        _userEmail = data['email'] ?? '';
-        _userPicture = data['picture'];
-      });
-    }
+  void _updateDisplayData(Map<String, dynamic> data) {
+    if (!mounted) return;
+    setState(() {
+      _userName = data['name'] ?? 'User';
+      _userEmail = data['email'] ?? '';
+      _userPicture = data['picture'];
+    });
   }
 
   Future<void> _fetchFromNetwork() async {
@@ -233,7 +335,7 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
 
       final response = await http
           .get(
-            Uri.parse('http://182.93.94.210:3067/api/v1/user-profile'),
+            Uri.parse('http://182.93.94.220:8005/api/users/me/'),
             headers: {
               'Content-Type': 'application/json',
               'Authorization': 'Bearer $authToken',
@@ -242,27 +344,53 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
           .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200 && mounted) {
-        final responseData = json.decode(response.body);
-        if (responseData['status'] == 200 && responseData['data'] != null) {
-          final userData = responseData['data'];
+        final responseData = json.decode(response.body) as Map<String, dynamic>;
 
-          // Update all storage
-          InstantCache.update(userData);
-          AppData().updateUser(userData);
-          await DrawerProfileCache.cacheProfile(
-            userId: userData['_id'] ?? '',
-            name: userData['name'] ?? '',
-            email: userData['email'] ?? '',
-            picturePath: userData['picture'],
-          );
+        // Normalize new API shape → flat drawer data
+        final profile = responseData['profile'] as Map<String, dynamic>? ?? {};
 
-          _updateData(userData);
-        }
+        final fullName = responseData['full_name']?.toString() ?? '';
+        final username = responseData['username']?.toString() ?? '';
+        final normalizedName =
+            fullName.isNotEmpty
+                ? fullName
+                : username.isNotEmpty
+                ? username
+                : 'User';
+
+        final avatarPath = profile['avatar']?.toString() ?? '';
+        final photoUrl = responseData['photo_url']?.toString() ?? '';
+        final normalizedPicture =
+            photoUrl.isNotEmpty
+                ? photoUrl
+                : avatarPath.isNotEmpty
+                ? avatarPath
+                : null;
+
+        final drawerData = {
+          'name': normalizedName,
+          'email': responseData['email']?.toString() ?? '',
+          'picture': normalizedPicture,
+        };
+
+        // Update all layers
+        InstantCache.update(drawerData);
+        await AppData().updateUser(responseData);
+        await DrawerProfileCache.cacheProfile(
+          userId: responseData['id']?.toString() ?? '',
+          name: normalizedName,
+          email: responseData['email']?.toString() ?? '',
+          picturePath: normalizedPicture,
+        );
+
+        _updateDisplayData(drawerData);
       }
     } catch (e) {
       developer.log('Network fetch failed: $e');
     }
   }
+
+  // ── Build ───────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -279,7 +407,7 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
                 context,
                 MaterialPageRoute(
                   builder:
-                      (context) => UserProfileScreen(
+                      (_) => UserProfileScreen(
                         userId: AppData().currentUserId ?? '',
                       ),
                 ),
@@ -293,18 +421,20 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
     );
   }
 
-  //bool _KMSEnabled = false;
+  // ── Header ──────────────────────────────────────────────────────────────────
 
   Widget _buildHeader() {
     return Container(
-      // height: MediaQuery.of(context).size.height * 0.34,
-      // width: MediaQuery.of(context).size.width * 0.68,
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFEB6B46), Color(0xFFFF8A65), Color(0xFFEB6B46)],
+          colors: [
+            Color.fromRGBO(244, 135, 6, 1),
+            Color.fromRGBO(244, 135, 6, 0.9),
+            Color.fromRGBO(244, 135, 6, 1),
+          ],
         ),
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(50),
@@ -317,7 +447,7 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Profile picture
+              // Avatar with refresh indicator
               Stack(
                 children: [
                   Container(
@@ -333,7 +463,6 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
                     ),
                     child: _buildProfileImage(),
                   ),
-                  // Refresh indicator
                   if (_isRefreshing)
                     Positioned(
                       bottom: 0,
@@ -349,7 +478,7 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
                           height: 12,
                           child: CircularProgressIndicator(
                             strokeWidth: 1.5,
-                            color: Color(0xFFEB6B46),
+                            color: Color.fromRGBO(244, 135, 6, 1),
                           ),
                         ),
                       ),
@@ -358,7 +487,6 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
               ),
               const SizedBox(height: 20),
 
-              // Welcome text
               const Text(
                 'Welcome Back',
                 style: TextStyle(
@@ -367,28 +495,33 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
                   fontWeight: FontWeight.w500,
                 ),
               ),
+              _isRefreshing && _userName == 'User'
+                  ? const SizedBox(
+                    width: 100,
+                    height: 20,
+                    child: LinearProgressIndicator(
+                      color: Colors.white70,
+                      backgroundColor: Colors.white24,
+                    ),
+                  )
+                  : Text(
+                    _userName.toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 24,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Inter Thin',
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
 
-              Text(
-                _userName,
-                style: const TextStyle(
-                  fontSize: 24,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Inter Thin',
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-
-              // Email
               if (_userEmail.isNotEmpty) ...[
                 Container(
-                  padding: EdgeInsets.only(
-                    right: 10,
-                    left: 10,
-                    top: 0,
-                    bottom: 0,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 0,
                   ),
                   decoration: BoxDecoration(
                     color: Colors.white.withAlpha(20),
@@ -404,17 +537,15 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
                   ),
                 ),
               ],
+
               const SizedBox(height: 5),
+
+              // KMS toggle
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 3,
                 ),
-                // decoration: BoxDecoration(
-                //   color: Colors.white.withAlpha(15),
-                //   borderRadius: BorderRadius.circular(20),
-                //   //border: Border.all(color: Colors.white.withAlpha(30)),
-                // ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -446,8 +577,6 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
                           );
                         }
                       },
-                      // activeColor: Colors.white,
-                      //activeTrackColor: Colors.green,
                       inactiveTrackColor: Colors.white.withAlpha(20),
                     ),
                   ],
@@ -460,33 +589,60 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
     );
   }
 
-  Widget _buildProfileImage() {
-    const baseUrl = 'http://182.93.94.210:3067';
+  // ── Profile image ───────────────────────────────────────────────────────────
 
-    // NO HERO WIDGET - Simple Container to avoid conflicts
+  Widget _buildProfileImage() {
+    const baseUrl = 'http://182.93.94.220:8005';
+    String? resolvedUrl;
+    if (_userPicture != null && _userPicture!.isNotEmpty) {
+      resolvedUrl =
+          _userPicture!.startsWith('http')
+              ? _userPicture!
+              : '$baseUrl$_userPicture';
+    }
+    final versionedUrl =
+        resolvedUrl != null
+            ? '$resolvedUrl?v=${InstantCache.version.value}'
+            : null;
+
     return Container(
       width: 70,
       height: 70,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: Colors.white.withAlpha(20),
-        image:
-            _userPicture != null && _userPicture!.isNotEmpty
-                ? DecorationImage(
-                  image: CachedNetworkImageProvider('$baseUrl$_userPicture'),
-                  fit: BoxFit.cover,
-                  onError: (exception, stackTrace) {
-                    // Handle error silently
-                  },
-                )
-                : null,
       ),
       child:
-          _userPicture == null || _userPicture!.isEmpty
-              ? const Icon(Icons.person, size: 35, color: Colors.white)
-              : null,
+          _isRefreshing && versionedUrl == null
+              ? const CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2,
+              )
+              : versionedUrl != null
+              ? ClipOval(
+                child: CachedNetworkImage(
+                  imageUrl: versionedUrl,
+                  fit: BoxFit.cover,
+                  width: 70,
+                  height: 70,
+                  placeholder:
+                      (_, __) => const CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                  errorWidget:
+                      (_, __, ___) => const Icon(
+                        Icons.person,
+                        size: 35,
+                        color: Colors.white,
+                      ),
+                ),
+              )
+              : const Icon(Icons.person, size: 35, color: Colors.white),
     );
   }
+
+  // ── Menu ────────────────────────────────────────────────────────────────────
 
   Widget _buildMenu() {
     return SingleChildScrollView(
@@ -494,120 +650,6 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
       padding: const EdgeInsets.symmetric(vertical: 20),
       child: Column(
         children: [
-          // _QuickMenuItem(icon: Icons.app_blocking_sharp, title: 'KMS', onTap: (){
-          //                     showDialog(
-          //   context: context,
-          //   builder: (dialogContext) => AlertDialog(
-          //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          //     backgroundColor: Colors.white,
-          //     title: const Text(
-          //       '🚀 Coming Soon',
-          //       style: TextStyle(
-          //         fontSize: 20,
-          //         fontWeight: FontWeight.bold,
-          //         color: Color(0xFFEB6B46),
-          //       ),
-          //       textAlign: TextAlign.center,
-          //     ),
-          //     content: Column(
-          //       mainAxisSize: MainAxisSize.min,
-          //       children: [
-          //         Container(
-          //           padding: const EdgeInsets.all(20),
-          //           decoration: BoxDecoration(
-          //             gradient: const LinearGradient(
-          //               colors: [Color(0xFFEB6B46), Color(0xFFFF8A65)],
-          //             ),
-          //             borderRadius: BorderRadius.circular(15),
-          //           ),
-          //           child: const Text(
-          //             '📊',
-          //             style: TextStyle(fontSize: 60),
-          //             textAlign: TextAlign.center,
-          //           ),
-          //         ),
-          //         const SizedBox(height: 20),
-          //         const Text(
-          //           'Knowledge Management System',
-          //           style: TextStyle(
-          //             fontSize: 16,
-          //             fontWeight: FontWeight.w600,
-          //             color: Colors.grey,
-          //           ),
-          //           textAlign: TextAlign.center,
-          //         ),
-          //         const SizedBox(height: 15),
-          //         Container(
-          //           padding: const EdgeInsets.all(12),
-          //           decoration: BoxDecoration(
-          //             color: Colors.blue.withAlpha(10),
-          //             borderRadius: BorderRadius.circular(10),
-          //             border: Border.all(
-          //               color: Colors.blue.withAlpha(30),
-          //               width: 1,
-          //             ),
-          //           ),
-          //           child: const Text(
-          //             '✨ We\'re working on something amazing! The KMS feature will help you manage and organize knowledge efficiently.\n\n💡 Stay tuned for updates!',
-          //             style: TextStyle(
-          //               fontSize: 14,
-          //               color: Colors.black87,
-          //               height: 1.5,
-          //             ),
-          //             textAlign: TextAlign.center,
-          //           ),
-          //         ),
-          //         const SizedBox(height: 15),
-          //         Row(
-          //           mainAxisAlignment: MainAxisAlignment.center,
-          //           children: [
-          //             Container(
-          //               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          //               decoration: BoxDecoration(
-          //                 color: Colors.amber.withAlpha(20),
-          //                 borderRadius: BorderRadius.circular(20),
-          //               ),
-          //               child: const Row(
-          //                 children: [
-          //                   Text('🔔', style: TextStyle(fontSize: 14)),
-          //                   SizedBox(width: 6),
-          //                   Text(
-          //                     'Notify Me',
-          //                     style: TextStyle(
-          //                       fontSize: 12,
-          //                       fontWeight: FontWeight.w600,
-          //                       color: Colors.amber,
-          //                     ),
-          //                   ),
-          //                 ],
-          //               ),
-          //             ),
-          //           ],
-          //         ),
-          //       ],
-          //     ),
-          //     actions: [
-          //       TextButton(
-          //         onPressed: () => Navigator.pop(dialogContext),
-          //         child: const Text(
-          //           'Got It! 👍',
-          //           style: TextStyle(
-          //             fontSize: 14,
-          //             fontWeight: FontWeight.w600,
-          //             color: Color(0xFFEB6B46),
-          //           ),
-          //         ),
-          //       ),
-          //     ],
-          //     actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
-          //   ),
-          // );
-          //Navigator.push(context, MaterialPageRoute(builder: (_) => LoginScreen()));
-          //              }),
-          //_QuickMenuItem(icon: Icons.message_rounded, title: 'Messages', onTap: _goToMessages),
-          //  _QuickMenuItem(icon: Icons.help_rounded, title: 'Payment', onTap: (){
-          //   Navigator.push(context, MaterialPageRoute(builder: (context)=>PaymentScreen()));
-          //  }),
           _QuickMenuItem(
             icon: Icons.person_rounded,
             title: 'Profile',
@@ -617,6 +659,16 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
             icon: Icons.psychology_rounded,
             title: 'Eliza ChatBot',
             onTap: _goToEliza,
+          ),
+          _QuickMenuItem(
+            icon: Icons.menu_book_rounded,
+            title: 'E-Learning',
+            onTap: _gotoelearning,
+          ),
+          _QuickMenuItem(
+            icon: Icons.shop,
+            title: 'Shop',
+            onTap: _gotoecommerce,
           ),
           _QuickMenuItem(
             icon: Icons.event_available,
@@ -683,12 +735,12 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFFEB6B46).withAlpha(10),
+              color: const Color.fromRGBO(244, 135, 6, 1).withAlpha(10),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(
               Icons.rocket_launch,
-              color: Color(0xFFEB6B46),
+              color: Color.fromRGBO(244, 135, 6, 1),
               size: 20,
             ),
           ),
@@ -697,7 +749,7 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Innovator App v:1.0.42',
+                'Innovator App v:1.0.44',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -719,8 +771,8 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
     );
   }
 
-  // Navigation methods - all instant
-  // void _goToMessages() => _quickNavigate(() => const OptimizedChatHomePage());
+  // ── Navigation ──────────────────────────────────────────────────────────────
+
   void _goToProfile() => _quickNavigate(
     () => ProviderScope(
       child: UserProfileScreen(userId: AppData().currentUserId ?? ''),
@@ -728,6 +780,8 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
   );
   void _goToEliza() => _quickNavigate(() => ElizaChatScreen());
   void _goToEvents() => _quickNavigate(() => EventsHomePage());
+  void _gotoelearning() => _quickNavigate(() => const HomeScreen());
+  void _gotoecommerce() => _quickNavigate(() => const ShopPage());
   void _goToReports() => _quickNavigate(() => ReportsScreen());
   void _goToPrivacy() =>
       _quickNavigate(() => const ProviderScope(child: PrivacyPolicy()));
@@ -735,9 +789,11 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
   void _goToFAQ() => _quickNavigate(() => const FAQScreen());
 
   void _quickNavigate(Widget Function() builder) {
-    Navigator.of(context).pop(); // Close drawer
+    Navigator.of(context).pop();
     Navigator.push(context, MaterialPageRoute(builder: (_) => builder()));
   }
+
+  // ── Logout ──────────────────────────────────────────────────────────────────
 
   void _showLogout() {
     showDialog(
@@ -757,11 +813,9 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
               ElevatedButton(
                 onPressed: () {
                   AppData().clearAuthToken();
-                  Navigator.of(dialogContext).pop(); // Close dialog immediately
+                  InstantCache.clear();
+                  Navigator.of(dialogContext).pop();
                 },
-                // => _performLogout(
-                //   dialogContext,
-                // ), // Fixed: Call with dialogContext
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                 child: const Text(
                   'Logout',
@@ -775,91 +829,55 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
 
   Future<void> _performLogout(BuildContext dialogContext) async {
     try {
-      developer.log('🚪 Starting optimized logout process...');
-
-      // Close confirmation dialog immediately
+      developer.log('🚪 Starting logout...');
       Navigator.of(dialogContext).pop();
       AppData().clearAuthToken();
 
-      // Optionally close drawer to stay on underlying screen (comment out if you want drawer to stay open during loading)
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(
-          context,
-        ).pop(); // Pop drawer - now "stays" on the previous screen
-      }
+      if (Navigator.of(context).canPop()) Navigator.of(context).pop();
 
-      // Show centered CircularProgressIndicator overlay (non-fullscreen, dismissible only by code)
       _showGlobalLoading(true);
-
-      // Execute cleanup in background
       await _executeOptimizedLogout();
-
-      // Brief pause for smooth transition (optional)
       await Future.delayed(const Duration(milliseconds: 500));
-
-      // Close loading overlay
       _showGlobalLoading(false);
 
-      // Direct navigation using GLOBAL KEY (reliable, clears stack)
-      developer.log('Direct navigation to login page...');
       navigatorKey.currentState?.pushAndRemoveUntil(
         MaterialPageRoute(
           builder: (context) => const LoginPage(),
           settings: const RouteSettings(name: '/login'),
         ),
-        (route) => false, // Clears entire stack
+        (route) => false,
       );
-      developer.log('Direct navigation to login completed');
     } catch (e) {
-      developer.log(' Error during logout: $e');
-
-      // Emergency: Close loading and force direct navigation
+      developer.log('Error during logout: $e');
       _showGlobalLoading(false);
-
       try {
-        // Brief pause in emergency too
         await Future.delayed(const Duration(milliseconds: 300));
-
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => LoginPage()),
           (route) => false,
         );
-        developer.log('Emergency direct navigation to login completed');
       } catch (navError) {
-        developer.log(' Emergency navigation failed: $navError');
-        // Fallback: If global key fails, try root navigator
-        navigatorKey.currentState?.context
-            .findRootAncestorStateOfType<NavigatorState>()
-            ?.pushAndRemoveUntil(
-              MaterialPageRoute(builder: (context) => const LoginPage()),
-              (route) => false,
-            );
+        developer.log('Emergency navigation failed: $navError');
       }
     }
   }
 
-  // Updated: Non-fullscreen, centered CircularProgressIndicator overlay
   void _showGlobalLoading(bool show) {
     if (show) {
-      // Use showDialog for lightweight, centered overlay (stays on current screen)
       showDialog(
-        context:
-            navigatorKey.currentContext ?? context, // Fallback to local context
-        barrierDismissible: false, // Can't dismiss by tapping outside
+        context: navigatorKey.currentContext ?? context,
+        barrierDismissible: false,
         builder:
             (context) => const Dialog(
-              backgroundColor: Colors.transparent, // No background dialog color
-              insetPadding: EdgeInsets.symmetric(
-                horizontal: 40,
-                vertical: 200,
-              ), // Compact sizing
+              backgroundColor: Colors.transparent,
+              insetPadding: EdgeInsets.symmetric(horizontal: 40, vertical: 200),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   CircularProgressIndicator(
-                    color: Color(0xFFEB6B46),
-                  ), // Your app's color
+                    color: Color.fromRGBO(244, 135, 6, 1),
+                  ),
                   SizedBox(height: 16),
                   Text(
                     'Logging out...',
@@ -868,101 +886,45 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
                 ],
               ),
             ),
-      ).then((_) {
-        // Auto-dismiss if needed (but we control it manually)
-      });
-      developer.log('Loading overlay shown');
+      );
     } else {
-      // Dismiss the loading dialog (pops the top route if it's the loading one)
       if (navigatorKey.currentState?.canPop() ?? false) {
         navigatorKey.currentState?.pop();
-        developer.log('Loading overlay dismissed');
       }
     }
   }
 
-  // Optimized logout execution
   Future<void> _executeOptimizedLogout() async {
-    developer.log('🧹 Executing optimized logout...');
-
-    // Step 1: Cancel streams immediately to prevent permission errors
-    // try {
-    //   if (Get.isRegistered<FireChatController>()) {
-    //     final chatController = Get.find<FireChatController>();
-    //     await chatController.cancelAllStreamSubscriptionsImmediate();
-    //     developer.log('Chat streams canceled immediately');
-    //   }
-    // } catch (e) {
-    //   developer.log(' Error canceling chat streams: $e');
-    // }
-
-    // Step 2: Update user status to offline (with timeout)
-    // try {
-    //   final currentUser = AppData().currentUser;
-    //   if (currentUser != null && currentUser['_id'] != null) {
-    //     await FirebaseService.updateUserStatus(
-    //       currentUser['_id'],
-    //       false,
-    //     ).timeout(const Duration(seconds: 3));
-    //     developer.log('User status updated to offline');
-    //   }
-    // } catch (e) {
-    //   developer.log(' Failed to update user status: $e');
-    // }
-
-    // Step 3: Sign out from Firebase Auth
     try {
       await FirebaseAuth.instance.signOut();
       await GoogleSignIn().signOut();
-      developer.log('Signed out from Firebase and Google');
     } catch (e) {
-      developer.log(' Error signing out from Firebase: $e');
+      developer.log('Firebase signout error: $e');
     }
-
-    // Step 4: Clear controllers
-    // try {
-    //   if (Get.isRegistered<FireChatController>()) {
-    //     final chatController = Get.find<FireChatController>();
-    //     await chatController.completeLogoutAfterSignout();
-    //     Get.delete<FireChatController>(force: true);
-    //     developer.log('Chat controller cleared');
-    //   }
-    // } catch (e) {
-    //   developer.log(' Error clearing chat controller: $e');
-    // }
 
     try {
       if (Get.isRegistered<UserController>()) {
         Get.delete<UserController>(force: true);
-        developer.log('User controller cleared');
       }
     } catch (e) {
-      developer.log(' Error clearing user controller: $e');
+      developer.log('UserController clear error: $e');
     }
 
-    // Step 5: Clear AppData
-    try {
-      // await AppData().clearAuthToken();
-      developer.log('AppData cleared');
-    } catch (e) {
-      developer.log(' Error clearing AppData: $e');
-    }
-
-    // Step 6: Clear all caches
     try {
       await DrawerProfileCache.clearCache();
       await DefaultCacheManager().emptyCache();
-      // OptimizedProfileCache.clearCache();
-      developer.log('All caches cleared');
     } catch (e) {
-      developer.log(' Error clearing caches: $e');
+      developer.log('Cache clear error: $e');
     }
 
-    developer.log('Optimized logout execution finished');
+    InstantCache.clear();
+    developer.log('Logout complete');
   }
 }
 
-// Ultra-lightweight menu item
+// ─────────────────────────────────────────────────────────────────────────────
+// _QuickMenuItem
+// ─────────────────────────────────────────────────────────────────────────────
 class _QuickMenuItem extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -1006,12 +968,15 @@ class _QuickMenuItem extends StatelessWidget {
                   color:
                       isLogout
                           ? Colors.red.withAlpha(10)
-                          : const Color(0xFFEB6B46).withAlpha(10),
+                          : const Color.fromRGBO(244, 135, 6, 1).withAlpha(10),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   icon,
-                  color: isLogout ? Colors.red : const Color(0xFFEB6B46),
+                  color:
+                      isLogout
+                          ? Colors.red
+                          : const Color.fromRGBO(244, 135, 6, 1),
                   size: 22,
                 ),
               ),
@@ -1039,14 +1004,15 @@ class _QuickMenuItem extends StatelessWidget {
   }
 }
 
-// Public interface
+// ─────────────────────────────────────────────────────────────────────────────
+// Public interface & compatibility aliases
+// ─────────────────────────────────────────────────────────────────────────────
 class SmoothDrawerService {
   static void showLeftDrawer(BuildContext context) {
     InstantDrawerService.show(context);
   }
 }
 
-// Compatibility classes
 class CustomDrawer extends TrueInstantDrawer {
   const CustomDrawer({super.key});
 }
