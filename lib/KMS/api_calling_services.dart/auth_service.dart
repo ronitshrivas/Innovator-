@@ -9,44 +9,6 @@ class AuthService extends BaseApiService {
   AuthService() : super(dio: DioClient.authInstance);
 
   final TokenService _tokenService = TokenService();
-
-  // Future<Map<String, dynamic>> login({
-  //   required String email,
-  //   required String password,
-  // }) async {
-  //   return await post<Map<String, dynamic>>(
-  //     ApiConstants.login,
-  //     data: {'email': email, 'password': password},
-  //   );
-  // }
-
-  // Future<Map<String, dynamic>> register({
-  //   required String userName,
-  //   required String email,
-  //   required String password,
-  //   required String role,
-  // }) async {
-  //   return await post<Map<String, dynamic>>(
-  //     ApiConstants.register,
-  //     data: {
-  //       'username': userName,
-  //       'email': email,
-  //       'password': password,
-  //       'role': role,
-  //     },
-  //   );
-  // }
-
-  // Future<void> logout() async {
-  //   await _tokenService.clearTokens();
-  //   DioClient.reset();
-  //   log('✅ Logged out — tokens cleared and Dio reset');
-  // }
-
-  // Future<bool> isLoggedIn() async {
-  //   return await _tokenService.hasToken();
-  // }
-
     Future<Map<String, dynamic>> login({
     required String email,
     required String password,
@@ -56,10 +18,10 @@ class AuthService extends BaseApiService {
       data: {'email': email, 'password': password},
     );
 
-    final role = response['role'] as String?;
+     final role = response['user']?['role'] as String?;
     if (role != null && role.isNotEmpty) {
       await _tokenService.saveRole(role);
-      log('💾 Role saved: $role');
+      log('Role saved: $role');
     }
 
     return response;
@@ -82,15 +44,14 @@ class AuthService extends BaseApiService {
     );
 
     await _tokenService.saveRole(role);
-    log('💾 Role saved on register: $role');
+    log('Role saved on register: $role');
 
     return response;
   }
 
   Future<void> logout() async {
     await _tokenService.clearTokens(); 
-    DioClient.reset();
-    log('✅ Logged out — tokens and role cleared, Dio reset');
+    log('Logged out — tokens and role cleared, Dio reset');
   }
 
   Future<bool> isLoggedIn() async {

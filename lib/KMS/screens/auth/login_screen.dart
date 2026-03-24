@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/KMS/core/constants/app_style.dart';
 import 'package:innovator/KMS/core/constants/mediaquery.dart';
 import 'package:innovator/KMS/provider/auth_provider.dart';
+import 'package:innovator/KMS/provider/teacher_provider.dart';
 import 'package:innovator/KMS/provider/user_provider.dart';
 import 'package:innovator/KMS/screens/auth/forgot_password_screen.dart';
 import 'package:innovator/KMS/screens/auth/signup_screen.dart';
@@ -49,28 +50,30 @@ class _KmsLoginScreenState extends ConsumerState<KmsLoginScreen> {
 
       switch (role) {
         case 'admin':
-        ref.refresh(userDetailsProvider);
+        ref.invalidate(userDetailsProvider);
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => AdminDashboardScreen()),
           );
           break;
         case 'coordinator':
-        ref.refresh(userDetailsProvider);
+        ref.invalidate(userDetailsProvider);
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => CoordinatorDashboardScreen()),
           );
           break;
         case 'teacher':
-        ref.refresh(userDetailsProvider);
+       ref.invalidate(userDetailsProvider);
+ref.invalidate(teacherProfileProvider);
+ref.invalidate(kycStatusProvider);
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => TeacherDashboardScreen()),
           );
           break;
         case 'student':
-        ref.refresh(userDetailsProvider);
+        ref.invalidate(userDetailsProvider);
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => StudentDashboardScreen()),
