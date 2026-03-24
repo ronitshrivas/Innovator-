@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/KMS/api_calling_services.dart/teacher_service.dart';
+import 'package:innovator/KMS/core/constants/service/token_service.dart';
 import 'package:innovator/KMS/model/teacher_model/student_model.dart';
 import 'package:innovator/KMS/model/teacher_model/teacher-profile.dart';
 import 'package:innovator/KMS/model/teacher_model/teacher_kyc_model.dart';
@@ -10,8 +11,19 @@ final teacherServiceProvider = Provider<TeacherService>(
   (_) => TeacherService(),
 );
 
-final teacherProfileProvider = FutureProvider<TeacherProfileModel>((ref) {
+// final teacherProfileProvider = FutureProvider<TeacherProfileModel>((ref) {
+//   return ref.watch(teacherServiceProvider).teacherProfile();
+// });
+final teacherProfileProvider = FutureProvider<TeacherProfileModel>((ref) async {
+  final token = await TokenService().getAccessToken();
+  if (token == null || token.isEmpty) throw Exception('No token — not logged in');
   return ref.watch(teacherServiceProvider).teacherProfile();
+});
+
+final kycStatusProvider = FutureProvider<KycModel>((ref) async {
+  final token = await TokenService().getAccessToken();
+  if (token == null || token.isEmpty) throw Exception('No token — not logged in');
+  return ref.watch(teacherServiceProvider).checkKycStatus();
 });
 
 final checkInProvider = FutureProvider.family<Map<String, dynamic>, String>(
@@ -37,9 +49,9 @@ final kycUploadProvider =
             nIdNumber: params['nIdNumber'] as String,
           ),
     );
-final kycStatusProvider = FutureProvider<KycModel>((ref) {
-  return ref.watch(teacherServiceProvider).checkKycStatus();
-});
+// final kycStatusProvider = FutureProvider<KycModel>((ref) {
+//   return ref.watch(teacherServiceProvider).checkKycStatus();
+// });
 
 final studentsProvider = FutureProvider<List<StudentModel>>((ref) {
   return ref.read(teacherServiceProvider).getStudents();

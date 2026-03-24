@@ -51,7 +51,7 @@ class AuthService extends BaseApiService {
 
   Future<void> logout() async {
     await _tokenService.clearTokens(); 
-    log('Logged out — tokens and role cleared, Dio reset');
+    log('Logged out — tokens and role cleared');
   }
 
   Future<bool> isLoggedIn() async {
