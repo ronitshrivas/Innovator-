@@ -243,7 +243,7 @@ class _CoordinatorInvoiceScreenState
   }
 }
 
-// ─── Skeleton ────────────────────────────────────────────────────────────────
+//  Skeleton 
 
 class _SkeletonCard extends StatefulWidget {
   final int index;
@@ -312,7 +312,7 @@ class _SkeletonCardState extends State<_SkeletonCard>
       );
 }
 
-// ─── Invoice Card ─────────────────────────────────────────────────────────────
+//  Invoice Card 
 
 class _InvoiceCard extends StatelessWidget {
   final CoordinatorInvoiceModel invoice;
@@ -497,7 +497,7 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
-// ─── Invoice Detail Screen ────────────────────────────────────────────────────
+//  Invoice Detail Screen 
 
 class CoordinatorInvoiceDetailScreen extends StatefulWidget {
   final CoordinatorInvoiceModel invoice;
@@ -721,7 +721,7 @@ class _CoordinatorInvoiceDetailScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Header ──
+                  //  Header 
                   Container(
                     width: double.infinity,
                     color: _darkNavy,
@@ -760,7 +760,7 @@ class _CoordinatorInvoiceDetailScreenState
                     ),
                   ),
 
-                  // ── Status row ──
+                  //  Status row 
                   Container(
                     color: const Color(0xFFF5F7FA),
                     padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
@@ -809,7 +809,7 @@ class _CoordinatorInvoiceDetailScreenState
 
                   const SizedBox(height: 20),
 
-                  // ── Table ──
+                  //  Table 
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Column(
@@ -837,7 +837,7 @@ class _CoordinatorInvoiceDetailScreenState
 
                   const SizedBox(height: 20),
 
-                  // ── Dashed divider ──
+                  //  Dashed divider 
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Row(
@@ -857,7 +857,7 @@ class _CoordinatorInvoiceDetailScreenState
 
                   const SizedBox(height: 16),
 
-                  // ── Notes ──
+                  //  Notes 
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Column(
@@ -879,7 +879,7 @@ class _CoordinatorInvoiceDetailScreenState
 
                   const SizedBox(height: 24),
 
-                  // ── Footer ──
+                  //  Footer 
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 18),

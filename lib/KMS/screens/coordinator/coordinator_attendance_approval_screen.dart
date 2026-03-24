@@ -170,7 +170,7 @@ class CoordinatorAttendanceApprovalScreen extends ConsumerWidget {
   }
 }
 
-// ─── Attendance Detail Screen ─────────────────────────────────────────────────
+//  Attendance Detail Screen 
 
 class CoordinatorAttendanceDetailScreen extends ConsumerStatefulWidget {
   final CoordinatorAttendanceModel item;
@@ -531,7 +531,7 @@ class _CoordinatorAttendanceDetailScreenState
   }
 }
 
-// ─── Shared detail widgets ────────────────────────────────────────────────────
+//  Shared detail widgets 
 
 class _DetailCard extends StatelessWidget {
   final List<Widget> children;
