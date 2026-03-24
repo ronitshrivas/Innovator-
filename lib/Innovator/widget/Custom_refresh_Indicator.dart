@@ -21,9 +21,9 @@ class _CustomRefreshIndicatorState extends State<CustomRefreshIndicator>
   bool _isRefreshing = false;
   late AnimationController _animationController;
   late Animation<double> _animation;
-  
+
   // Add scroll tracking
-  final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey = 
+  final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey =
       GlobalKey<RefreshIndicatorState>();
 
   @override
@@ -74,7 +74,8 @@ class _CustomRefreshIndicatorState extends State<CustomRefreshIndicator>
             // Prevent refresh on fast downward scrolls
             if (notification is OverscrollNotification) {
               // Only allow refresh on overscroll at the top (negative overscroll)
-              if (notification.overscroll < 0 && notification.metrics.pixels <= 0) {
+              if (notification.overscroll < 0 &&
+                  notification.metrics.pixels <= 0) {
                 // This is a valid pull-to-refresh at the top
                 return false; // Allow the refresh
               } else if (notification.overscroll > 0) {
@@ -122,10 +123,7 @@ class _CustomRefreshIndicatorState extends State<CustomRefreshIndicator>
                     Container(
                       width: 24,
                       height: 24,
-                      child: Image.asset(
-                        widget.gifPath,
-                        fit: BoxFit.contain,
-                      ),
+                      child: Image.asset(widget.gifPath, fit: BoxFit.contain),
                     ),
                     SizedBox(width: 8),
                     Text(

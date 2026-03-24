@@ -59,7 +59,7 @@
 //           crossAxisAlignment: CrossAxisAlignment.start,
 //           children: [
 //             const Text(
-//               '🚀 Daily Innovator Thoughts',
+//               'Daily Innovator Thoughts',
 //               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
 //             ),
 //             const SizedBox(height: 8),

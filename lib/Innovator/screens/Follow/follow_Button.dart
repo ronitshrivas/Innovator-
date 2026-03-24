@@ -47,6 +47,8 @@ class _FollowButtonState extends State<FollowButton>
   @override
   void initState() {
     super.initState();
+    // Trust the feed API's is_followed value — no extra API call needed.
+    // The feed response already includes is_followed per post.
     _isFollowing = widget.initialFollowStatus;
 
     _scaleCtrl = AnimationController(
@@ -57,20 +59,16 @@ class _FollowButtonState extends State<FollowButton>
       value: 1.0,
     );
     _scaleAnim = _scaleCtrl;
-
-    _syncFromCache();
   }
 
   @override
-  void dispose() {
-    _scaleCtrl.dispose();
-    super.dispose();
-  }
-
-  void _syncFromCache() {
-    FollowService.checkFollowStatus(widget.targetUserId).then((status) {
-      if (mounted) setState(() => _isFollowing = status);
-    });
+  void didUpdateWidget(FollowButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If parent updates initialFollowStatus (e.g. after Riverpod state change),
+    // sync local state to match.
+    if (oldWidget.initialFollowStatus != widget.initialFollowStatus) {
+      setState(() => _isFollowing = widget.initialFollowStatus);
+    }
   }
 
   // ── Tap ────────────────────────────────────────────────────────────────
@@ -99,13 +97,19 @@ class _FollowButtonState extends State<FollowButton>
       if (!mounted) return;
       setState(() => _isFollowing = true);
       widget.onFollowSuccess?.call();
-      Get.snackbar(
-        'Following',
-        'You are now following this user',
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2),
-        snackPosition: SnackPosition.BOTTOM,
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'You are now following this user',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: Colors.green.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -119,13 +123,19 @@ class _FollowButtonState extends State<FollowButton>
       if (!mounted) return;
       setState(() => _isFollowing = false);
       widget.onUnfollowSuccess?.call();
-      Get.snackbar(
-        'Unfollowed',
-        'You unfollowed this user',
-        backgroundColor: Colors.grey.shade700,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2),
-        snackPosition: SnackPosition.BOTTOM,
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'You unfollowed this user',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: Colors.grey.shade700,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -134,13 +144,18 @@ class _FollowButtonState extends State<FollowButton>
   }
 
   void _showError(String msg) {
-    Get.snackbar(
-      'Error',
-      msg.replaceFirst('Exception: ', ''),
-      backgroundColor: Colors.red,
-      colorText: Colors.white,
-      duration: const Duration(seconds: 3),
-      snackPosition: SnackPosition.BOTTOM,
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          msg.replaceFirst('Exception: ', ''),
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        backgroundColor: Colors.red.shade600,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 3),
+      ),
     );
   }
 

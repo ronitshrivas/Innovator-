@@ -21,7 +21,6 @@ class CommentService {
 
   // ── Fetch top-level comments for a post ────────────────────────────────────
   // GET /api/comments/?post=<postId>
-  // The API returns a list (or a paginated wrapper — handled both ways).
   Future<List<Comment>> getComments(String postId, {int page = 0}) async {
     try {
       final uri = Uri.parse('$_base/api/comments/').replace(
@@ -53,7 +52,7 @@ class CommentService {
   }
 
   // ── Fetch replies for a comment ────────────────────────────────────────────
-  // GET /api/replies/?parent=<commentId>  (assumed; adjust if endpoint differs)
+  // GET /api/replies/?parent=<commentId>
   Future<List<Comment>> getReplies(String commentId) async {
     try {
       final uri = Uri.parse(
@@ -125,7 +124,7 @@ class CommentService {
     throw Exception('addReply failed: ${response.statusCode}');
   }
 
-  // ── Edit a comment ─────────────────────────────────────────────────────────
+  // ── Edit a top-level comment ───────────────────────────────────────────────
   // PATCH /api/comments/<id>/  { "content": newText }
   Future<Comment> updateComment({
     required String commentId,
@@ -145,7 +144,27 @@ class CommentService {
     throw Exception('updateComment failed: ${response.statusCode}');
   }
 
-  // ── Delete a comment ───────────────────────────────────────────────────────
+  // ── Edit a reply ───────────────────────────────────────────────────────────
+  // PATCH /api/replies/<id>/  { "content": newText }
+  Future<Comment> updateReply({
+    required String replyId,
+    required String content,
+  }) async {
+    final response = await http.patch(
+      Uri.parse('$_base/api/replies/$replyId/'),
+      headers: _headers(),
+      body: jsonEncode({'content': content}),
+    );
+    log('[Comment] PATCH /api/replies/$replyId/ → ${response.statusCode}');
+    if (response.statusCode == 200) {
+      return Comment.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
+    }
+    throw Exception('updateReply failed: ${response.statusCode}');
+  }
+
+  // ── Delete a top-level comment ─────────────────────────────────────────────
   // DELETE /api/comments/<id>/
   Future<void> deleteComment(String commentId) async {
     final response = await http.delete(
@@ -155,6 +174,19 @@ class CommentService {
     log('[Comment] DELETE /api/comments/$commentId/ → ${response.statusCode}');
     if (response.statusCode != 204 && response.statusCode != 200) {
       throw Exception('deleteComment failed: ${response.statusCode}');
+    }
+  }
+
+  // ── Delete a reply ─────────────────────────────────────────────────────────
+  // DELETE /api/replies/<id>/
+  Future<void> deleteReply(String replyId) async {
+    final response = await http.delete(
+      Uri.parse('$_base/api/replies/$replyId/'),
+      headers: _headers(json: false),
+    );
+    log('[Comment] DELETE /api/replies/$replyId/ → ${response.statusCode}');
+    if (response.statusCode != 204 && response.statusCode != 200) {
+      throw Exception('deleteReply failed: ${response.statusCode}');
     }
   }
 }

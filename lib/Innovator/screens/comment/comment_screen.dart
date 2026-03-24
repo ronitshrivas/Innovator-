@@ -26,6 +26,8 @@ class _CommentScreenState extends State<CommentScreen> {
   bool _isSending = false;
 
   String? _editingCommentId;
+  bool _editingIsReply =
+      false; // ← track whether the comment being edited is a reply
   String? _replyToCommentId;
   String? _replyToUsername;
   final Set<String> _expandedReplies = {};
@@ -69,14 +71,35 @@ class _CommentScreenState extends State<CommentScreen> {
 
     try {
       if (_editingCommentId != null) {
-        final updated = await _service.updateComment(
-          commentId: _editingCommentId!,
-          content: text,
-        );
-        setState(() {
-          final i = _comments.indexWhere((c) => c.id == _editingCommentId);
-          if (i != -1) _comments[i] = updated;
-        });
+        // ── Route to the correct endpoint based on whether it's a reply ──
+        final Comment updated;
+        if (_editingIsReply) {
+          updated = await _service.updateReply(
+            replyId: _editingCommentId!,
+            content: text,
+          );
+          // Update inside the replies map
+          setState(() {
+            for (final key in _replies.keys) {
+              final idx = _replies[key]?.indexWhere(
+                (r) => r.id == _editingCommentId,
+              );
+              if (idx != null && idx != -1) {
+                _replies[key]![idx] = updated;
+                break;
+              }
+            }
+          });
+        } else {
+          updated = await _service.updateComment(
+            commentId: _editingCommentId!,
+            content: text,
+          );
+          setState(() {
+            final i = _comments.indexWhere((c) => c.id == _editingCommentId);
+            if (i != -1) _comments[i] = updated;
+          });
+        }
       } else if (_replyToCommentId != null) {
         final reply = await _service.addReply(
           parentCommentId: _replyToCommentId!,
@@ -107,6 +130,7 @@ class _CommentScreenState extends State<CommentScreen> {
         setState(() {
           _isSending = false;
           _editingCommentId = null;
+          _editingIsReply = false;
           _replyToCommentId = null;
           _replyToUsername = null;
         });
@@ -116,7 +140,7 @@ class _CommentScreenState extends State<CommentScreen> {
     }
   }
 
-  Future<void> _delete(String id) async {
+  Future<void> _delete(Comment comment) async {
     final ok = await showDialog<bool>(
       context: context,
       builder:
@@ -139,11 +163,18 @@ class _CommentScreenState extends State<CommentScreen> {
           ),
     );
     if (ok != true) return;
-    await _service.deleteComment(id);
+
+    // ── Route to the correct delete endpoint ──────────────────────────────
+    if (comment.isReply) {
+      await _service.deleteReply(comment.id);
+    } else {
+      await _service.deleteComment(comment.id);
+    }
+
     setState(() {
-      _comments.removeWhere((c) => c.id == id);
+      _comments.removeWhere((c) => c.id == comment.id);
       for (final k in _replies.keys) {
-        _replies[k]?.removeWhere((r) => r.id == id);
+        _replies[k]?.removeWhere((r) => r.id == comment.id);
       }
     });
   }
@@ -212,7 +243,7 @@ class _CommentScreenState extends State<CommentScreen> {
                   const SizedBox(width: 6),
                   Text(
                     _editingCommentId != null
-                        ? 'Editing comment'
+                        ? 'Editing ${_editingIsReply ? 'reply' : 'comment'}'
                         : 'Replying to @$_replyToUsername',
                     style: const TextStyle(
                       fontSize: 12,
@@ -225,6 +256,7 @@ class _CommentScreenState extends State<CommentScreen> {
                     onTap: () {
                       setState(() {
                         _editingCommentId = null;
+                        _editingIsReply = false;
                         _replyToCommentId = null;
                         _replyToUsername = null;
                         _inputCtrl.clear();
@@ -270,7 +302,7 @@ class _CommentScreenState extends State<CommentScreen> {
                             _replyToUsername != null
                                 ? 'Reply to @$_replyToUsername…'
                                 : _editingCommentId != null
-                                ? 'Edit your comment…'
+                                ? 'Edit your ${_editingIsReply ? 'reply' : 'comment'}…'
                                 : 'Write a comment…',
                         isDense: true,
                         contentPadding: const EdgeInsets.symmetric(
@@ -405,6 +437,7 @@ class _CommentScreenState extends State<CommentScreen> {
                               _replyToCommentId = comment.id;
                               _replyToUsername = comment.username;
                               _editingCommentId = null;
+                              _editingIsReply = false;
                               _inputCtrl.clear();
                             });
                             _focusNode.requestFocus();
@@ -425,6 +458,7 @@ class _CommentScreenState extends State<CommentScreen> {
                           onTap: () {
                             setState(() {
                               _editingCommentId = comment.id;
+                              _editingIsReply = isReply; // ← set flag
                               _replyToCommentId = null;
                               _inputCtrl.text = comment.content;
                             });
@@ -441,7 +475,7 @@ class _CommentScreenState extends State<CommentScreen> {
                         ),
                         const SizedBox(width: 12),
                         GestureDetector(
-                          onTap: () => _delete(comment.id),
+                          onTap: () => _delete(comment), // ← pass full comment
                           child: const Text(
                             'Delete',
                             style: TextStyle(

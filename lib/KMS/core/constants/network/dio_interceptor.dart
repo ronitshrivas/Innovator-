@@ -1,4 +1,3 @@
-
 import 'dart:developer';
 
 import 'package:dio/dio.dart';
@@ -17,10 +16,7 @@ class AppInterceptor extends Interceptor {
   final List<_PendingRequest> _pendingRequests = [];
 
   // Endpoints that don't need an auth token attached
-  static const _authEndpoints = [
-    '/auth/sso/login/',
-    '/auth/register/',
-  ];
+  static const _authEndpoints = ['/auth/sso/login/', '/auth/register/'];
 
   // Update this to match your actual refresh endpoint
   static const _refreshEndpoint = '/auth/token/refresh/';
@@ -28,7 +24,10 @@ class AppInterceptor extends Interceptor {
   // ─── Request ──────────────────────────────────────────────────────────────
 
   @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+  void onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
     if (!_connectivityService.isConnected) {
       return handler.reject(
         DioException(
@@ -49,7 +48,7 @@ class AppInterceptor extends Interceptor {
     options.headers['Content-Type'] = 'application/json';
     options.headers['Accept'] = 'application/json';
 
-    log('🚀 REQUEST[${options.method}] => PATH: ${options.path}');
+    log('REQUEST[${options.method}] => PATH: ${options.path}');
     super.onRequest(options, handler);
   }
 
@@ -57,7 +56,9 @@ class AppInterceptor extends Interceptor {
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) async {
-    log('✅ RESPONSE[${response.statusCode}] => PATH: ${response.requestOptions.path}');
+    log(
+      '✅ RESPONSE[${response.statusCode}] => PATH: ${response.requestOptions.path}',
+    );
 
     await _autoSaveToken(response);
 
@@ -73,10 +74,13 @@ class AppInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
-    log('❌ ERROR[${err.response?.statusCode}] => PATH: ${err.requestOptions.path}');
+    log(
+      '❌ ERROR[${err.response?.statusCode}] => PATH: ${err.requestOptions.path}',
+    );
 
     // Try to refresh token on 401 before failing
-    if (err.response?.statusCode == 401 && !_isAuthEndpoint(err.requestOptions.path)) {
+    if (err.response?.statusCode == 401 &&
+        !_isAuthEndpoint(err.requestOptions.path)) {
       final retried = await _handleTokenRefresh(err, handler);
       if (retried) return;
     }
@@ -133,7 +137,9 @@ class AppInterceptor extends Interceptor {
       final newRefreshToken = response.data['refresh_token'] as String?;
 
       if (newAccessToken == null || newAccessToken.isEmpty) {
-        log('⚠️ Refresh response did not include access_token — forcing logout');
+        log(
+          '⚠️ Refresh response did not include access_token — forcing logout',
+        );
         await _forceLogout();
         _isRefreshing = false;
         return false;
@@ -150,7 +156,11 @@ class AppInterceptor extends Interceptor {
 
       // Retry any queued requests that also 401'd during the refresh window
       for (final pending in _pendingRequests) {
-        await _retryRequest(pending.error.requestOptions, pending.handler, newAccessToken);
+        await _retryRequest(
+          pending.error.requestOptions,
+          pending.handler,
+          newAccessToken,
+        );
       }
 
       _pendingRequests.clear();
@@ -218,7 +228,9 @@ class AppInterceptor extends Interceptor {
           accessToken: accessToken,
           refreshToken: refreshToken,
         );
-        log('💾 Tokens saved — access_token: ✅ | refresh_token: ${refreshToken != null ? '✅' : '❌ not present'}');
+        log(
+          '💾 Tokens saved — access_token: ✅ | refresh_token: ${refreshToken != null ? '✅' : '❌ not present'}',
+        );
       }
     } catch (e) {
       log('⚠️ _autoSaveToken error: $e');
@@ -267,7 +279,10 @@ class AppInterceptor extends Interceptor {
       case 503:
         return ServerException(message ?? 'Server error');
       default:
-        return AppException(message ?? 'Error occurred (Code: $statusCode)', statusCode: statusCode);
+        return AppException(
+          message ?? 'Error occurred (Code: $statusCode)',
+          statusCode: statusCode,
+        );
     }
   }
 
@@ -284,7 +299,8 @@ class AppInterceptor extends Interceptor {
 
     if (data is Map) {
       // 1. Check standard flat keys first
-      final flat = data['message'] ?? data['detail'] ?? data['error'] ?? data['msg'];
+      final flat =
+          data['message'] ?? data['detail'] ?? data['error'] ?? data['msg'];
       if (flat != null) return flat.toString();
 
       // 2. DRF non-field errors
@@ -313,7 +329,12 @@ class AppInterceptor extends Interceptor {
   }
 
   bool _shouldShowSuccessToast(Response response) {
-    return ['POST', 'PUT', 'DELETE', 'PATCH'].contains(response.requestOptions.method);
+    return [
+      'POST',
+      'PUT',
+      'DELETE',
+      'PATCH',
+    ].contains(response.requestOptions.method);
   }
 }
 
