@@ -70,11 +70,11 @@ class _FloatingMenuWidgetState extends State<FloatingMenuWidget>
 
   // ── 5 Nav bar items ──────────────────────────────────────────────────────
   static const List<Map<String, dynamic>> _navItems = [
-    {'icon': Icons.home, 'label': 'Home', 'action': 'navigate_home'},
-    {'icon': Icons.search, 'label': 'Search', 'action': 'view_profile'},
-    {'icon': Icons.add_a_photo, 'label': 'Post', 'action': 'add_photo'},
-    {'icon': Icons.notifications, 'label': 'Alerts', 'action': 'notification'},
-    {'icon': Icons.menu, 'label': 'Menu', 'action': 'drawer'},
+    {'icon': Icons.home, 'label': '', 'action': 'navigate_home'},
+    {'icon': Icons.search, 'label': '', 'action': 'view_profile'},
+    {'icon': Icons.add_a_photo, 'label': '', 'action': 'add_photo'},
+    {'icon': Icons.notifications, 'label': '', 'action': 'notification'},
+    {'icon': Icons.menu, 'label': '', 'action': 'drawer'},
   ];
 
   // ── Floating popup icons ─────────────────────────────────────────────────
@@ -254,6 +254,7 @@ class _FloatingMenuWidgetState extends State<FloatingMenuWidget>
         // _fetchUnreadNotificationCount();
         break;
       case 'drawer':
+        InstantCache.init(); // pre-warm synchronously before route push
         SmoothDrawerService.showLeftDrawer(context);
         break;
       default:
@@ -558,10 +559,10 @@ class _NavBarState extends State<_NavBar> with SingleTickerProviderStateMixin {
             );
 
     final barContent = Container(
-      height: 65 + widget.topPadding,
+      // height: 65 + widget.topPadding,
       padding: EdgeInsets.only(top: widget.topPadding),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.transparent,
         borderRadius: br,
         boxShadow: [
           BoxShadow(
@@ -604,7 +605,7 @@ class _NavBarState extends State<_NavBar> with SingleTickerProviderStateMixin {
                         child: Icon(
                           item['icon'],
                           size: 22,
-                          color: selected ? Colors.orange : Colors.grey,
+                          color: selected ? Colors.orange : Colors.black,
                         ),
                       ),
                       if (hasBadge)

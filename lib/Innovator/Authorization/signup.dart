@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/Authorization/Login.dart';
 import 'package:innovator/Innovator/Authorization/OTP_Validation.dart';
@@ -9,14 +11,148 @@ import 'package:innovator/Innovator/helper/dialogs.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class Signup extends StatefulWidget {
+// ─────────────────────────────────────────────────────────────────────────────
+// Username Check State
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum UsernameStatus { idle, checking, available, taken, error }
+
+class UsernameCheckState {
+  final UsernameStatus status;
+  final List<String> suggestions;
+  final String? errorMessage;
+
+  const UsernameCheckState({
+    this.status = UsernameStatus.idle,
+    this.suggestions = const [],
+    this.errorMessage,
+  });
+
+  UsernameCheckState copyWith({
+    UsernameStatus? status,
+    List<String>? suggestions,
+    String? errorMessage,
+  }) => UsernameCheckState(
+    status: status ?? this.status,
+    suggestions: suggestions ?? this.suggestions,
+    errorMessage: errorMessage ?? this.errorMessage,
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Username Notifier — debounced real-time check like Instagram
+// ─────────────────────────────────────────────────────────────────────────────
+
+class UsernameNotifier extends StateNotifier<UsernameCheckState> {
+  UsernameNotifier() : super(const UsernameCheckState());
+
+  static const _baseUrl = 'http://182.93.94.220:8005';
+  Timer? _debounce;
+
+  // Called on every keystroke — debounced 500ms so we don't spam the API
+  void onUsernameChanged(String username) {
+    _debounce?.cancel();
+
+    if (username.isEmpty) {
+      state = const UsernameCheckState();
+      return;
+    }
+
+    // Show "checking" immediately so user sees feedback
+    state = state.copyWith(status: UsernameStatus.checking, suggestions: []);
+
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      _checkUsername(username.trim());
+    });
+  }
+
+  Future<void> _checkUsername(String username) async {
+    if (username.length < 3) {
+      state = state.copyWith(
+        status: UsernameStatus.error,
+        errorMessage: 'Username must be at least 3 characters',
+        suggestions: [],
+      );
+      return;
+    }
+
+    try {
+      final response = await http
+          .get(
+            Uri.parse('$_baseUrl/api/users/check-username/?username=$username'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final isAvailable = data['is_available'] == true;
+        final suggestions =
+            (data['suggestions'] as List<dynamic>?)
+                ?.map((s) => s.toString())
+                .toList() ??
+            [];
+
+        state = state.copyWith(
+          status: isAvailable ? UsernameStatus.available : UsernameStatus.taken,
+          suggestions: isAvailable ? [] : suggestions,
+          errorMessage: null,
+        );
+      } else {
+        state = state.copyWith(
+          status: UsernameStatus.error,
+          errorMessage: 'Could not check username',
+          suggestions: [],
+        );
+      }
+    } catch (e) {
+      developer.log('Username check error: $e');
+      state = state.copyWith(
+        status: UsernameStatus.error,
+        errorMessage: 'Network error',
+        suggestions: [],
+      );
+    }
+  }
+
+  void selectSuggestion(String suggestion) {
+    // When user taps a suggestion, immediately mark as available
+    state = state.copyWith(status: UsernameStatus.available, suggestions: []);
+  }
+
+  void reset() {
+    _debounce?.cancel();
+    state = const UsernameCheckState();
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+}
+
+// Provider — autoDispose so it cleans up when Signup screen is popped
+final usernameProvider =
+    StateNotifierProvider.autoDispose<UsernameNotifier, UsernameCheckState>(
+      (ref) => UsernameNotifier(),
+    );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Signup Screen
+// ─────────────────────────────────────────────────────────────────────────────
+
+class Signup extends ConsumerStatefulWidget {
   const Signup({super.key});
 
   @override
-  State<Signup> createState() => _SignupState();
+  ConsumerState<Signup> createState() => _SignupState();
 }
 
-class _SignupState extends State<Signup> {
+class _SignupState extends ConsumerState<Signup> {
   final Color preciseGreen = const Color.fromRGBO(244, 135, 6, 1);
 
   bool _isPasswordVisible = false;
@@ -82,8 +218,18 @@ class _SignupState extends State<Signup> {
   }
 
   bool _validateFields() {
+    final usernameState = ref.read(usernameProvider);
+
     if (usernameController.text.trim().isEmpty) {
       Dialogs.showSnackbar(context, 'Please enter a username');
+      return false;
+    }
+    if (usernameState.status == UsernameStatus.taken) {
+      Dialogs.showSnackbar(context, 'Username is already taken');
+      return false;
+    }
+    if (usernameState.status == UsernameStatus.checking) {
+      Dialogs.showSnackbar(context, 'Please wait — checking username...');
       return false;
     }
     if (fullNameController.text.trim().isEmpty) {
@@ -151,7 +297,6 @@ class _SignupState extends State<Signup> {
         'address': addressController.text.trim(),
         'date_of_birth': dobController.text,
         'gender': genderController.text.trim(),
-        // role is nullable — not sent
       };
 
       developer.log('Signup request: $requestBody');
@@ -168,7 +313,12 @@ class _SignupState extends State<Signup> {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         await _saveCredentials();
-        Navigator.push(context, MaterialPageRoute(builder: (_) => LoginPage()));
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => LoginPage()),
+          );
+        }
       } else {
         final data = jsonDecode(response.body) as Map<String, dynamic>?;
         final error =
@@ -176,14 +326,16 @@ class _SignupState extends State<Signup> {
             data?['error'] ??
             data?['detail'] ??
             'Registration failed (${response.statusCode})';
-        Dialogs.showSnackbar(context, error.toString());
+        if (mounted) Dialogs.showSnackbar(context, error.toString());
       }
     } catch (e) {
       developer.log('Signup error: $e');
-      Dialogs.showSnackbar(
-        context,
-        'Network error. Please check your connection.',
-      );
+      if (mounted) {
+        Dialogs.showSnackbar(
+          context,
+          'Network error. Please check your connection.',
+        );
+      }
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -207,7 +359,7 @@ class _SignupState extends State<Signup> {
       child: Scaffold(
         body: Stack(
           children: [
-            // Orange header
+            // ── Orange header ──────────────────────────────────────────────
             Container(
               width: mq.width,
               height: mq.height / 2.0,
@@ -247,7 +399,7 @@ class _SignupState extends State<Signup> {
               ),
             ),
 
-            // White form card
+            // ── White form card ────────────────────────────────────────────
             Align(
               alignment: Alignment.bottomCenter,
               child: Container(
@@ -264,10 +416,10 @@ class _SignupState extends State<Signup> {
                       children: [
                         const SizedBox(height: 20),
 
-                        _buildField(
-                          'Username',
-                          usernameController,
-                          hint: 'Enter your username',
+                        // ── USERNAME — Riverpod real-time check ────────────
+                        _UsernameField(
+                          controller: usernameController,
+                          preciseGreen: preciseGreen,
                         ),
                         SizedBox(height: mq.height * 0.025),
 
@@ -287,7 +439,7 @@ class _SignupState extends State<Signup> {
                         ),
                         SizedBox(height: mq.height * 0.025),
 
-                        // Phone number
+                        // Phone
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -328,7 +480,7 @@ class _SignupState extends State<Signup> {
                         ),
                         SizedBox(height: mq.height * 0.025),
 
-                        // Gender Dropdown
+                        // Gender
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -349,9 +501,8 @@ class _SignupState extends State<Signup> {
                                       )
                                       .toList(),
                               onChanged: (value) {
-                                if (value != null) {
+                                if (value != null)
                                   genderController.text = value;
-                                }
                               },
                               decoration: _inputDecoration(
                                 hint: 'Select your gender',
@@ -453,7 +604,6 @@ class _SignupState extends State<Signup> {
 
                         const SizedBox(height: 16),
 
-                        // Back to login
                         TextButton.icon(
                           onPressed:
                               () => Navigator.pushReplacement(
@@ -554,4 +704,295 @@ class _SignupState extends State<Signup> {
       borderSide: const BorderSide(color: Colors.red),
     ),
   );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// _UsernameField — ConsumerWidget, watches usernameProvider independently
+// Only this widget rebuilds on every keystroke, not the entire form
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _UsernameField extends ConsumerWidget {
+  final TextEditingController controller;
+  final Color preciseGreen;
+
+  const _UsernameField({required this.controller, required this.preciseGreen});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(usernameProvider);
+    final mq = MediaQuery.of(context).size;
+
+    // Border color based on status
+    Color borderColor() {
+      switch (state.status) {
+        case UsernameStatus.available:
+          return Colors.green.shade500;
+        case UsernameStatus.taken:
+          return Colors.red.shade400;
+        case UsernameStatus.checking:
+          return Colors.orange.shade300;
+        default:
+          return Colors.grey.shade300;
+      }
+    }
+
+    // Suffix icon based on status
+    Widget? suffixIcon() {
+      switch (state.status) {
+        case UsernameStatus.checking:
+          return Padding(
+            padding: const EdgeInsets.all(12),
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.orange.shade400,
+              ),
+            ),
+          );
+        case UsernameStatus.available:
+          return Icon(
+            Icons.check_circle_rounded,
+            color: Colors.green.shade500,
+            size: 22,
+          );
+        case UsernameStatus.taken:
+          return Icon(
+            Icons.cancel_rounded,
+            color: Colors.red.shade400,
+            size: 22,
+          );
+        default:
+          return null;
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Username',
+          style: const TextStyle(
+            fontSize: 16,
+            fontFamily: 'InterThin',
+            fontWeight: FontWeight.w500,
+            color: Colors.black,
+          ),
+        ),
+        SizedBox(height: mq.height * 0.004),
+
+        // ── Text field ─────────────────────────────────────────────────────
+        TextFormField(
+          controller: controller,
+          autocorrect: false,
+          enableSuggestions: false,
+          textInputAction: TextInputAction.next,
+          onChanged:
+              (value) =>
+                  ref.read(usernameProvider.notifier).onUsernameChanged(value),
+          decoration: InputDecoration(
+            hintText: 'Enter your username',
+            hintStyle: const TextStyle(
+              fontSize: 14,
+              color: Colors.grey,
+              fontFamily: 'InterThin',
+            ),
+            prefixIcon: const Icon(
+              Icons.alternate_email,
+              color: Colors.black54,
+            ),
+            suffixIcon: suffixIcon(),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: borderColor()),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: borderColor(), width: 1.5),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: borderColor(), width: 2),
+            ),
+          ),
+        ),
+
+        // ── Status message ─────────────────────────────────────────────────
+        AnimatedSize(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          child: _buildStatusMessage(state),
+        ),
+
+        // ── Suggestions ────────────────────────────────────────────────────
+        if (state.status == UsernameStatus.taken &&
+            state.suggestions.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Try one of these:',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children:
+                state.suggestions.map((suggestion) {
+                  return _SuggestionChip(
+                    label: suggestion,
+                    preciseGreen: preciseGreen,
+                    onTap: () {
+                      // Fill the field and mark as available
+                      controller.text = suggestion;
+                      controller.selection = TextSelection.fromPosition(
+                        TextPosition(offset: suggestion.length),
+                      );
+                      ref
+                          .read(usernameProvider.notifier)
+                          .selectSuggestion(suggestion);
+                      // Trigger a fresh check for this suggestion
+                      ref
+                          .read(usernameProvider.notifier)
+                          .onUsernameChanged(suggestion);
+                    },
+                  );
+                }).toList(),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildStatusMessage(UsernameCheckState state) {
+    switch (state.status) {
+      case UsernameStatus.available:
+        return Padding(
+          padding: const EdgeInsets.only(top: 6, left: 4),
+          child: Row(
+            children: [
+              Icon(
+                Icons.check_circle_outline,
+                size: 14,
+                color: Colors.green.shade500,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'Username is available!',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.green.shade600,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        );
+      case UsernameStatus.taken:
+        return Padding(
+          padding: const EdgeInsets.only(top: 6, left: 4),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, size: 14, color: Colors.red.shade400),
+              const SizedBox(width: 4),
+              Text(
+                'Username already taken',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.red.shade500,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        );
+      case UsernameStatus.error:
+        return Padding(
+          padding: const EdgeInsets.only(top: 6, left: 4),
+          child: Text(
+            state.errorMessage ?? 'Invalid username',
+            style: TextStyle(fontSize: 12, color: Colors.orange.shade700),
+          ),
+        );
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// _SuggestionChip — tappable username pill, orange on tap
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SuggestionChip extends StatefulWidget {
+  final String label;
+  final Color preciseGreen;
+  final VoidCallback onTap;
+
+  const _SuggestionChip({
+    required this.label,
+    required this.preciseGreen,
+    required this.onTap,
+  });
+
+  @override
+  State<_SuggestionChip> createState() => _SuggestionChipState();
+}
+
+class _SuggestionChipState extends State<_SuggestionChip> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color:
+              _pressed
+                  ? widget.preciseGreen
+                  : widget.preciseGreen.withOpacity(0.08),
+          border: Border.all(
+            color:
+                _pressed
+                    ? widget.preciseGreen
+                    : widget.preciseGreen.withOpacity(0.4),
+            width: 1.2,
+          ),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.alternate_email,
+              size: 13,
+              color: _pressed ? Colors.white : widget.preciseGreen,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              widget.label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: _pressed ? Colors.white : widget.preciseGreen,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

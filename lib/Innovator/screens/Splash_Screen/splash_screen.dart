@@ -21,7 +21,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _initializeApp() async {
     try {
-      developer.log('🚀 Splash screen initializing...');
+      developer.log('Splash screen initializing...');
 
       // Initialize AppData first
       await AppData().initialize();

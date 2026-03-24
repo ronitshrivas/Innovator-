@@ -2,32 +2,6 @@ import 'dart:convert';
 import 'dart:developer' as developer;
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Single source of truth for auth state and current-user data.
-///
-/// New API (http://182.93.94.220:8005) user shape stored in prefs:
-/// {
-///   "id":        "uuid",
-///   "username":  "ronit98122",
-///   "full_name": "...",
-///   "email":     "...",
-///   "role":      "",
-///   "photo_url": "..."      ← written locally after avatar upload
-///   "profile": {
-///     "avatar":          null | "http://...",
-///     "bio":             null | "...",
-///     "phone_number":    "...",
-///     "gender":          "...",
-///     "date_of_birth":   "yyyy-MM-dd",
-///     "address":         "...",
-///     "education":       "...",
-///     "occupation":      "...",
-///     "hobbies":         "...",
-///     "followers_count": 0,
-///     "following_count": 0
-///   }
-/// }
-///
-/// SharedPreferences keys are STABLE — changing them logs out all users.
 class AppData {
   static final AppData _instance = AppData._internal();
   factory AppData() => _instance;
