@@ -103,8 +103,7 @@ class CoordinatorSessionsScreen extends ConsumerWidget {
                       loading: () => const Center(
                           child: CircularProgressIndicator()),
                       error: (e, _) => Center(
-                        child: Text('Error: $e',
-                            style: const TextStyle(fontFamily: 'Inter')),
+                        child: CoordinatorErrorBox(error: e)
                       ),
                       data: (data) {
                         if (data.sessions.isEmpty) {

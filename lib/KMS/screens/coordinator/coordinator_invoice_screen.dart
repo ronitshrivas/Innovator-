@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/KMS/core/constants/app_style.dart'; 
 import 'package:innovator/KMS/model/coordinator_model/coordinator_teacher_response_model.dart';
 import 'package:innovator/KMS/provider/coordinator_provider.dart';
+import 'package:innovator/KMS/screens/coordinator/coordinator_shared_widget.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -157,8 +158,7 @@ class _CoordinatorInvoiceScreenState
               child: invoicesAsync.when(
                 loading: () => _buildSkeleton(),
                 error: (e, _) => Center(
-                  child: Text('Failed to load: $e',
-                      style: const TextStyle(fontFamily: 'Inter')),
+                  child: CoordinatorErrorBox(error: e)
                 ),
                 data: (invoices) {
                   final filtered = _filtered(invoices);

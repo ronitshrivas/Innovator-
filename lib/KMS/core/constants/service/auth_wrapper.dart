@@ -41,12 +41,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
           return const AdminDashboardScreen();
         case 'teacher':
           return const TeacherDashboardScreen();
-        case 'coordiantor':
+        case 'coordinator':
           return const CoordinatorDashboardScreen();
         case 'student':
           return const StudentDashboardScreen();
         default:
-          log('⚠️ Unknown role "$role" — falling back to LoginScreen');
+          log('Unknown role "$role" — falling back to LoginScreen');
           return const KmsLoginScreen();
       }
     } catch (e) {
