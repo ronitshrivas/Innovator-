@@ -1,5 +1,4 @@
 import 'dart:developer';
-
 import 'package:dio/dio.dart';
 import 'package:innovator/KMS/core/constants/api_constants.dart';
 import 'package:innovator/KMS/core/constants/service/connectivity_service.dart';
@@ -9,20 +8,15 @@ import 'package:innovator/KMS/core/utils/toast_utils.dart';
 
 class AppInterceptor extends Interceptor {
   final TokenService _tokenService = TokenService();
-  final ConnectivityService _connectivityService = ConnectivityService();
-
-  // Prevents multiple simultaneous refresh calls
+  final ConnectivityService _connectivityService = ConnectivityService(); 
   bool _isRefreshing = false;
   final List<_PendingRequest> _pendingRequests = [];
-
-  // Endpoints that don't need an auth token attached
+ 
   static const _authEndpoints = ['/auth/sso/login/', '/auth/register/'];
-
-  // Update this to match your actual refresh endpoint
+ 
   static const _refreshEndpoint = '/auth/token/refresh/';
 
-  // ─── Request ──────────────────────────────────────────────────────────────
-
+  //Request 
   @override
   void onRequest(
     RequestOptions options,
@@ -52,8 +46,7 @@ class AppInterceptor extends Interceptor {
     super.onRequest(options, handler);
   }
 
-  // ─── Response ─────────────────────────────────────────────────────────────
-
+  //Response
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) async {
     log(
@@ -70,15 +63,14 @@ class AppInterceptor extends Interceptor {
     super.onResponse(response, handler);
   }
 
-  // ─── Error ────────────────────────────────────────────────────────────────
+  //Error
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
     log(
-      '❌ ERROR[${err.response?.statusCode}] => PATH: ${err.requestOptions.path}',
+      'ERROR[${err.response?.statusCode}] => PATH: ${err.requestOptions.path}',
     );
-
-    // Try to refresh token on 401 before failing
+ 
     if (err.response?.statusCode == 401 &&
         !_isAuthEndpoint(err.requestOptions.path)) {
       final retried = await _handleTokenRefresh(err, handler);
@@ -98,15 +90,11 @@ class AppInterceptor extends Interceptor {
     );
   }
 
-  // ─── Token Refresh ────────────────────────────────────────────────────────
-
-  /// Attempts to refresh the access token and retry the failed request.
-  /// Returns true if the request was retried successfully.
+  //Token Refresh 
   Future<bool> _handleTokenRefresh(
     DioException err,
     ErrorInterceptorHandler handler,
-  ) async {
-    // If already refreshing, queue this request and wait
+  ) async { 
     if (_isRefreshing) {
       _pendingRequests.add(_PendingRequest(err, handler));
       return true;
@@ -118,15 +106,13 @@ class AppInterceptor extends Interceptor {
       final refreshToken = await _tokenService.getRefreshToken();
 
       if (refreshToken == null || refreshToken.isEmpty) {
-        log('⚠️ No refresh token found — forcing logout');
+        log('No refresh token found — forcing logout');
         await _forceLogout();
         _isRefreshing = false;
         return false;
       }
 
-      log('🔄 Access token expired — refreshing...');
-
-      // Use a plain Dio (no interceptors) to avoid an infinite loop
+      log('Access token expired — refreshing...'); 
       final refreshDio = Dio(BaseOptions(baseUrl: ApiConstants.baseUrl));
       final response = await refreshDio.post(
         _refreshEndpoint,
@@ -138,7 +124,7 @@ class AppInterceptor extends Interceptor {
 
       if (newAccessToken == null || newAccessToken.isEmpty) {
         log(
-          '⚠️ Refresh response did not include access_token — forcing logout',
+          'Refresh response did not include access_token — forcing logout',
         );
         await _forceLogout();
         _isRefreshing = false;
@@ -149,12 +135,12 @@ class AppInterceptor extends Interceptor {
         accessToken: newAccessToken,
         refreshToken: newRefreshToken,
       );
-      log('✅ Token refreshed and saved');
+      log(' Token refreshed and saved');
 
-      // Retry the original request
+     
       await _retryRequest(err.requestOptions, handler, newAccessToken);
 
-      // Retry any queued requests that also 401'd during the refresh window
+     
       for (final pending in _pendingRequests) {
         await _retryRequest(
           pending.error.requestOptions,
@@ -167,13 +153,27 @@ class AppInterceptor extends Interceptor {
       _isRefreshing = false;
       return true;
     } on DioException catch (e) {
-      log('❌ Token refresh failed: ${e.message}');
-      _pendingRequests.clear();
-      _isRefreshing = false;
+      log('Token refresh failed: ${e.message}');
+     _rejectAllPending();
       await _forceLogout();
       return false;
     }
+    finally{
+      _isRefreshing = false;
+    }
   }
+  void _rejectAllPending() {
+  for (final pending in _pendingRequests) {
+    pending.handler.reject(
+      DioException(
+        requestOptions: pending.error.requestOptions,
+        error: UnauthorizedException('Session expired'),
+        type: DioExceptionType.badResponse,
+      ),
+    );
+  }
+  _pendingRequests.clear();
+}
 
   Future<void> _retryRequest(
     RequestOptions requestOptions,
@@ -197,21 +197,16 @@ class AppInterceptor extends Interceptor {
       log('🔁 Retried request succeeded: ${requestOptions.path}');
       handler.resolve(response);
     } catch (e) {
-      log('❌ Retried request also failed: $e');
+      log('Retried request also failed: $e');
     }
   }
 
   Future<void> _forceLogout() async {
     await _tokenService.clearTokens();
-    // TODO: Add your navigation to login screen here, e.g.:
-    // NavigationService.instance.navigateToLogin();
-    log('🔒 User force-logged out');
+    log('User force-logged out');
   }
 
-  // ─── Auto-save Token ──────────────────────────────────────────────────────
-
-  /// Reads access_token and refresh_token from login/register responses
-  /// and saves them automatically — no manual save needed in AuthService.
+  //Auto-save Token
   Future<void> _autoSaveToken(Response response) async {
     try {
       if (!_isAuthEndpoint(response.requestOptions.path)) return;
@@ -219,7 +214,6 @@ class AppInterceptor extends Interceptor {
       final data = response.data;
       if (data is! Map<String, dynamic>) return;
 
-      // Matches your API: { "access_token": "...", "refresh_token": "..." }
       final accessToken = data['access_token'] as String?;
       final refreshToken = data['refresh_token'] as String?;
 
@@ -229,15 +223,15 @@ class AppInterceptor extends Interceptor {
           refreshToken: refreshToken,
         );
         log(
-          '💾 Tokens saved — access_token: ✅ | refresh_token: ${refreshToken != null ? '✅' : '❌ not present'}',
+          'Tokens saved — access_token:| refresh_token: ${refreshToken != null ? '' : ''}',
         );
       }
     } catch (e) {
-      log('⚠️ _autoSaveToken error: $e');
+      log('AutoSaveToken error: $e');
     }
   }
 
-  // ─── Error Handling ───────────────────────────────────────────────────────
+  //Error Handling
 
   AppException _handleError(DioException error) {
     if (!_connectivityService.isConnected) return NetworkException();
@@ -266,7 +260,6 @@ class AppInterceptor extends Interceptor {
       case 400:
         return BadRequestException(message ?? 'Invalid request');
       case 401:
-        _forceLogout();
         return UnauthorizedException(message ?? 'Session expired');
       case 403:
         return AppException(message ?? 'Access denied', statusCode: 403);
@@ -286,41 +279,67 @@ class AppInterceptor extends Interceptor {
     }
   }
 
-  // ─── Message Extraction ───────────────────────────────────────────────────
 
-  /// Handles all Django REST Framework error shapes:
-  ///
-  ///   Flat key      → {"detail": "Not found."}
-  ///   Custom key    → {"message": "No user found with this email"}
-  ///   Field error   → {"email": ["No user found with this email"]}
-  ///   Non-field     → {"non_field_errors": ["Invalid credentials"]}
+  // String? _extractMessage(dynamic data) {
+  //   if (data == null) return null;
+
+  //   if (data is Map) { 
+  //     final flat =
+  //         data['message'] ?? data['detail'] ?? data['error'] ?? data['msg'];
+  //     if (flat != null) return flat.toString();
+
+  //     final nonField = data['non_field_errors'];
+  //     if (nonField is List && nonField.isNotEmpty) {
+  //       return nonField.first.toString();
+  //     }
+
+  //     for (final value in data.values) {
+  //       if (value is List && value.isNotEmpty) return value.first.toString();
+  //       if (value is String) return value;
+  //     }
+  //   }
+
+  //   if (data is String) return data;
+  //   return null;
+  // }
   String? _extractMessage(dynamic data) {
-    if (data == null) return null;
+  if (data == null) return null;
 
-    if (data is Map) {
-      // 1. Check standard flat keys first
-      final flat =
-          data['message'] ?? data['detail'] ?? data['error'] ?? data['msg'];
-      if (flat != null) return flat.toString();
-
-      // 2. DRF non-field errors
-      final nonField = data['non_field_errors'];
-      if (nonField is List && nonField.isNotEmpty) {
-        return nonField.first.toString();
-      }
-
-      // 3. DRF field-level errors — grab the first one found
-      for (final value in data.values) {
-        if (value is List && value.isNotEmpty) return value.first.toString();
-        if (value is String) return value;
-      }
+  if (data is Map) {
+    final flat =
+        data['message'] ?? data['detail'] ?? data['error'] ?? data['msg'];
+    if (flat != null && flat.toString().isNotEmpty) {
+      return flat.toString();
     }
 
-    if (data is String) return data;
-    return null;
+    final nonField = data['non_field_errors'];
+    if (nonField is List && nonField.isNotEmpty) {
+      return nonField.first.toString();
+    }
   }
 
-  // ─── Helpers ──────────────────────────────────────────────────────────────
+  if (data is String) return data;
+  return null;
+}
+
+bool _shouldShowSuccessToast(Response response) {
+  final path = response.requestOptions.path;
+ 
+  final silentEndpoints = [
+    '/teacher/check-in/',
+    '/teacher/check-out/',
+    '/attendance/mark/',
+    '/teacher/kyc/',
+    '/student/create/',
+  ];
+
+  if (silentEndpoints.any((e) => path.contains(e))) return false;
+
+  return ['POST', 'PUT', 'DELETE', 'PATCH']
+      .contains(response.requestOptions.method);
+}
+
+  //Helpers 
 
   bool _isAuthEndpoint(String path) {
     return _authEndpoints.any(
@@ -328,14 +347,14 @@ class AppInterceptor extends Interceptor {
     );
   }
 
-  bool _shouldShowSuccessToast(Response response) {
-    return [
-      'POST',
-      'PUT',
-      'DELETE',
-      'PATCH',
-    ].contains(response.requestOptions.method);
-  }
+  // bool _shouldShowSuccessToast(Response response) {
+  //   return [
+  //     'POST',
+  //     'PUT',
+  //     'DELETE',
+  //     'PATCH',
+  //   ].contains(response.requestOptions.method);
+  // }
 }
 
 // Holds a queued request that arrived while a token refresh was in progress

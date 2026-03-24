@@ -274,9 +274,7 @@ class AppDrawer extends ConsumerWidget {
 
               // ── Drawer Items ──
               ...List.generate(items.length, (index) {
-                final item = items[index];
-                // Coordinators: only highlight Dashboard (index 0)
-                // Others: highlight current selected index
+                final item = items[index]; 
                 final isSelected =
                     isCoord
                         ? index == 0 && selectedIndex == 0
@@ -427,23 +425,19 @@ class AppDrawer extends ConsumerWidget {
   }) {
     return GestureDetector(
       onTap: () {
-        Navigator.pop(context); // always close drawer first
+        Navigator.pop(context);  
 
         if (title == 'KYC Verification') {
           _handleKycTap(context, ref);
           return;
         }
 
-        if (isCoordinator) {
-          // Coordinator: push without updating selected index
-          // so no screen ever shows as "selected" except dashboard
-          if (index == 0) {
-            // Dashboard — already there, nothing to push
+        if (isCoordinator) { 
+          if (index == 0) { 
             return;
           }
           Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
-        } else {
-          // Teacher / Student: update index and push
+        } else { 
           if (!isSelected) {
             ref.read(drawerSelectedIndexProvider.notifier).state = index;
             Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
