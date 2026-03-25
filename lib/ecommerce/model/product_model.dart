@@ -3,12 +3,10 @@ class ProductModel {
   final String name;
   final String? description;
   final String price;
-  final int stock;
-  final bool isActive;
+  final int stock; 
   final String? category;
   final dynamic categoryDetails;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  
   final List<dynamic> images;
 
   ProductModel({
@@ -16,12 +14,9 @@ class ProductModel {
     required this.name,
     this.description,
     required this.price,
-    required this.stock,
-    required this.isActive,
+    required this.stock, 
     this.category,
-    this.categoryDetails,
-    required this.createdAt,
-    required this.updatedAt,
+    this.categoryDetails, 
     required this.images,
   });
 
@@ -31,12 +26,9 @@ class ProductModel {
       name: json['name'] as String,
       description: json['description'] as String?,
       price: json['price'] as String,
-      stock: json['stock'] as int,
-      isActive: json['is_active'] as bool,
+      stock: json['stock'] as int, 
       category: json['category'] as String?,
-      categoryDetails: json['category_details'],
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      categoryDetails: json['category_details'], 
       images: json['images'] as List<dynamic>,
     );
   }
@@ -47,12 +39,9 @@ class ProductModel {
       'name': name,
       'description': description,
       'price': price,
-      'stock': stock,
-      'is_active': isActive,
+      'stock': stock, 
       'category': category,
-      'category_details': categoryDetails,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
+      'category_details': categoryDetails, 
       'images': images,
     };
   }
@@ -65,6 +54,6 @@ class ProductModel {
 
   @override
   String toString() {
-    return 'ProductModel(id: $id, name: $name, price: $price, stock: $stock, isActive: $isActive)';
+    return 'ProductModel(id: $id, name: $name, price: $price, stock: $stock)';
   }
 }
