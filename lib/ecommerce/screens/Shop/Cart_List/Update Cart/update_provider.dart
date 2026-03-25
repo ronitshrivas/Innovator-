@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:innovator/Innovator/screens/Shop/Cart_List/Update%20Cart/update_cart_model.dart';
+import 'package:innovator/ecommerce/screens/Shop/Cart_List/Update%20Cart/update_cart_model.dart';
 import 'update_cart_service.dart';
 
 final updateCartServiceProvider = Provider((ref) => UpdateCartService());

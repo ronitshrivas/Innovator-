@@ -9,7 +9,7 @@ class ToastUtils {
 
     switch (type) {
       case ToastType.success:
-        backgroundColor = Colors.green.shade200;
+        backgroundColor = Colors.green;
         break;
       case ToastType.error:
         backgroundColor = Colors.red;

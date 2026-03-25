@@ -5,11 +5,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/Innovator/App_data/App_data.dart';
-import 'package:innovator/Innovator/screens/Shop/Cart_List/Update%20Cart/update_provider.dart';
-import 'package:innovator/Innovator/screens/Shop/Cart_List/api_services.dart';
-import 'package:innovator/Innovator/screens/Shop/checkout.dart';
+import 'package:innovator/ecommerce/screens/Shop/Cart_List/Update%20Cart/update_provider.dart';
+import 'package:innovator/ecommerce/screens/Shop/Cart_List/api_services.dart';
+import 'package:innovator/ecommerce/screens/Shop/checkout.dart';
 import 'package:innovator/Innovator/widget/FloatingMenuwidget.dart';
-import '../../../models/Shop_cart_model.dart';
+import '../../../../Innovator/models/Shop_cart_model.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({Key? key}) : super(key: key);

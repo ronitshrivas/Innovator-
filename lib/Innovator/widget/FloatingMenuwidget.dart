@@ -7,12 +7,12 @@ import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/screens/Course/home.dart';
 import 'package:innovator/Innovator/screens/CreatePost/createpost.dart';
 import 'package:innovator/Innovator/screens/Events/Events.dart';
-import 'package:innovator/Innovator/screens/Shop/CardIconWidget/cart_state_manager.dart';
+import 'package:innovator/ecommerce/screens/Shop/CardIconWidget/cart_state_manager.dart';
 import 'package:innovator/Innovator/utils/Drawer/custom_drawer.dart';
 import 'package:innovator/Innovator/Notification/FCM_Services.dart';
 import 'package:innovator/innovator_home.dart';
 import 'package:innovator/Innovator/screens/Search/Searchpage.dart';
-import 'package:innovator/Innovator/screens/Shop/Shop_Page.dart';
+import 'package:innovator/ecommerce/screens/Shop/Shop_Page.dart';
 
 const double _kEdgeThreshold = 80.0;
 

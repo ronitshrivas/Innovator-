@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:innovator/Innovator/models/payment_model.dart';
 import 'package:innovator/Innovator/Payment/payment_provider.dart';
-import 'package:innovator/Innovator/screens/Shop/Cart_List/api_services.dart';
+import 'package:innovator/ecommerce/screens/Shop/Cart_List/api_services.dart';
 import 'package:innovator/Innovator/models/Shop_cart_model.dart';
 import 'package:path/path.dart' as path;
 

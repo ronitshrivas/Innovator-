@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
-import 'package:innovator/Innovator/screens/Shop/Shop_Page.dart';
+import 'package:innovator/ecommerce/screens/Shop/Shop_Page.dart';
 import 'package:innovator/Innovator/services/notifcation_polling_services.dart';
 import 'package:innovator/innovator_home.dart';
 import 'package:innovator/Innovator/screens/show_Specific_Profile/Show_Specific_Profile.dart';
