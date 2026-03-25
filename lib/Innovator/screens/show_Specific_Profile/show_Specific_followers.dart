@@ -7,6 +7,8 @@ import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:innovator/Innovator/screens/show_Specific_Profile/Show_Specific_Profile.dart';
 
+const String _kBaseUrl = 'http://182.93.94.220:8005';
+
 class FollowersFollowingScreen extends StatefulWidget {
   final String userId;
 
@@ -22,7 +24,6 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final appData = AppData();
-  final userController = Get.find<UserController>();
 
   List<Map<String, dynamic>> followers = [];
   List<Map<String, dynamic>> following = [];
@@ -51,54 +52,21 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
       isLoadingFollowers = true;
       errorFollowers = null;
     });
-
     try {
       final response = await http.get(
-        Uri.parse(
-          'http://182.93.94.210:3067/api/v1/followers/${widget.userId}?page=0',
-        ),
+        Uri.parse('$_kBaseUrl/api/users/${widget.userId}/followers/'),
         headers: {
-          'authorization': 'Bearer ${appData.accessToken}',
+          'Authorization': 'Bearer ${appData.accessToken}',
           'Content-Type': 'application/json',
         },
       );
-
-      debugPrint(' Followers API Status: ${response.statusCode}');
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-
-        if (data['status'] == 200 && data['data'] != null) {
-          // Parse as List of Maps - preserving ALL fields including _id
-          final List<dynamic> rawData = data['data'] as List<dynamic>;
-          final fetchedFollowers =
-              rawData.map((item) {
-                return Map<String, dynamic>.from(item as Map);
-              }).toList();
-
-          // Debug first follower
-          if (fetchedFollowers.isNotEmpty) {
-            debugPrint('First follower: ${fetchedFollowers[0]}');
-            debugPrint('Has _id: ${fetchedFollowers[0].containsKey('_id')}');
-          }
-
-          // Cache users
-          if (Get.isRegistered<UserController>()) {
-            Get.find<UserController>().bulkCacheUsers(fetchedFollowers);
-          }
-
-          setState(() {
-            followers = fetchedFollowers;
-            isLoadingFollowers = false;
-          });
-
-          debugPrint('Loaded ${fetchedFollowers.length} followers');
-        } else {
-          setState(() {
-            errorFollowers = data['message'] ?? 'Failed to load followers';
-            isLoadingFollowers = false;
-          });
-        }
+        final List<dynamic> raw = data['followers'] ?? [];
+        setState(() {
+          followers = raw.whereType<Map<String, dynamic>>().toList();
+          isLoadingFollowers = false;
+        });
       } else {
         setState(() {
           errorFollowers = 'Server error: ${response.statusCode}';
@@ -106,7 +74,6 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
         });
       }
     } catch (e) {
-      debugPrint(' Error fetching followers: $e');
       setState(() {
         errorFollowers = 'Network error: $e';
         isLoadingFollowers = false;
@@ -119,54 +86,21 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
       isLoadingFollowing = true;
       errorFollowing = null;
     });
-
     try {
       final response = await http.get(
-        Uri.parse(
-          'http://182.93.94.210:3067/api/v1/following/${widget.userId}?page=0',
-        ),
+        Uri.parse('$_kBaseUrl/api/users/${widget.userId}/following/'),
         headers: {
-          'authorization': 'Bearer ${appData.accessToken}',
+          'Authorization': 'Bearer ${appData.accessToken}',
           'Content-Type': 'application/json',
         },
       );
-
-      debugPrint(' Following API Status: ${response.statusCode}');
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-
-        if (data['status'] == 200 && data['data'] != null) {
-          // Parse as List of Maps - preserving ALL fields including _id
-          final List<dynamic> rawData = data['data'] as List<dynamic>;
-          final fetchedFollowing =
-              rawData.map((item) {
-                return Map<String, dynamic>.from(item as Map);
-              }).toList();
-
-          // Debug first following
-          if (fetchedFollowing.isNotEmpty) {
-            debugPrint('First following: ${fetchedFollowing[0]}');
-            debugPrint('Has _id: ${fetchedFollowing[0].containsKey('_id')}');
-          }
-
-          // Cache users
-          if (Get.isRegistered<UserController>()) {
-            Get.find<UserController>().bulkCacheUsers(fetchedFollowing);
-          }
-
-          setState(() {
-            following = fetchedFollowing;
-            isLoadingFollowing = false;
-          });
-
-          debugPrint('Loaded ${fetchedFollowing.length} following');
-        } else {
-          setState(() {
-            errorFollowing = data['message'] ?? 'Failed to load following';
-            isLoadingFollowing = false;
-          });
-        }
+        final List<dynamic> raw = data['following'] ?? [];
+        setState(() {
+          following = raw.whereType<Map<String, dynamic>>().toList();
+          isLoadingFollowing = false;
+        });
       } else {
         setState(() {
           errorFollowing = 'Server error: ${response.statusCode}';
@@ -174,7 +108,6 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
         });
       }
     } catch (e) {
-      debugPrint(' Error fetching following: $e');
       setState(() {
         errorFollowing = 'Network error: $e';
         isLoadingFollowing = false;
@@ -182,15 +115,37 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
     }
   }
 
+  /// Extracts the user ID from the new API response shape (field is "id", not "_id")
+  String? _extractUserId(Map<String, dynamic> user) {
+    final id = user['id']?.toString().trim() ?? '';
+    return id.isNotEmpty ? id : null;
+  }
+
+  String _extractName(Map<String, dynamic> user) {
+    final fn = user['full_name']?.toString().trim() ?? '';
+    return fn.isNotEmpty ? fn : user['username']?.toString() ?? 'Unknown';
+  }
+
+  String? _extractAvatarUrl(Map<String, dynamic> user) {
+    final raw = user['profile']?['avatar']?.toString() ?? '';
+    if (raw.isEmpty) return null;
+    return raw.startsWith('http') ? raw : '$_kBaseUrl$raw';
+  }
+
   void _navigateToProfile(Map<String, dynamic> user) {
-    debugPrint(' Navigating to profile');
-    debugPrint(' User data: $user');
-    debugPrint(' Available keys: ${user.keys.toList()}');
+    final userId = _extractUserId(user);
 
-    // Check if current user
-    final isCurrentUser = appData.isCurrentUserByEmail(user['email'] ?? '');
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cannot open profile: User ID not found'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
-    if (isCurrentUser) {
+    if (userId == appData.currentUserId) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('This is your profile'),
@@ -201,174 +156,58 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
       return;
     }
 
-    // Extract user ID with multiple fallbacks
-    String? userId;
-
-    if (user['_id'] != null && user['_id'].toString().trim().isNotEmpty) {
-      userId = user['_id'].toString().trim();
-      debugPrint('Found _id: $userId');
-    } else if (user['id'] != null && user['id'].toString().trim().isNotEmpty) {
-      userId = user['id'].toString().trim();
-      debugPrint('Found id: $userId');
-    } else if (user['userId'] != null &&
-        user['userId'].toString().trim().isNotEmpty) {
-      userId = user['userId'].toString().trim();
-      debugPrint('Found userId: $userId');
-    }
-
-    // Validate userId
-    if (userId == null || userId.isEmpty || userId == 'null') {
-      debugPrint(' No valid user ID found');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Cannot open profile: User ID not found'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-
-    // Validate ObjectId format (24 hex characters)
-    final isValidObjectId = RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(userId);
-    if (!isValidObjectId) {
-      debugPrint(' Warning: Invalid ObjectId format: $userId');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Invalid user ID format'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-
-    debugPrint('Navigating with userId: $userId');
-
-    try {
-      Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => SpecificUserProfilePage(userId: userId!),
-            ),
-          )
-          .then((value) {
-            debugPrint('🔙 Returned from profile page');
-          })
-          .catchError((error) {
-            debugPrint(' Navigation error: $error');
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Error opening profile'),
-                backgroundColor: Colors.red,
-                duration: Duration(seconds: 2),
-              ),
-            );
-          });
-    } catch (error) {
-      debugPrint(' Exception: $error');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error opening profile'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SpecificUserProfilePage(userId: userId),
+      ),
+    );
   }
 
-  Widget _buildUserProfilePicture(Map<String, dynamic> user) {
-    final userId = user['_id'] ?? user['id'] ?? user['userId'] ?? '';
-    final pictureUrl = user['picture'];
-    final name = user['name'] ?? 'U';
+  Widget _buildAvatar(Map<String, dynamic> user) {
+    final avatarUrl = _extractAvatarUrl(user);
+    final name = _extractName(user);
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
 
-    // Build the full image URL
-    String? fullImageUrl;
-    if (pictureUrl != null && pictureUrl.toString().isNotEmpty) {
-      final picStr = pictureUrl.toString();
-      fullImageUrl =
-          picStr.startsWith('http')
-              ? picStr
-              : 'http://182.93.94.210:3067${picStr.startsWith('/') ? picStr : '/$picStr'}';
-    }
-
-    return GetBuilder<UserController>(
-      builder: (controller) {
-        // Try to get cached URL first
-        final cachedUrl = controller.getOtherUserFullProfilePicturePath(
-          userId.toString(),
-        );
-        final imageUrl = cachedUrl ?? fullImageUrl;
-
-        return CircleAvatar(
-          radius: 25,
-          backgroundColor: Colors.grey[300],
-          child:
-              imageUrl != null && imageUrl.isNotEmpty
-                  ? ClipOval(
-                    child: CachedNetworkImage(
-                      imageUrl: imageUrl,
-                      width: 50,
-                      height: 50,
-                      fit: BoxFit.cover,
-                      placeholder:
-                          (context, url) => Container(
-                            width: 50,
-                            height: 50,
-                            color: Colors.grey[200],
-                            child: Center(
-                              child: SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.grey[400]!,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                      errorWidget:
-                          (context, url, error) => Container(
-                            width: 50,
-                            height: 50,
-                            color: Colors.grey[400],
-                            child: Center(
-                              child: Text(
-                                name[0].toUpperCase(),
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ),
-                      memCacheWidth: 100,
-                      memCacheHeight: 100,
-                    ),
-                  )
-                  : Text(
-                    name[0].toUpperCase(),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: Colors.white,
-                    ),
-                  ),
-        );
-      },
+    return CircleAvatar(
+      radius: 25,
+      backgroundColor: Colors.grey[300],
+      child:
+          avatarUrl != null
+              ? ClipOval(
+                child: CachedNetworkImage(
+                  imageUrl: avatarUrl,
+                  width: 50,
+                  height: 50,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => Container(color: Colors.grey[200]),
+                  errorWidget:
+                      (_, __, ___) => Text(
+                        initial,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          color: Colors.white,
+                        ),
+                      ),
+                ),
+              )
+              : Text(
+                initial,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: Colors.white,
+                ),
+              ),
     );
   }
 
   Widget _buildUserTile(Map<String, dynamic> user) {
-    final isCurrentUser = appData.isCurrentUserByEmail(user['email'] ?? '');
-
-    // Debug the user data structure
-    debugPrint('🔧 Building tile for user: ${user['name']}');
-    debugPrint('🔧 User has _id: ${user.containsKey('_id')}');
-    debugPrint('🔧 _id value: ${user['_id']}');
+    final userId = _extractUserId(user);
+    final isCurrentUser = userId == appData.currentUserId;
+    final name = _extractName(user);
+    final username = user['username']?.toString() ?? '';
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -387,18 +226,19 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
         ],
       ),
       child: ListTile(
-        onTap:
-            isCurrentUser
-                ? null
-                : () {
-                  // Pass the ENTIRE user object to _navigateToProfile
-                  _navigateToProfile(user);
-                },
-        leading: _buildUserProfilePicture(user),
+        onTap: isCurrentUser ? null : () => _navigateToProfile(user),
+        leading: _buildAvatar(user),
         title: Text(
-          user['name'] ?? 'Unknown User',
+          name,
           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
         ),
+        subtitle:
+            username.isNotEmpty
+                ? Text(
+                  '@$username',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                )
+                : null,
         trailing:
             isCurrentUser
                 ? Container(
@@ -407,7 +247,7 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withAlpha(1),
+                    color: Colors.blue.withAlpha(20),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Text(
@@ -427,134 +267,56 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
     );
   }
 
-  Widget _buildFollowersList() {
-    if (isLoadingFollowers) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(20),
-          child: CircularProgressIndicator(),
-        ),
-      );
+  Widget _buildList(
+    bool isLoading,
+    String? error,
+    List<Map<String, dynamic>> items,
+    VoidCallback onRetry,
+    IconData emptyIcon,
+    String emptyText,
+  ) {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
     }
-
-    if (errorFollowers != null) {
+    if (error != null) {
       return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(
-                errorFollowers!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _fetchFollowers,
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(
+              error,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(onPressed: onRetry, child: const Text('Retry')),
+          ],
         ),
       );
     }
-
-    if (followers.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(20),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.people_outline, size: 48, color: Colors.grey),
-              SizedBox(height: 16),
-              Text(
-                'No followers yet',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            ],
-          ),
+    if (items.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(emptyIcon, size: 48, color: Colors.grey),
+            const SizedBox(height: 16),
+            Text(
+              emptyText,
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+          ],
         ),
       );
     }
-
     return RefreshIndicator(
-      onRefresh: _fetchFollowers,
+      onRefresh: onRetry as Future<void> Function(),
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: followers.length,
-        itemBuilder: (context, index) {
-          return _buildUserTile(followers[index]);
-        },
-      ),
-    );
-  }
-
-  Widget _buildFollowingList() {
-    if (isLoadingFollowing) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(20),
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    if (errorFollowing != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(
-                errorFollowing!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _fetchFollowing,
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (following.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(20),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.person_add_outlined, size: 48, color: Colors.grey),
-              SizedBox(height: 16),
-              Text(
-                'Not following anyone yet',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: _fetchFollowing,
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: following.length,
-        itemBuilder: (context, index) {
-          return _buildUserTile(following[index]);
-        },
+        itemCount: items.length,
+        itemBuilder: (_, i) => _buildUserTile(items[i]),
       ),
     );
   }
@@ -601,41 +363,59 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
       ),
       body: TabBarView(
         controller: _tabController,
-        children: [_buildFollowersList(), _buildFollowingList()],
+        children: [
+          _buildList(
+            isLoadingFollowers,
+            errorFollowers,
+            followers,
+            _fetchFollowers,
+            Icons.people_outline,
+            'No followers yet',
+          ),
+          _buildList(
+            isLoadingFollowing,
+            errorFollowing,
+            following,
+            _fetchFollowing,
+            Icons.person_add_outlined,
+            'Not following anyone yet',
+          ),
+        ],
       ),
     );
   }
 }
 
-// Dialog function to show followers/following
+// ── Dialog helper ─────────────────────────────────────────────────────────────
+
 void showFollowersFollowingDialog(BuildContext context, String userId) {
   showDialog(
     context: context,
-    builder: (context) {
-      return Dialog(
-        insetPadding: const EdgeInsets.all(16),
-        backgroundColor: Colors.transparent,
-        child: Container(
-          decoration: BoxDecoration(
-            color:
-                Theme.of(context).brightness == Brightness.dark
-                    ? const Color(0xFF1A1A1A)
-                    : Colors.white,
-            borderRadius: BorderRadius.circular(20),
+    builder:
+        (_) => Dialog(
+          insetPadding: const EdgeInsets.all(16),
+          backgroundColor: Colors.transparent,
+          child: Container(
+            decoration: BoxDecoration(
+              color:
+                  Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF1A1A1A)
+                      : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            padding: const EdgeInsets.all(16),
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.7,
+              maxWidth: MediaQuery.of(context).size.width * 0.9,
+            ),
+            child: FollowersFollowingContent(userId: userId),
           ),
-          padding: const EdgeInsets.all(16),
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.7,
-            maxWidth: MediaQuery.of(context).size.width * 0.9,
-          ),
-          child: FollowersFollowingContent(userId: userId),
         ),
-      );
-    },
   );
 }
 
-// Separate widget for dialog content
+// ── Dialog content widget ──────────────────────────────────────────────────────
+
 class FollowersFollowingContent extends StatefulWidget {
   final String userId;
 
@@ -679,28 +459,24 @@ class _FollowersFollowingContentState extends State<FollowersFollowingContent>
       isLoadingFollowers = true;
       errorFollowers = null;
     });
-
     try {
       final response = await http.get(
-        Uri.parse(
-          'http://182.93.94.210:3067/api/v1/followers/${widget.userId}',
-        ),
+        Uri.parse('$_kBaseUrl/api/users/${widget.userId}/followers/'),
         headers: {
-          'authorization': 'Bearer ${appData.accessToken}',
+          'Authorization': 'Bearer ${appData.accessToken}',
           'Content-Type': 'application/json',
         },
       );
-
-      final data = jsonDecode(response.body);
-
-      if (data['status'] == 200) {
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> raw = data['followers'] ?? [];
         setState(() {
-          followers = List<Map<String, dynamic>>.from(data['data']);
+          followers = raw.whereType<Map<String, dynamic>>().toList();
           isLoadingFollowers = false;
         });
       } else {
         setState(() {
-          errorFollowers = data['message'] ?? 'Failed to load followers';
+          errorFollowers = 'Server error: ${response.statusCode}';
           isLoadingFollowers = false;
         });
       }
@@ -717,28 +493,24 @@ class _FollowersFollowingContentState extends State<FollowersFollowingContent>
       isLoadingFollowing = true;
       errorFollowing = null;
     });
-
     try {
       final response = await http.get(
-        Uri.parse(
-          'http://182.93.94.210:3067/api/v1/following/${widget.userId}',
-        ),
+        Uri.parse('$_kBaseUrl/api/users/${widget.userId}/following/'),
         headers: {
-          'authorization': 'Bearer ${appData.accessToken}',
+          'Authorization': 'Bearer ${appData.accessToken}',
           'Content-Type': 'application/json',
         },
       );
-
-      final data = jsonDecode(response.body);
-
-      if (data['status'] == 200) {
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> raw = data['following'] ?? [];
         setState(() {
-          following = List<Map<String, dynamic>>.from(data['data']);
+          following = raw.whereType<Map<String, dynamic>>().toList();
           isLoadingFollowing = false;
         });
       } else {
         setState(() {
-          errorFollowing = data['message'] ?? 'Failed to load following';
+          errorFollowing = 'Server error: ${response.statusCode}';
           isLoadingFollowing = false;
         });
       }
@@ -750,108 +522,63 @@ class _FollowersFollowingContentState extends State<FollowersFollowingContent>
     }
   }
 
+  String? _extractUserId(Map<String, dynamic> user) {
+    final id = user['id']?.toString().trim() ?? '';
+    return id.isNotEmpty ? id : null;
+  }
+
+  String _extractName(Map<String, dynamic> user) {
+    final fn = user['full_name']?.toString().trim() ?? '';
+    return fn.isNotEmpty ? fn : user['username']?.toString() ?? 'Unknown';
+  }
+
+  String? _extractAvatarUrl(Map<String, dynamic> user) {
+    final raw = user['profile']?['avatar']?.toString() ?? '';
+    if (raw.isEmpty) return null;
+    return raw.startsWith('http') ? raw : '$_kBaseUrl$raw';
+  }
+
   void _navigateToProfile(Map<String, dynamic> user) {
-    // Check if this is the current user
-    final isCurrentUser = appData.isCurrentUserByEmail(user['email'] ?? '');
+    final userId = _extractUserId(user);
 
-    if (isCurrentUser) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('This is your profile'),
-          backgroundColor: Colors.blue,
-        ),
-      );
-      return;
-    }
-
-    // Debug: Print user data to understand the structure
-    debugPrint(' Navigating to profile with user data: $user');
-    debugPrint(' Available keys: ${user.keys.toList()}');
-
-    // Try different possible ID fields based on your API response
-    String? userId;
-
-    // Priority order for finding user ID
-    if (user['_id'] != null && user['_id'].toString().trim().isNotEmpty) {
-      userId = user['_id'].toString().trim();
-      debugPrint('Found userId from _id: $userId');
-    } else if (user['id'] != null && user['id'].toString().trim().isNotEmpty) {
-      userId = user['id'].toString().trim();
-      debugPrint('Found userId from id: $userId');
-    } else if (user['userId'] != null &&
-        user['userId'].toString().trim().isNotEmpty) {
-      userId = user['userId'].toString().trim();
-      debugPrint('Found userId from userId: $userId');
-    } else if (user['user_id'] != null &&
-        user['user_id'].toString().trim().isNotEmpty) {
-      userId = user['user_id'].toString().trim();
-      debugPrint('Found userId from user_id: $userId');
-    }
-
-    // Validate userId before navigation
-    if (userId == null || userId.isEmpty || userId == 'null') {
-      debugPrint(' No valid user ID found in user data');
+    if (userId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Cannot open profile: User ID not found'),
           backgroundColor: Colors.red,
-          duration: Duration(seconds: 2),
         ),
       );
       return;
     }
 
-    // Additional validation: Check if userId looks like a valid MongoDB ObjectId (24 hex characters)
-    final isValidObjectId = RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(userId);
-    if (!isValidObjectId) {
-      debugPrint(
-        ' Warning: userId "$userId" does not look like a valid ObjectId',
-      );
-    }
-
-    debugPrint('Navigating to SpecificUserProfilePage with userId: $userId');
-
-    try {
-      // Close the dialog first (if in dialog version)
-      if (Navigator.canPop(context)) {
-        Navigator.of(context).pop();
-      }
-
-      // Navigate to profile
-      Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => SpecificUserProfilePage(userId: userId!),
-            ),
-          )
-          .then((value) {
-            // Optional: Handle any return value or refresh data
-            debugPrint('🔙 Returned from SpecificUserProfilePage');
-          })
-          .catchError((error) {
-            debugPrint(' Navigation error: $error');
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Error opening profile: $error'),
-                backgroundColor: Colors.red,
-                duration: Duration(seconds: 2),
-              ),
-            );
-          });
-    } catch (error) {
-      debugPrint(' Exception during navigation: $error');
+    if (userId == appData.currentUserId) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error opening profile: $error'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 2),
+        const SnackBar(
+          content: Text('This is your profile'),
+          backgroundColor: Colors.blue,
+          duration: Duration(seconds: 1),
         ),
       );
+      return;
     }
+
+    // Close dialog, then navigate
+    Navigator.of(context).pop();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SpecificUserProfilePage(userId: userId),
+      ),
+    );
   }
 
   Widget _buildUserTile(Map<String, dynamic> user) {
-    final isCurrentUser = appData.isCurrentUserByEmail(user['email'] ?? '');
+    final userId = _extractUserId(user);
+    final isCurrentUser = userId == appData.currentUserId;
+    final name = _extractName(user);
+    final username = user['username']?.toString() ?? '';
+    final avatarUrl = _extractAvatarUrl(user);
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -867,37 +594,45 @@ class _FollowersFollowingContentState extends State<FollowersFollowingContent>
         leading: CircleAvatar(
           radius: 22,
           backgroundColor: Colors.grey[300],
-          backgroundImage:
-              user['picture'] != null && user['picture'].toString().isNotEmpty
-                  ? NetworkImage(
-                    user['picture'].toString().startsWith('http://') ||
-                            user['picture'].toString().startsWith('https://')
-                        ? user['picture']
-                        : 'http://182.93.94.210:3067${user['picture']}',
-                  )
-                  : null,
           child:
-              user['picture'] == null || user['picture'].toString().isEmpty
-                  ? Text(
-                    (user['name'] ?? 'U')[0].toUpperCase(),
+              avatarUrl != null
+                  ? ClipOval(
+                    child: CachedNetworkImage(
+                      imageUrl: avatarUrl,
+                      width: 44,
+                      height: 44,
+                      fit: BoxFit.cover,
+                      placeholder:
+                          (_, __) => Container(color: Colors.grey[200]),
+                      errorWidget:
+                          (_, __, ___) => Text(
+                            initial,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                    ),
+                  )
+                  : Text(
+                    initial,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),
-                  )
-                  : null,
+                  ),
         ),
         title: Text(
-          user['name'] ?? 'Unknown User',
+          name,
           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
         ),
-        // subtitle: Text(
-        //   user['email'] ?? '',
-        //   style: TextStyle(
-        //     color: Colors.grey[600],
-        //     fontSize: 13,
-        //   ),
-        // ),
+        subtitle:
+            username.isNotEmpty
+                ? Text(
+                  '@$username',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                )
+                : null,
         trailing:
             isCurrentUser
                 ? Container(
@@ -906,7 +641,7 @@ class _FollowersFollowingContentState extends State<FollowersFollowingContent>
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withAlpha(10),
+                    color: Colors.blue.withAlpha(20),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: const Text(
@@ -927,12 +662,16 @@ class _FollowersFollowingContentState extends State<FollowersFollowingContent>
     );
   }
 
-  Widget _buildFollowersList() {
-    if (isLoadingFollowers) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (errorFollowers != null) {
+  Widget _buildList(
+    bool isLoading,
+    String? error,
+    List<Map<String, dynamic>> items,
+    VoidCallback onRetry,
+    IconData emptyIcon,
+    String emptyText,
+  ) {
+    if (isLoading) return const Center(child: CircularProgressIndicator());
+    if (error != null) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -940,7 +679,7 @@ class _FollowersFollowingContentState extends State<FollowersFollowingContent>
             const Icon(Icons.error_outline, size: 32, color: Colors.red),
             const SizedBox(height: 8),
             Text(
-              errorFollowers!,
+              error,
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.red, fontSize: 14),
             ),
@@ -948,76 +687,25 @@ class _FollowersFollowingContentState extends State<FollowersFollowingContent>
         ),
       );
     }
-
-    if (followers.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.people_outline, size: 32, color: Colors.grey),
-            SizedBox(height: 8),
-            Text(
-              'No followers yet',
-              style: TextStyle(color: Colors.grey, fontSize: 14),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      shrinkWrap: true,
-      itemCount: followers.length,
-      itemBuilder: (context, index) {
-        return _buildUserTile(followers[index]);
-      },
-    );
-  }
-
-  Widget _buildFollowingList() {
-    if (isLoadingFollowing) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (errorFollowing != null) {
+    if (items.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 32, color: Colors.red),
+            Icon(emptyIcon, size: 32, color: Colors.grey),
             const SizedBox(height: 8),
             Text(
-              errorFollowing!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.red, fontSize: 14),
+              emptyText,
+              style: const TextStyle(color: Colors.grey, fontSize: 14),
             ),
           ],
         ),
       );
     }
-
-    if (following.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.person_add_outlined, size: 32, color: Colors.grey),
-            SizedBox(height: 8),
-            Text(
-              'Not following anyone yet',
-              style: TextStyle(color: Colors.grey, fontSize: 14),
-            ),
-          ],
-        ),
-      );
-    }
-
     return ListView.builder(
       shrinkWrap: true,
-      itemCount: following.length,
-      itemBuilder: (context, index) {
-        return _buildUserTile(following[index]);
-      },
+      itemCount: items.length,
+      itemBuilder: (_, i) => _buildUserTile(items[i]),
     );
   }
 
@@ -1026,7 +714,6 @@ class _FollowersFollowingContentState extends State<FollowersFollowingContent>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Header
         Row(
           children: [
             const Expanded(
@@ -1042,8 +729,6 @@ class _FollowersFollowingContentState extends State<FollowersFollowingContent>
           ],
         ),
         const SizedBox(height: 16),
-
-        // Tab Bar
         TabBar(
           controller: _tabController,
           labelColor: const Color.fromRGBO(244, 135, 6, 1),
@@ -1055,7 +740,7 @@ class _FollowersFollowingContentState extends State<FollowersFollowingContent>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Icon(Icons.people_outline, size: 16),
-                  const SizedBox(width: 2),
+                  const SizedBox(width: 4),
                   Text('Followers (${followers.length})'),
                 ],
               ),
@@ -1065,19 +750,34 @@ class _FollowersFollowingContentState extends State<FollowersFollowingContent>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Icon(Icons.person_add_outlined, size: 16),
-                  const SizedBox(width: 2),
+                  const SizedBox(width: 4),
                   Text('Following (${following.length})'),
                 ],
               ),
             ),
           ],
         ),
-
-        // Content
         Expanded(
           child: TabBarView(
             controller: _tabController,
-            children: [_buildFollowersList(), _buildFollowingList()],
+            children: [
+              _buildList(
+                isLoadingFollowers,
+                errorFollowers,
+                followers,
+                _fetchFollowers,
+                Icons.people_outline,
+                'No followers yet',
+              ),
+              _buildList(
+                isLoadingFollowing,
+                errorFollowing,
+                following,
+                _fetchFollowing,
+                Icons.person_add_outlined,
+                'Not following anyone yet',
+              ),
+            ],
           ),
         ),
       ],

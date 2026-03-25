@@ -1,11 +1,3 @@
-// follow-Service.dart
-// Follow:   POST http://182.93.94.220:8005/api/users/<userId>/follow/
-// Unfollow: POST http://182.93.94.220:8005/api/users/<userId>/unfollow/
-// Lookup:   GET  http://182.93.94.220:8005/api/users/?username=<username>
-//
-// Accepts both UUID and username as input.
-// If a username is passed, it is resolved to a UUID first via the lookup API.
-
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;

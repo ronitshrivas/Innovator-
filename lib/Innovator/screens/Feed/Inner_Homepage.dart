@@ -12,11 +12,15 @@ import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Login.dart';
 import 'package:innovator/Innovator/controllers/user_controller.dart';
 import 'package:innovator/Innovator/screens/Feed/Optimize%20Media/OptimizeMediaScreen.dart';
+import 'package:innovator/Innovator/screens/Feed/Repost/repost_button.dart';
+import 'package:innovator/Innovator/screens/Feed/Repost/repost_list_screen.dart';
+import 'package:innovator/Innovator/screens/Feed/Repost/sharedrepostcard.dart';
 import 'package:innovator/Innovator/screens/Feed/Update%20Feed/API_Service.dart';
 import 'package:innovator/Innovator/screens/Follow/follow_Button.dart';
 import 'package:innovator/Innovator/screens/Likes/Content-Like-Service.dart';
 import 'package:innovator/Innovator/screens/Likes/content-Like-Button.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:innovator/Innovator/screens/Likes/reaction_sheet_screen.dart';
 import 'package:innovator/Innovator/screens/SHow_Specific_Profile/Show_Specific_Profile.dart';
 import 'package:innovator/Innovator/screens/chatrrom/sound/soundplayer.dart';
 import 'package:innovator/Innovator/screens/comment/comment_section.dart';
@@ -663,25 +667,6 @@ class _Inner_HomePageState extends State<Inner_HomePage> {
 
   // ── Auth / Connectivity ────────────────────────────────────────────────────
 
-  Future<void> _requestNotificationPermission() async {
-    try {
-      if (await Permission.notification.isDenied) {
-        await Permission.notification.request();
-      }
-      await FirebaseMessaging.instance.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-        criticalAlert: true,
-      );
-      if (Platform.isAndroid) {
-        developer.log('Android: ensure battery optimization disabled');
-      }
-    } catch (e) {
-      developer.log('Notification permission error: $e');
-    }
-  }
-
   Future<bool> _verifyToken() async {
     try {
       if (_appData.accessToken == null || _appData.accessToken!.isEmpty) {
@@ -716,8 +701,6 @@ class _Inner_HomePageState extends State<Inner_HomePage> {
       setState(() => _isOnline = false);
     }
   }
-
-  // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -963,6 +946,7 @@ class _FeedItemState extends State<FeedItem>
   late AnimationController _controller;
   late String formattedTimeAgo;
   bool _showComments = false;
+  // final List<RepostEntry> _entries = [];
 
   final ContentLikeService likeService = ContentLikeService(
     baseUrl: 'http://182.93.94.220:8005',
@@ -983,6 +967,18 @@ class _FeedItemState extends State<FeedItem>
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  String _mapReportReason(String uiReason) {
+    const Map<String, String> reasonMap = {
+      'Spam': 'spam',
+      'Harassment': 'harassment',
+      'Inappropriate content': 'inappropriate_content',
+      'Fake account': 'fake_account',
+      'Copyright violation': 'copyright_violation',
+      'Other': 'other',
+    };
+    return reasonMap[uiReason] ?? uiReason.toLowerCase().replaceAll(' ', '_');
   }
 
   String _formatTimeAgo(DateTime dt) {
@@ -1186,7 +1182,8 @@ class _FeedItemState extends State<FeedItem>
               child: Row(
                 children: [
                   Hero(
-                    tag: 'avatar_${widget.content.author.id}',
+                    tag:
+                        'avatar_${widget.content.author.id}_${widget.content.id}',
                     child: Container(
                       width: 48,
                       height: 48,
@@ -1430,12 +1427,58 @@ class _FeedItemState extends State<FeedItem>
               ),
 
             // Media
-            if (widget.content.files.isNotEmpty)
+            if (widget.content.isRepost &&
+                widget.content.sharedPostDetails != null)
+              SharedPostCard(details: widget.content.sharedPostDetails!),
+
+            // Own media (only shown when NOT a repost)
+            if (!widget.content.isRepost && widget.content.files.isNotEmpty)
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 1.0),
                 child: _buildMediaPreview(),
               ),
-
+            // In your action bar section, ABOVE the Divider, add this:
+            // if (widget.content.likes > 0)
+            //   Padding(
+            //     padding: const EdgeInsets.symmetric(
+            //       horizontal: 16,
+            //       vertical: 6,
+            //     ),
+            //     child: Row(
+            //       children: [
+            //         GestureDetector(
+            //           onTap: () => _showReactionsList(context),
+            //           child: Row(
+            //             children: [
+            //               _buildReactionBubbles(),
+            //               const SizedBox(width: 6),
+            //               Text(
+            //                 '${widget.content.likes}',
+            //                 style: TextStyle(
+            //                   fontSize: 13,
+            //                   color: Colors.grey.shade600,
+            //                 ),
+            //               ),
+            //             ],
+            //           ),
+            //         ),
+            //         const Spacer(),
+            //         if (widget.content.comments > 0)
+            //           GestureDetector(
+            //             onTap:
+            //                 () =>
+            //                     setState(() => _showComments = !_showComments),
+            //             child: Text(
+            //               '${widget.content.comments} comments',
+            //               style: TextStyle(
+            //                 fontSize: 13,
+            //                 color: Colors.grey.shade600,
+            //               ),
+            //             ),
+            //           ),
+            //       ],
+            //     ),
+            //   ),
             const SizedBox(height: 10.0),
             Divider(
               color: Colors.grey.shade300,
@@ -1455,6 +1498,7 @@ class _FeedItemState extends State<FeedItem>
                 // top: 10,
               ),
               child: Row(
+                //mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   Row(
                     children: [
@@ -1468,14 +1512,18 @@ class _FeedItemState extends State<FeedItem>
                         },
                       ),
                       //const SizedBox(width: 10),
-                      Text(
-                        '${widget.content.likes} Likes',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade700,
-                          fontSize: 11.0,
+                      GestureDetector(
+                        onTap: () => _showReactionsList(context),
+                        child: Text(
+                          '${widget.content.likes} Likes',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade700,
+                            fontSize: 11.0,
+                          ),
                         ),
                       ),
+                      //_buildReactionBubbles(),
                     ],
                   ),
                   const SizedBox(width: 30),
@@ -1504,6 +1552,35 @@ class _FeedItemState extends State<FeedItem>
                           fontSize: 11.0,
                         ),
                       ),
+                    ],
+                  ),
+                  SizedBox(width: 20),
+                  Row(
+                    children: [
+                      RepostButton(
+                        postId: widget.content.id,
+                        authorName: widget.content.author.name,
+                        content: widget.content.status,
+                        authorAvatar:
+                            widget.content.author.picture.isNotEmpty
+                                ? widget.content.author.picture
+                                : null,
+                        onViewReposts: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => RepostsListScreen(
+                                    postId: widget.content.id,
+                                    originalAuthorName:
+                                        widget.content.author.name,
+                                  ),
+                            ),
+                          );
+                        },
+                      ),
+                      // CountPill(count: _entries.length),
+                      //CountPill(count: widget.content., label: 'Reposts'),
                     ],
                   ),
                   const Spacer(),
@@ -1546,6 +1623,56 @@ class _FeedItemState extends State<FeedItem>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showReactionsList(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => reeactionsheet(postId: widget.content.id),
+    );
+  }
+
+  Widget _buildReactionBubbles() {
+    // Derive top 3 from categoriesDetail or hardcode from API top_reactions
+    const topTypes = ['like']; // replace with actual top_reactions from API
+    final emojiMap = {
+      'like': '👍',
+      'love': '❤️',
+      'haha': '😂',
+      'wow': '😮',
+      'sad': '😢',
+      'angry': '😡',
+      'celebrate': '🎉',
+      'dislike': '👎',
+    };
+    return SizedBox(
+      width: topTypes.length * 16.0 + 6,
+      height: 22,
+      child: Stack(
+        children: List.generate(topTypes.length, (i) {
+          return Positioned(
+            left: i * 14.0,
+            child: Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.grey.shade100,
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+              child: Center(
+                child: Text(
+                  emojiMap[topTypes[i]] ?? '👍',
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ),
+            ),
+          );
+        }),
       ),
     );
   }
@@ -2617,7 +2744,7 @@ class _FeedItemState extends State<FeedItem>
               'Authorization': 'Bearer $token',
             },
             body: jsonEncode({
-              'reason': reason.toLowerCase(),
+              'reason': _mapReportReason(reason),
               'description': description.isNotEmpty ? description : reason,
             }),
           )
@@ -2887,7 +3014,6 @@ class _FeedItemState extends State<FeedItem>
       }
 
       final requestBody = {
-        'blocked_user': widget.content.author.id,
         'reason': description.isNotEmpty ? description : reason,
       };
 
@@ -2895,7 +3021,9 @@ class _FeedItemState extends State<FeedItem>
 
       final response = await http
           .post(
-            Uri.parse('http://182.93.94.220:8005/api/blocks/'),
+            Uri.parse(
+              'http://182.93.94.220:8005/api/users/${widget.content.author.id}/block/',
+            ),
             headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json',
@@ -2910,14 +3038,17 @@ class _FeedItemState extends State<FeedItem>
       developer.log('Block response: ${response.statusCode} ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = json.decode(response.body);
+        final msg =
+            data['message']?.toString() ??
+            'Successfully blocked ${widget.content.author.name}';
         Get.snackbar(
           'User Blocked',
-          'You have successfully blocked ${widget.content.author.name}. '
-              'They will no longer be able to see your posts or contact you.',
+          msg,
           backgroundColor: Colors.green,
           colorText: Colors.white,
           icon: const Icon(Icons.block, color: Colors.white),
-          duration: const Duration(seconds: 5),
+          duration: const Duration(seconds: 3),
         );
       } else if (response.statusCode == 401) {
         Navigator.pushAndRemoveUntil(

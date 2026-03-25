@@ -9,7 +9,6 @@ import 'package:innovator/Innovator/Authorization/Forget_PWD.dart';
 import 'package:innovator/Innovator/Authorization/signup.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/helper/dialogs.dart';
-import 'package:innovator/Innovator/screens/Profile/Edit_Profile.dart';
 import 'package:innovator/innovator_home.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -180,7 +179,7 @@ class _LoginPageState extends State<LoginPage> {
       developer.log('Profile incomplete → EditProfileScreen');
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+        MaterialPageRoute(builder: (_) => const Homepage()),
         (_) => false,
       );
       Future.delayed(const Duration(milliseconds: 400), () {

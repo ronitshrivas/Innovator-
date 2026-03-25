@@ -675,11 +675,11 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
             title: 'Events',
             onTap: _goToEvents,
           ),
-          _QuickMenuItem(
-            icon: Icons.report_rounded,
-            title: 'Reports',
-            onTap: _goToReports,
-          ),
+          // _QuickMenuItem(
+          //   icon: Icons.report_rounded,
+          //   title: 'Reports',
+          //   onTap: _goToReports,
+          // ),
           _QuickMenuItem(
             icon: Icons.privacy_tip_rounded,
             title: 'Privacy & Policy',
@@ -782,7 +782,7 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
   void _goToEvents() => _quickNavigate(() => EventsHomePage());
   void _gotoelearning() => _quickNavigate(() => const HomeScreen());
   void _gotoecommerce() => _quickNavigate(() => const ShopPage());
-  void _goToReports() => _quickNavigate(() => ReportsScreen());
+  //void _goToReports() => _quickNavigate(() => ReportsScreen());
   void _goToPrivacy() =>
       _quickNavigate(() => const ProviderScope(child: PrivacyPolicy()));
   void _goToSettings() => _quickNavigate(() => const SettingsScreen());

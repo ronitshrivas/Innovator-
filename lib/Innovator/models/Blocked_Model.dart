@@ -1,176 +1,53 @@
-// Add these classes and methods to your AppData class
-
-// Model classes for blocked users
-import 'dart:developer' as developer;
-
 class BlockedUser {
   final String id;
+  final String username;
+  final String? fullName;
   final String email;
-  final String name;
-  final String picture;
-  final String blockReason;
-  final String blockType;
-  final DateTime blockedAt;
-  final PreviousInteractions previousInteractions;
+  final String role;
+  final String? avatar;
+  final int followersCount;
+  final int followingCount;
+  final String? bio;
+  final String? occupation;
+  final String? education;
 
-  const BlockedUser({
+  BlockedUser({
     required this.id,
+    required this.username,
+    this.fullName,
     required this.email,
-    required this.name,
-    required this.picture,
-    required this.blockReason,
-    required this.blockType,
-    required this.blockedAt,
-    required this.previousInteractions,
+    required this.role,
+    this.avatar,
+    required this.followersCount,
+    required this.followingCount,
+    this.bio,
+    this.occupation,
+    this.education,
   });
 
   factory BlockedUser.fromJson(Map<String, dynamic> json) {
+    final profile = json['profile'] as Map<String, dynamic>?;
     return BlockedUser(
-      id: json['_id'] ?? '',
+      id: json['id'] ?? '',
+      username: json['username'] ?? '',
+      fullName: json['full_name'],
       email: json['email'] ?? '',
-      name: json['name'] ?? 'Unknown',
-      picture: json['picture'] ?? '',
-      blockReason: json['blockReason'] ?? '',
-      blockType: json['blockType'] ?? 'full',
-      blockedAt: DateTime.parse(
-        json['blockedAt'] ?? DateTime.now().toIso8601String(),
-      ),
-      previousInteractions: PreviousInteractions.fromJson(
-        json['previousInteractions'] ?? {},
-      ),
+      role: json['role'] ?? '',
+      avatar: profile?['avatar'],
+      followersCount: json['followers_count'] ?? 0,
+      followingCount: json['following_count'] ?? 0,
+      bio: profile?['bio'],
+      occupation: profile?['occupation'],
+      education: profile?['education'],
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      '_id': id,
-      'email': email,
-      'name': name,
-      'picture': picture,
-      'blockReason': blockReason,
-      'blockType': blockType,
-      'blockedAt': blockedAt.toIso8601String(),
-      'previousInteractions': previousInteractions.toJson(),
-    };
-  }
+  String get displayName =>
+      (fullName != null && fullName!.isNotEmpty) ? fullName! : username;
 
-  // Helper method to get full picture URL
-  String get fullPictureUrl {
-    if (picture.isEmpty) return '';
-    if (picture.startsWith('http')) return picture;
-    return 'http://182.93.94.210:3067$picture';
+  String get avatarUrl {
+    if (avatar == null || avatar!.isEmpty) return '';
+    if (avatar!.startsWith('http')) return avatar!;
+    return 'http://182.93.94.220:8005$avatar';
   }
 }
-
-class PreviousInteractions {
-  final bool followedEachOther;
-  final bool hadConversations;
-  final bool sharedContent;
-
-  const PreviousInteractions({
-    required this.followedEachOther,
-    required this.hadConversations,
-    required this.sharedContent,
-  });
-
-  factory PreviousInteractions.fromJson(Map<String, dynamic> json) {
-    return PreviousInteractions(
-      followedEachOther: json['followedEachOther'] ?? false,
-      hadConversations: json['hadConversations'] ?? false,
-      sharedContent: json['sharedContent'] ?? false,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'followedEachOther': followedEachOther,
-      'hadConversations': hadConversations,
-      'sharedContent': sharedContent,
-    };
-  }
-}
-
-class BlockedUsersPagination {
-  final int page;
-  final int limit;
-  final int total;
-  final int pages;
-  final bool hasMore;
-
-  const BlockedUsersPagination({
-    required this.page,
-    required this.limit,
-    required this.total,
-    required this.pages,
-    required this.hasMore,
-  });
-
-  factory BlockedUsersPagination.fromJson(Map<String, dynamic> json) {
-    return BlockedUsersPagination(
-      page: json['page'] ?? 0,
-      limit: json['limit'] ?? 20,
-      total: json['total'] ?? 0,
-      pages: json['pages'] ?? 0,
-      hasMore: json['hasMore'] ?? false,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'page': page,
-      'limit': limit,
-      'total': total,
-      'pages': pages,
-      'hasMore': hasMore,
-    };
-  }
-}
-
-class BlockedUsersResponse {
-  final int status;
-  final List<BlockedUser> blockedUsers;
-  final BlockedUsersPagination pagination;
-  final String? error;
-  final String message;
-
-  const BlockedUsersResponse({
-    required this.status,
-    required this.blockedUsers,
-    required this.pagination,
-    this.error,
-    required this.message,
-  });
-
-  factory BlockedUsersResponse.fromJson(Map<String, dynamic> json) {
-    try {
-      final data = json['data'] as Map<String, dynamic>? ?? {};
-      final blockedUsersList = data['blockedUsers'] as List<dynamic>? ?? [];
-
-      return BlockedUsersResponse(
-        status: json['status'] ?? 200,
-        blockedUsers:
-            blockedUsersList
-                .map(
-                  (user) => BlockedUser.fromJson(user as Map<String, dynamic>),
-                )
-                .toList(),
-        pagination: BlockedUsersPagination.fromJson(data['pagination'] ?? {}),
-        error: json['error'],
-        message: json['message'] ?? '',
-      );
-    } catch (e) {
-      developer.log('Error parsing BlockedUsersResponse: $e');
-      return BlockedUsersResponse(
-        status: json['status'] ?? 500,
-        blockedUsers: [],
-        pagination: BlockedUsersPagination.fromJson({}),
-        error: 'Parsing error: $e',
-        message: json['message'] ?? 'Failed to parse response',
-      );
-    }
-  }
-}
-
-// Add these methods to your existing AppData class:
-
-// Fetch blocked users with pagination

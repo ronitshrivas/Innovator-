@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:innovator/Innovator/screens/Shop/CardIconWidget/cart_state_manager.dart';
 import 'package:innovator/Innovator/screens/Shop/Shop_Page.dart';
@@ -18,97 +17,96 @@ import 'package:innovator/KMS/screens/teacher/partner_assigned_school.dart';
 import 'package:innovator/KMS/screens/teacher/partner_assignment_management.dart';
 import 'package:innovator/KMS/screens/teacher/partner_attendance_specific_grade.dart';
 import 'dart:developer' as developer;
-import 'package:innovator/innovator_home.dart';
 
 late Size mq;
-late FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
+//late FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
 GlobalKey<NavigatorState> get navigatorKey => Get.key;
 
 //: Track Firebase initialization state
-bool _isFirebaseInitialized = false;
+//bool _isFirebaseInitialized = false;
 
-void _showImmediateFeedback(RemoteMessage message) {
-  try {
-    final title =
-        message.notification?.title ??
-        message.data['senderName'] ??
-        'New Message';
-    final body =
-        message.notification?.body ?? message.data['message'] ?? 'New message';
+// void _showImmediateFeedback(RemoteMessage message) {
+//   try {
+//     final title =
+//         message.notification?.title ??
+//         message.data['senderName'] ??
+//         'New Message';
+//     final body =
+//         message.notification?.body ?? message.data['message'] ?? 'New message';
 
-    Get.snackbar(
-      title,
-      body,
-      snackPosition: SnackPosition.TOP,
-      backgroundColor: const Color.fromRGBO(244, 135, 6, 0.95),
-      colorText: Colors.white,
-      duration: const Duration(seconds: 3),
-      margin: const EdgeInsets.all(16),
-      borderRadius: 12,
-      isDismissible: true,
-      mainButton: TextButton(
-        onPressed: () {
-          Get.back();
-          _handleNotificationTapFromMessage(message);
-        },
-        child: const Text(
-          'View',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-      ),
-    );
-    HapticFeedback.lightImpact();
-  } catch (e) {
-    developer.log('Immediate feedback error: $e');
-  }
-}
+//     Get.snackbar(
+//       title,
+//       body,
+//       snackPosition: SnackPosition.TOP,
+//       backgroundColor: const Color.fromRGBO(244, 135, 6, 0.95),
+//       colorText: Colors.white,
+//       duration: const Duration(seconds: 3),
+//       margin: const EdgeInsets.all(16),
+//       borderRadius: 12,
+//       isDismissible: true,
+//       mainButton: TextButton(
+//         onPressed: () {
+//           Get.back();
+//           _handleNotificationTapFromMessage(message);
+//         },
+//         child: const Text(
+//           'View',
+//           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+//         ),
+//       ),
+//     );
+//     HapticFeedback.lightImpact();
+//   } catch (e) {
+//     developer.log('Immediate feedback error: $e');
+//   }
+// }
 
-void _handleNotificationTapFromMessage(RemoteMessage message) {
-  try {
-    final data = message.data;
-    final type = data['type']?.toString() ?? '';
+// void _handleNotificationTapFromMessage(RemoteMessage message) {
+//   try {
+//     final data = message.data;
+//     final type = data['type']?.toString() ?? '';
 
-    switch (type) {
-      case 'chat':
-      case 'message':
-        _navigateToChatFromNotification(data);
-        break;
-      default:
-        Get.offAllNamed('/home');
-        break;
-    }
-  } catch (e) {
-    developer.log('Notification tap error: $e');
-  }
-}
+//     switch (type) {
+//       case 'chat':
+//       case 'message':
+//         _navigateToChatFromNotification(data);
+//         break;
+//       default:
+//         Get.offAllNamed('/home');
+//         break;
+//     }
+//   } catch (e) {
+//     developer.log('Notification tap error: $e');
+//   }
+// }
 
-void _navigateToChatFromNotification(Map<String, dynamic> data) {
-  try {
-    final senderId = data['senderId']?.toString() ?? '';
-    final senderName = data['senderName']?.toString() ?? 'Unknown';
-    final chatId = data['chatId']?.toString() ?? '';
+// void _navigateToChatFromNotification(Map<String, dynamic> data) {
+//   try {
+//     final senderId = data['senderId']?.toString() ?? '';
+//     final senderName = data['senderName']?.toString() ?? 'Unknown';
+//     final chatId = data['chatId']?.toString() ?? '';
 
-    if (senderId.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Get.toNamed(
-          '/chat',
-          arguments: {
-            'receiverUser': {
-              'id': senderId,
-              'userId': senderId,
-              '_id': senderId,
-              'name': senderName,
-            },
-            'chatId': chatId,
-            'fromNotification': true,
-          },
-        );
-      });
-    }
-  } catch (e) {
-    developer.log('Chat navigation error: $e');
-  }
-}
+//     if (senderId.isNotEmpty) {
+//       WidgetsBinding.instance.addPostFrameCallback((_) {
+//         Get.toNamed(
+//           '/chat',
+//           arguments: {
+//             'receiverUser': {
+//               'id': senderId,
+//               'userId': senderId,
+//               '_id': senderId,
+//               'name': senderName,
+//             },
+//             'chatId': chatId,
+//             'fromNotification': true,
+//           },
+//         );
+//       });
+//     }
+//   } catch (e) {
+//     developer.log('Chat navigation error: $e');
+//   }
+// }
 
 void main() async {
   // Wrap in error handling zone
@@ -187,29 +185,6 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
     super.initState();
     // WidgetsBinding.instance.addObserver(this);
     developer.log('InnovatorHomePage initialized');
-
-    // Initialize deferred services after first frame
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   developer.log('First frame rendered, starting deferred services...');
-    //   //_initializeDeferredServices();
-
-    //   //  Wait longer before starting polling to ensure overlay is ready
-    //   Future.delayed(const Duration(seconds: 3), () {
-    //     if (mounted && InAppNotificationService().isReady) {
-    //       _pollingService.startPolling();
-    //       developer.log('Notification polling started from main');
-    //     } else {
-    //       // Retry after another delay if not ready
-    //       Future.delayed(const Duration(seconds: 2), () {
-    //         if (mounted) {
-    //           // Force start even if not "ready" - the service will handle it
-    //           _pollingService.startPolling();
-    //           developer.log(' Notification polling started (forced retry)');
-    //         }
-    //       });
-    //     }
-    //   });
-    // });
   }
 
   @override

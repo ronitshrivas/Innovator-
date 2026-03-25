@@ -1,7 +1,9 @@
 class Report {
   final String id;
-  final User reporter;
-  final User reportedUser;
+  final String reporterId;
+  final String reporterUsername;
+  final String reportedUserId;
+  final String reportedUserUsername;
   final String reason;
   final String description;
   final String status;
@@ -9,8 +11,10 @@ class Report {
 
   Report({
     required this.id,
-    required this.reporter,
-    required this.reportedUser,
+    required this.reporterId,
+    required this.reporterUsername,
+    required this.reportedUserId,
+    required this.reportedUserUsername,
     required this.reason,
     required this.description,
     required this.status,
@@ -19,13 +23,15 @@ class Report {
 
   factory Report.fromJson(Map<String, dynamic> json) {
     return Report(
-      id: json['_id'],
-      reporter: User.fromJson(json['reporter']),
-      reportedUser: User.fromJson(json['reportedUser']),
+      id: json['id'],
+      reporterId: json['reporter'],
+      reporterUsername: json['reporter_username'],
+      reportedUserId: json['reported_user'],
+      reportedUserUsername: json['reported_user_username'],
       reason: json['reason'],
       description: json['description'],
       status: json['status'],
-      createdAt: json['createdAt'],
+      createdAt: json['created_at'],
     );
   }
 }

@@ -1,12 +1,99 @@
-// Feed_Content_Model.dart
-// Maps new API response: GET http://182.93.94.220:8005/api/posts/
-// Key new fields: user_id (UUID for follow), username, avatar (absolute URL)
+// ─────────────────────────────────────────────────────────────────────────────
+// Feed_Content_Model.dart  — updated to support shared_post_details (reposts)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const String _kBaseUrl = 'http://182.93.94.220:8005';
+
+String _resolveUrl(String? path) {
+  if (path == null || path.isEmpty) return '';
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return '$_kBaseUrl${path.startsWith('/') ? '' : '/'}$path';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SharedPostMedia  — one media item inside shared_post_details
+// ─────────────────────────────────────────────────────────────────────────────
+
+class SharedPostMedia {
+  final String id;
+  final String file; // absolute URL (resolved)
+  final String mediaType; // "image" | "video"
+
+  const SharedPostMedia({
+    required this.id,
+    required this.file,
+    required this.mediaType,
+  });
+
+  factory SharedPostMedia.fromJson(Map<String, dynamic> j) => SharedPostMedia(
+    id: j['id']?.toString() ?? '',
+    file: _resolveUrl(j['file']?.toString()),
+    mediaType: j['media_type']?.toString() ?? 'image',
+  );
+
+  bool get isImage => mediaType == 'image';
+  bool get isVideo => mediaType == 'video';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SharedPostDetails  — the embedded original post shown in a repost card
+// ─────────────────────────────────────────────────────────────────────────────
+
+class SharedPostDetails {
+  final String id;
+  final String username;
+  final String fullName;
+  final String? avatar; // may be null from API
+  final String content;
+  final DateTime createdAt;
+  final List<SharedPostMedia> media;
+
+  const SharedPostDetails({
+    required this.id,
+    required this.username,
+    required this.fullName,
+    this.avatar,
+    required this.content,
+    required this.createdAt,
+    required this.media,
+  });
+
+  factory SharedPostDetails.fromJson(Map<String, dynamic> j) {
+    final rawMedia = j['media'] as List<dynamic>? ?? [];
+    return SharedPostDetails(
+      id: j['id']?.toString() ?? '',
+      username: j['username']?.toString() ?? '',
+      fullName: j['full_name']?.toString() ?? j['username']?.toString() ?? '',
+      avatar:
+          j['avatar'] != null && j['avatar'].toString().isNotEmpty
+              ? _resolveUrl(j['avatar'].toString())
+              : null,
+      content: j['content']?.toString() ?? '',
+      createdAt:
+          DateTime.tryParse(j['created_at']?.toString() ?? '') ??
+          DateTime.now(),
+      media:
+          rawMedia
+              .whereType<Map<String, dynamic>>()
+              .map(SharedPostMedia.fromJson)
+              .toList(),
+    );
+  }
+
+  bool get hasMedia => media.isNotEmpty;
+  String? get firstImageUrl =>
+      media.where((m) => m.isImage).map((m) => m.file).firstOrNull;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Author
+// ─────────────────────────────────────────────────────────────────────────────
 
 class Author {
-  final String id; // user_id UUID — used for follow/unfollow API
-  final String name; // username — display name
-  final String picture; // avatar URL (absolute)
-  final String email; // empty for new API (not returned)
+  final String id;
+  final String name;
+  final String picture;
+  final String email;
 
   Author({
     required this.id,
@@ -17,7 +104,6 @@ class Author {
 
   factory Author.fromJson(Map<String, dynamic> json) {
     return Author(
-      // Legacy API uses _id; new API uses user_id at post level
       id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
       name:
           json['name']?.toString() ?? json['username']?.toString() ?? 'Unknown',
@@ -34,6 +120,10 @@ class Author {
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// FeedContent
+// ─────────────────────────────────────────────────────────────────────────────
+
 class FeedContent {
   final String id;
   final Author author;
@@ -46,12 +136,20 @@ class FeedContent {
   final String? thumbnailUrl;
   int likes;
   bool isLiked;
-  String?
-  currentUserReaction; // 'like','love','haha','wow','sad','angry','dislike','celebrate' or null
+  String? currentUserReaction;
   int comments;
   bool isFollowed;
   final DateTime createdAt;
   final List<String> tags;
+  final List<Map<String, dynamic>> categoriesDetail;
+  final List<String> reactionTypes;
+
+  // ── Repost fields ──────────────────────────────────────────────────────────
+  /// Non-null when this post IS a repost (has `shared_post` field)
+  final String? sharedPostId;
+  final SharedPostDetails? sharedPostDetails;
+
+  bool get isRepost => sharedPostId != null && sharedPostId!.isNotEmpty;
 
   FeedContent({
     required this.id,
@@ -70,16 +168,18 @@ class FeedContent {
     required this.isFollowed,
     required this.createdAt,
     this.tags = const [],
+    this.categoriesDetail = const [],
+    this.reactionTypes = const [],
+    this.sharedPostId,
+    this.sharedPostDetails,
   });
 
-  // ── Legacy factory (old API) ──────────────────────────────────────────────
+  // ── Legacy factory ─────────────────────────────────────────────────────────
   factory FeedContent.fromJson(Map<String, dynamic> json) {
-    // New API flat post shape — delegate to fromNewApiPost
     if (json.containsKey('user_id') || json.containsKey('username')) {
       return FeedContent.fromNewApiPost(json);
     }
 
-    // Old API shape
     final author = Author.fromJson(
       json['author'] is Map<String, dynamic>
           ? json['author'] as Map<String, dynamic>
@@ -96,6 +196,9 @@ class FeedContent {
 
     final rawOpt = json['optimizedFiles'] as List<dynamic>? ?? [];
     final optimizedFiles = rawOpt.whereType<Map<String, dynamic>>().toList();
+
+    final rawReactions = json['reactionTypes'] as List<dynamic>? ?? [];
+    final reactionTypes = rawReactions.whereType<String>().toList();
 
     return FeedContent(
       id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
@@ -117,36 +220,37 @@ class FeedContent {
       tags:
           (json['tags'] as List<dynamic>?)?.map((t) => t.toString()).toList() ??
           [],
+      categoriesDetail: const [],
+      reactionTypes: reactionTypes,
     );
   }
 
-  // ── New API factory: maps GET /api/posts/ response ────────────────────────
-  // Response fields:
-  //   id, user_id, username, avatar,
-  //   content, media[], category_names[],
-  //   reactions_count, reaction_types[], current_user_reaction,
-  //   comments_count, comments[], views_count,
-  //   is_followed, created_at, updated_at
+  // ── New API factory ────────────────────────────────────────────────────────
   factory FeedContent.fromNewApiPost(Map<String, dynamic> post) {
     final id = post['id']?.toString() ?? '';
-    final userId = post['user_id']?.toString() ?? ''; // UUID for follow API
+    final userId = post['user_id']?.toString() ?? '';
     final username = post['username']?.toString() ?? 'Unknown';
-    final avatar = post['avatar']?.toString() ?? ''; // absolute URL or null
+    final avatar = post['avatar']?.toString() ?? '';
     final content = post['content']?.toString() ?? '';
 
-    final categories =
-        (post['category_names'] as List<dynamic>?)
-            ?.map((c) => c.toString())
-            .toList() ??
-        <String>[];
+    // ── Categories ──────────────────────────────────────────────────────────
+    final rawCategories = post['categories_detail'] as List<dynamic>? ?? [];
+    final categoriesDetail =
+        rawCategories.whereType<Map<String, dynamic>>().toList();
+    final categoryNames =
+        categoriesDetail
+            .map((c) => c['name']?.toString() ?? '')
+            .where((n) => n.isNotEmpty)
+            .toList();
 
-    final reactCount = (post['reactions_count'] as num?)?.toInt() ?? 0;
+    // ── Reactions ───────────────────────────────────────────────────────────
+    final reactCount =
+        (post['reactions_count'] as num?)?.toInt() ??
+        (post['like_count'] as num?)?.toInt() ??
+        0;
     final isLiked = post['current_user_reaction'] != null;
     final currentUserReaction = post['current_user_reaction']?.toString();
     final commentCount = (post['comments_count'] as num?)?.toInt() ?? 0;
-
-    // is_followed: API returns true/false — drives Follow/Following button label
-    // Try both 'is_followed' and 'isFollowed' for forward compatibility
     final isFollowed =
         post['is_followed'] == true || post['isFollowed'] == true;
 
@@ -154,26 +258,37 @@ class FeedContent {
         DateTime.tryParse(post['created_at']?.toString() ?? '') ??
         DateTime.now();
 
-    final type = categories.isNotEmpty ? categories.first : 'post';
+    final type = categoryNames.isNotEmpty ? categoryNames.first : 'post';
 
-    // Author: use user_id as id (needed for follow/unfollow), username as name
     final author = Author(
-      id: userId, // UUID — passed to FollowButton.targetUserId
+      id: userId,
       name: username,
-      picture: avatar, // absolute URL, no prefix needed
+      picture: avatar,
       email: '',
     );
 
-    // Media: new API returns media[] [{id, file, media_type}]
+    // ── Media (own post media) ───────────────────────────────────────────────
     final files = <String>[];
     final rawMedia = post['media'];
     if (rawMedia is List) {
       for (final m in rawMedia) {
         if (m is Map) {
-          final fileUrl = m['file']?.toString() ?? '';
+          final fileUrl = _resolveUrl(m['file']?.toString());
           if (fileUrl.isNotEmpty) files.add(fileUrl);
         }
       }
+    }
+
+    // ── Reaction types ───────────────────────────────────────────────────────
+    final rawReactions = post['reaction_types'] as List<dynamic>? ?? [];
+    final reactionTypes = rawReactions.whereType<String>().toList();
+
+    // ── Repost fields ────────────────────────────────────────────────────────
+    final sharedPostId = post['shared_post']?.toString();
+    SharedPostDetails? sharedPostDetails;
+    final rawShared = post['shared_post_details'];
+    if (rawShared is Map<String, dynamic>) {
+      sharedPostDetails = SharedPostDetails.fromJson(rawShared);
     }
 
     return FeedContent(
@@ -190,21 +305,19 @@ class FeedContent {
       isLiked: isLiked,
       currentUserReaction: currentUserReaction,
       comments: commentCount,
-      isFollowed: isFollowed, // ← now reads from API, not hardcoded false
+      isFollowed: isFollowed,
       createdAt: createdAt,
-      tags: List<String>.from(categories),
+      tags: List<String>.from(categoryNames),
+      categoriesDetail: categoriesDetail,
+      reactionTypes: reactionTypes,
+      sharedPostId: sharedPostId,
+      sharedPostDetails: sharedPostDetails,
     );
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // ── Helpers ────────────────────────────────────────────────────────────────
 
-  /// Returns a full URL — new API already returns absolute URLs, so this
-  /// is a no-op for new posts. Kept for legacy optimizedFiles paths.
-  String formatUrl(String? path) {
-    if (path == null || path.isEmpty) return '';
-    if (path.startsWith('http://') || path.startsWith('https://')) return path;
-    return 'http://182.93.94.220:8005${path.startsWith('/') ? '' : '/'}$path';
-  }
+  String formatUrl(String? path) => _resolveUrl(path);
 
   Map<String, dynamic> toJson() => {
     '_id': id,
@@ -222,5 +335,7 @@ class FeedContent {
     'isFollowed': isFollowed,
     'createdAt': createdAt.toIso8601String(),
     'tags': tags,
+    'categoriesDetail': categoriesDetail,
+    if (sharedPostId != null) 'shared_post': sharedPostId,
   };
 }

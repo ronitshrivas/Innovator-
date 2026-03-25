@@ -29,7 +29,7 @@ class _HomepageState extends State<Homepage>
     _checkForUpdate();
 
     // Start notification polling
-    _startNotificationPolling();
+    // _startNotificationPolling();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       FloatingMenuOverlay.show(context);
@@ -61,14 +61,6 @@ class _HomepageState extends State<Homepage>
       case AppLifecycleState.hidden:
         break;
     }
-  }
-
-  void _startNotificationPolling() {
-    //_pollingService.startPolling();
-    log('Notification polling started');
-    Future.delayed(const Duration(seconds: 2), () {
-      // _pollingService.forceCheck();
-    });
   }
 
   Future<void> _checkForUpdate() async {
