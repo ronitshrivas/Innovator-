@@ -15,10 +15,11 @@ import 'package:innovator/KMS/screens/constant_screen/under_maintenance_page.dar
 import 'package:innovator/KMS/screens/dashboard/student_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/teacher/kyc_upload_screen.dart';
 import 'package:innovator/KMS/screens/student/student_examination.dart';
+import 'package:innovator/KMS/screens/teacher/teacher_attendance_screen.dart';
 import 'package:innovator/KMS/screens/teacher/teacher_salary_screen.dart';
 import 'package:innovator/KMS/screens/teacher/teacher_salary_slips.dart';
 import 'package:innovator/KMS/screens/teacher/teacher_school_attendance.dart';
-
+ 
 final drawerSelectedIndexProvider = StateProvider<int>((ref) => 0);
 
 class DrawerItemData {
@@ -57,6 +58,11 @@ const List<DrawerItemData> _teacherDrawerItems = [
     title: 'Invoice',
     image: 'assets/kms/drawer/invoice.png',
     screen: InvoiceScreen(),
+  ),
+  DrawerItemData(
+    title: 'Attendance History',
+    image: 'assets/kms/drawer/invoice.png',
+    screen: TeacherAttendanceScreen(),
   ),
 ];
 
@@ -136,7 +142,6 @@ class AppDrawer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selectedIndex = ref.watch(drawerSelectedIndexProvider);
     final userAsync = ref.watch(userDetailsProvider);
 
     return userAsync.when(
@@ -144,7 +149,6 @@ class AppDrawer extends ConsumerWidget {
           () => _buildDrawerShell(
             context: context,
             ref: ref,
-            selectedIndex: selectedIndex,
             role: 'teacher',
             username: '',
             email: '',
@@ -155,7 +159,6 @@ class AppDrawer extends ConsumerWidget {
           (_, __) => _buildDrawerShell(
             context: context,
             ref: ref,
-            selectedIndex: selectedIndex,
             role: 'teacher',
             username: 'User',
             email: '',
@@ -166,7 +169,6 @@ class AppDrawer extends ConsumerWidget {
           (user) => _buildDrawerShell(
             context: context,
             ref: ref,
-            selectedIndex: selectedIndex,
             role: user.role,
             username: user.username,
             email: user.email,
@@ -179,7 +181,6 @@ class AppDrawer extends ConsumerWidget {
   Widget _buildDrawerShell({
     required BuildContext context,
     required WidgetRef ref,
-    required int selectedIndex,
     required String role,
     required String username,
     required String email,
@@ -274,11 +275,9 @@ class AppDrawer extends ConsumerWidget {
 
               // ── Drawer Items ──
               ...List.generate(items.length, (index) {
-                final item = items[index]; 
-                final isSelected =
-                    isCoord
-                        ? index == 0 && selectedIndex == 0
-                        : selectedIndex == index;
+                final item = items[index];
+                // Selected indicator always stays on Dashboard (index 0)
+                final isSelected = index == 0;
 
                 return Column(
                   children: [
@@ -425,23 +424,22 @@ class AppDrawer extends ConsumerWidget {
   }) {
     return GestureDetector(
       onTap: () {
-        Navigator.pop(context);  
+        Navigator.pop(context);
 
         if (title == 'KYC Verification') {
           _handleKycTap(context, ref);
           return;
         }
 
-        if (isCoordinator) { 
-          if (index == 0) { 
-            return;
-          }
+        if (isCoordinator) {
+          // Dashboard (index 0) just closes the drawer — already on that screen
+          if (index == 0) return;
           Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
-        } else { 
-          if (!isSelected) {
-            ref.read(drawerSelectedIndexProvider.notifier).state = index;
-            Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
-          }
+        } else {
+          // Dashboard (index 0) just closes the drawer — already on that screen
+          if (index == 0) return;
+          // All other items are always tappable — no isSelected guard
+          Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
         }
       },
       child: AnimatedContainer(

@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; 
 import 'package:get/get.dart';
 import 'package:innovator/ecommerce/screens/Shop/CardIconWidget/cart_state_manager.dart';
 import 'package:innovator/ecommerce/screens/Shop/Shop_Page.dart';
@@ -14,11 +12,7 @@ import 'package:innovator/KMS/screens/auth/login_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/admin_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/student_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/teacher_dashboard_screen.dart';
-import 'package:innovator/KMS/screens/teacher/partner_assigned_school.dart';
-import 'package:innovator/KMS/screens/teacher/partner_assignment_management.dart';
-import 'package:innovator/KMS/screens/teacher/partner_attendance_specific_grade.dart';
-import 'dart:developer' as developer;
-import 'package:innovator/innovator_home.dart';
+import 'dart:developer' as developer; 
 
 late Size mq;
 late FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
@@ -256,11 +250,6 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
         '/kms/adminDasboard': (_) => AdminDashboardScreen(),
         '/kms/partnerDashboard': (_) => TeacherDashboardScreen(),
         '/kms/studentDashboard': (_) => StudentDashboardScreen(),
-        '/kms/partnerAssignedSchool': (_) => PartnerAssignedSchoolScreen(),
-        '/kms/partnerAssignmentMgmt':
-            (_) => PartnerAssignmentManagementScreen(),
-        '/kms/partnerAttendanceSpecificGrade':
-            (_) => PartnerAttendanceSpecificGradeScreen(),
       },
       title: 'Innovator',
       theme: _buildAppTheme(),

@@ -4,8 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:innovator/Innovator/models/payment_model.dart';
-import 'package:innovator/Innovator/Payment/payment_provider.dart';
-import 'package:innovator/ecommerce/screens/Shop/Cart_List/api_services.dart';
+import 'package:innovator/Innovator/Payment/payment_provider.dart'; 
 import 'package:innovator/Innovator/models/Shop_cart_model.dart';
 import 'package:path/path.dart' as path;
 
@@ -103,8 +102,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
   final _formKey = GlobalKey<FormState>();
 
   File? _paymentScreenshot;
-  final ImagePicker _picker = ImagePicker();
-  final ApiService _apiService = ApiService();
+  final ImagePicker _picker = ImagePicker(); 
 
   bool _isProcessing = false;
   bool isCOD = false;
@@ -228,18 +226,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
   Future<void> _placeCodOrder() async {
     setState(() => _isProcessing = true);
     try {
-      final response = await _apiService.checkout(
-        customerInfo: _customerInfo,
-        paidAmount: _finalTotal,
-        paymentProof: null,
-        notes:
-            _notesController.text.trim().isEmpty
-                ? null
-                : _notesController.text.trim(),
-        isCod: true,
-        paymentMethod: _selectedPaymentMethod,
-      );
-      _finishSuccess(response);
+      // final response = await _apiService.checkout(
+      //   customerInfo: _customerInfo,
+      //   paidAmount: _finalTotal,
+      //   paymentProof: null,
+      //   notes:
+      //       _notesController.text.trim().isEmpty
+      //           ? null
+      //           : _notesController.text.trim(),
+      //   isCod: true,
+      //   paymentMethod: _selectedPaymentMethod,
+      // );
+      // _finishSuccess(response);
     } catch (e) {
       _handleError(e);
     }
@@ -259,18 +257,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
 
     setState(() => _isProcessing = true);
     try {
-      final response = await _apiService.checkout(
-        customerInfo: _customerInfo,
-        paidAmount: widget.totalAmount,
-        paymentProof: _paymentScreenshot!,
-        notes:
-            _notesController.text.trim().isEmpty
-                ? null
-                : _notesController.text.trim(),
-        isCod: false,
-        paymentMethod: _selectedPaymentMethod,
-      );
-      _finishSuccess(response);
+      // final response = await _apiService.checkout(
+      //   customerInfo: _customerInfo,
+      //   paidAmount: widget.totalAmount,
+      //   paymentProof: _paymentScreenshot!,
+      //   notes:
+      //       _notesController.text.trim().isEmpty
+      //           ? null
+      //           : _notesController.text.trim(),
+      //   isCod: false,
+      //   paymentMethod: _selectedPaymentMethod,
+      // );
+      // _finishSuccess(response);
     } catch (e) {
       _handleError(e);
     }

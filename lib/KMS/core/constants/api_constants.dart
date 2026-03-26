@@ -25,6 +25,14 @@ class ApiConstants {
   static String get students => '$baseUrl/students/list/';
   static String get markAttendance => '$baseUrl/attendance/mark/';
   static String get addStudents => '$baseUrl/student/create/';
+  static String get studentAttendanceList => '$baseUrl/students/attendance/';
+  static String teacherAttendance({String? school, String? date}) {
+    final params = <String>[];
+    if (school != null && school.isNotEmpty) params.add('school=$school');
+    if (date != null && date.isNotEmpty) params.add('date=$date');
+    final query = params.isEmpty ? '' : '?${params.join('&')}';
+    return '$baseUrl/teacher/attendance/$query';
+  }
   //admin endpoints
 
   // Coordinator endpoints
@@ -35,10 +43,10 @@ class ApiConstants {
   static String get coordinatorInvoices => '$baseUrl/coordinator/invoices/';
   static String get teacherNoteVerification =>
       '$baseUrl/coordinator/student-attendance/approve/';
-      static String get getTeacherNotesVerification => '$baseUrl/coordinator/teaching-notes/';
-      static String get teacherNotes=> '$baseUrl/coordinator/teaching-notes/';
+  static String get getTeacherNotesVerification =>
+      '$baseUrl/coordinator/teaching-notes/';
+  static String get teacherNotes => '$baseUrl/coordinator/teaching-notes/';
 
- 
   //student endpoints
   static String get createStudents => '$baseUrl/api/create/';
   //attendace endpoints

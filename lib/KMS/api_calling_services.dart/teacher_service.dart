@@ -1,14 +1,13 @@
-
-
-
 import 'dart:developer';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:innovator/KMS/core/constants/api_constants.dart';
 import 'package:innovator/KMS/core/constants/network/base_api_service.dart';
 import 'package:innovator/KMS/core/constants/network/dio_client.dart';
+import 'package:innovator/KMS/model/teacher_model/student_attendance_model.dart';
 import 'package:innovator/KMS/model/teacher_model/student_model.dart';
 import 'package:innovator/KMS/model/teacher_model/teacher-profile.dart';
+import 'package:innovator/KMS/model/teacher_model/teacher_attendance_model.dart';
 import 'package:innovator/KMS/model/teacher_model/teacher_kyc_model.dart';
 import 'package:innovator/KMS/model/teacher_model/teacher_salary_slips.dart';
 
@@ -18,7 +17,9 @@ class TeacherService extends BaseApiService {
   Future<TeacherProfileModel> teacherProfile() async {
     final data = await get<Map<String, dynamic>>(ApiConstants.teacherProfile);
     final profile = TeacherProfileModel.fromJson(data);
-    log('Teacher: ${profile.name} | schools: ${profile.earnings.schools.length} | total earnings: ${profile.earnings.totalEarnings}');
+    log(
+      'Teacher: ${profile.name} | schools: ${profile.earnings.schools.length} | total earnings: ${profile.earnings.totalEarnings}',
+    );
     return profile;
   }
 
@@ -50,12 +51,21 @@ class TeacherService extends BaseApiService {
     required String nIdNumber,
   }) async {
     final formData = FormData.fromMap({
-      'id_doc': await MultipartFile.fromFile(idDoc.path, filename: idDoc.path.split('/').last),
+      'id_doc': await MultipartFile.fromFile(
+        idDoc.path,
+        filename: idDoc.path.split('/').last,
+      ),
       'bank_account_number': bankAccountNumber,
       'bank_name': bankName,
       'citizenship': citizenship,
-      'photo': await MultipartFile.fromFile(photo.path, filename: photo.path.split('/').last),
-      'cv': await MultipartFile.fromFile(cv.path, filename: cv.path.split('/').last),
+      'photo': await MultipartFile.fromFile(
+        photo.path,
+        filename: photo.path.split('/').last,
+      ),
+      'cv': await MultipartFile.fromFile(
+        cv.path,
+        filename: cv.path.split('/').last,
+      ),
       'n_id_number': nIdNumber,
     });
     final result = await post<Map<String, dynamic>>(
@@ -76,17 +86,42 @@ class TeacherService extends BaseApiService {
 
   Future<List<StudentModel>> getStudents() async {
     final data = await get<List<dynamic>>(ApiConstants.students);
-    final students = data.map((e) => StudentModel.fromJson(e as Map<String, dynamic>)).toList();
+    final students =
+        data
+            .map((e) => StudentModel.fromJson(e as Map<String, dynamic>))
+            .toList();
     log('Students: ${students.length}');
     return students;
   }
 
+  // Future<Map<String, dynamic>> markAttendance({
+  //   required String studentId,
+  //   required String classroomId,
+  //   required String date,
+  //   required String status,
+  //   required String notes,
+  // }) async {
+  //   final result = await post<Map<String, dynamic>>(
+  //     ApiConstants.markAttendance,
+  //     data: {
+  //       'student_id': studentId,
+  //       'classroom_id': classroomId,
+  //       'date': date,
+  //       'status': status,
+  //       'notes': notes,
+  //     },
+  //   );
+  //   log('Attendance: $result');
+  //   return result;
+  // }
   Future<Map<String, dynamic>> markAttendance({
     required String studentId,
     required String classroomId,
     required String date,
     required String status,
     required String notes,
+    required String homework,
+    required bool presentWithHomework,
   }) async {
     final result = await post<Map<String, dynamic>>(
       ApiConstants.markAttendance,
@@ -96,6 +131,8 @@ class TeacherService extends BaseApiService {
         'date': date,
         'status': status,
         'notes': notes,
+        'homework': homework,
+        'present_with_homework': presentWithHomework,
       },
     );
     log('Attendance: $result');
@@ -116,9 +153,38 @@ class TeacherService extends BaseApiService {
   }
 
   Future<SalarySlipResponse> getSalarySlips() async {
-    final data = await get<Map<String, dynamic>>(ApiConstants.teacherSalarySlips);
+    final data = await get<Map<String, dynamic>>(
+      ApiConstants.teacherSalarySlips,
+    );
     final response = SalarySlipResponse.fromJson(data);
     log('Salary slips: ${response.total} total');
     return response;
   }
+
+  Future<List<StudentAttendanceRecord>> getStudentAttendanceList() async {
+    final data = await get<List<dynamic>>(ApiConstants.studentAttendanceList);
+    final list =
+        data
+            .map(
+              (e) =>
+                  StudentAttendanceRecord.fromJson(e as Map<String, dynamic>),
+            )
+            .toList();
+    log('Attendance records: ${list.length}');
+    return list;
+  }
+
+  Future<List<TeacherAttendanceRecord>> getTeacherAttendance({
+  String? school,
+  String? date,
+}) async {
+  final data = await get<List<dynamic>>(
+    ApiConstants.teacherAttendance(school: school, date: date),
+  );
+  final list = data
+      .map((e) => TeacherAttendanceRecord.fromJson(e as Map<String, dynamic>))
+      .toList();
+  log('Teacher attendance: ${list.length} records');
+  return list;
+}
 }
