@@ -39,6 +39,7 @@ Future<void> clearTokens() async {
   final role = await _storage.read(key: _roleKey);
 
   await _storage.delete(key: _accessTokenKey);
+<<<<<<< HEAD
   log('access_token cleared: ${accessToken != null ? '($accessToken)' : 'was already empty'}');
 
   await _storage.delete(key: _refreshTokenKey);
@@ -46,6 +47,15 @@ Future<void> clearTokens() async {
 
   await _storage.delete(key: _roleKey);
   log('role cleared: ${role ?? 'was already empty'}');
+=======
+  log('Access_token cleared: ${accessToken != null ? '$accessToken' : 'was already empty'}');
+
+  await _storage.delete(key: _refreshTokenKey);
+  log('Refresh_token cleared: ${refreshToken != null ? '$refreshToken' : 'was already empty'}');
+
+  await _storage.delete(key: _roleKey);
+  log('Role cleared: ${role ?? 'was already empty'}');
+>>>>>>> 8daf34c (Change in the kms)
 }
  
   Future<void> saveRole(String role) async {

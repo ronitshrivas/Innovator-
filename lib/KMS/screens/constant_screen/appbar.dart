@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/KMS/core/constants/app_style.dart';
 import 'package:innovator/KMS/provider/auth_provider.dart';
+import 'package:innovator/KMS/provider/teacher_provider.dart';
+import 'package:innovator/KMS/provider/user_provider.dart';
 import 'package:innovator/KMS/screens/auth/login_screen.dart';
 
 class AppbarScreen extends ConsumerWidget {
@@ -176,7 +178,10 @@ class AppbarScreen extends ConsumerWidget {
                                       onPressed: () async {
                                         Navigator.pop(context);
                                         await ref.read(authProvider).logout();
-                                         ref.invalidate(authProvider);
+                                        ref.invalidate(userDetailsProvider);
+                                        ref.invalidate(teacherProfileProvider);
+                                        ref.invalidate(kycStatusProvider);
+                                        ref.invalidate(salarySlipsProvider);
                                         if (context.mounted) {
                                           Navigator.pushAndRemoveUntil(
                                             context,

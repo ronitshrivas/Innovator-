@@ -9,8 +9,11 @@ class AuthService extends BaseApiService {
   AuthService() : super(dio: DioClient.authInstance);
 
   final TokenService _tokenService = TokenService();
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 8daf34c (Change in the kms)
     Future<Map<String, dynamic>> login({
     required String email,
     required String password,
@@ -20,7 +23,10 @@ class AuthService extends BaseApiService {
       data: {'email': email, 'password': password},
     );
 
+<<<<<<< HEAD
     // final role = response['role'] as String?;
+=======
+>>>>>>> 8daf34c (Change in the kms)
      final role = response['user']?['role'] as String?;
     if (role != null && role.isNotEmpty) {
       await _tokenService.saveRole(role);
@@ -54,7 +60,10 @@ class AuthService extends BaseApiService {
 
   Future<void> logout() async {
     await _tokenService.clearTokens(); 
+<<<<<<< HEAD
     DioClient.reset();
+=======
+>>>>>>> 8daf34c (Change in the kms)
     log('Logged out — tokens and role cleared, Dio reset');
   }
 

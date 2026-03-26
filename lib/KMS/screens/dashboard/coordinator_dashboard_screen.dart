@@ -60,7 +60,11 @@ class CoordinatorDashboardScreen extends ConsumerWidget {
               ),
             ),
             error: (e, _) =>
+<<<<<<< HEAD
                 CoordinatorErrorBox(error: e),
+=======
+                CoordinatorErrorBox(error: e,),
+>>>>>>> 8daf34c (Change in the kms)
             data: (data) {
               if (data.attendances.isEmpty) {
                 return const CoordinatorEmptyState(

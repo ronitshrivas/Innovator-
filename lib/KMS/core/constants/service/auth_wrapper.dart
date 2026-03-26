@@ -46,7 +46,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
         case 'student':
           return const StudentDashboardScreen();
         default:
-          log('⚠️ Unknown role "$role" — falling back to LoginScreen');
+          log('Unknown role "$role" — falling back to LoginScreen');
           return const KmsLoginScreen();
       }
     } catch (e) {
