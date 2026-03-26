@@ -25,7 +25,7 @@ class CoordinatorDashboardScreen extends ConsumerWidget {
         children: [
           const SizedBox(height: 20),
 
-          // ── Stats grid ──
+          // Stats grid
           attendanceAsync.when(
             loading: () => _StatsGridSkeleton(),
             error: (_, __) => _buildStatsGrid(null),
@@ -218,7 +218,7 @@ class CoordinatorDashboardScreen extends ConsumerWidget {
   }
 }
 
-// ─── Section header ───────────────────────────────────────────────────────────
+// Section header
 
 class _SectionHeader extends StatelessWidget {
   final String title;
@@ -288,7 +288,7 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ─── Attendance preview tile (no buttons) ────────────────────────────────────
+// Attendance preview tile (no buttons)
 
 class _AttendancePreviewTile extends StatelessWidget {
   final CoordinatorAttendanceModel item;
@@ -396,7 +396,7 @@ class _AttendancePreviewTile extends StatelessWidget {
   }
 }
 
-// ─── Session preview tile (no buttons) ───────────────────────────────────────
+// Session preview tile (no buttons)
 
 class _SessionPreviewTile extends StatelessWidget {
   final TeacherSessionModel session;
@@ -479,7 +479,7 @@ class _SessionPreviewTile extends StatelessWidget {
   }
 }
 
-// ─── View more button ─────────────────────────────────────────────────────────
+// View more button
 
 class _ViewMoreButton extends StatelessWidget {
   final String label;
@@ -518,7 +518,7 @@ class _ViewMoreButton extends StatelessWidget {
   }
 }
 
-// ─── Shared stat card & skeleton ─────────────────────────────────────────────
+// Shared stat card & skeleton
 
 class _StatCard extends StatelessWidget {
   final String label;
