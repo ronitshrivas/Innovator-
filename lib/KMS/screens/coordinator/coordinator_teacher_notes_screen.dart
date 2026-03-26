@@ -104,8 +104,12 @@ class CoordinatorSessionsScreen extends ConsumerWidget {
                       loading: () => const Center(
                           child: CircularProgressIndicator()),
                       error: (e, _) => Center(
+<<<<<<< HEAD
                         child: Text(e is DioException ? e.error.toString() : e.toString(),
                             style: const TextStyle(fontFamily: 'Inter')),
+=======
+                        child: CoordinatorErrorBox(error: e)
+>>>>>>> 8daf34c (Change in the kms)
                       ),
                       data: (data) {
                         if (data.sessions.isEmpty) {

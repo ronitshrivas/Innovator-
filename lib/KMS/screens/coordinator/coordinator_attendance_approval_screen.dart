@@ -105,7 +105,11 @@ class CoordinatorAttendanceApprovalScreen extends ConsumerWidget {
                       loading: () => const Center(
                           child: CircularProgressIndicator()),
                       error: (e, _) => Center(
+<<<<<<< HEAD
                         child: CoordinatorErrorBox(error: e,)
+=======
+                        child: CoordinatorErrorBox(error: e)
+>>>>>>> 8daf34c (Change in the kms)
                       ),
                       data: (data) {
                         final list = filter == 'ALL'

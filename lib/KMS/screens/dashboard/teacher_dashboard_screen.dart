@@ -141,7 +141,11 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
     final profileAsync = ref.watch(teacherProfileProvider);
 
     return RefreshIndicator(
-      onRefresh: () => ref.refresh(teacherProfileProvider.future),
+      onRefresh: () async {
+        ref.invalidate(teacherProfileProvider);
+        ref.invalidate(kycStatusProvider);
+        await ref.read(teacherProfileProvider.future);
+      },
       child: CustomScrolling(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,7 +166,6 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
             ),
 
             const SizedBox(height: 20),
-             
 
             _buildKycBanner(context),
 
@@ -277,7 +280,7 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
             title: 'KYC Under Review',
             subtitle: 'Your documents are being verified',
             icon: Icons.hourglass_top_rounded,
-            color:  Colors.blueAccent,
+            color: Colors.blueAccent,
             onTap: () => _showKycStatusDialog(context, kyc),
           );
         }
@@ -550,11 +553,11 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                           label: 'KYC Verified',
                           color: Colors.green,
                         ),
-                        'rejected' => (label: 'KYC Rejected', color: Colors.red),
-                        _ => (
-                          label: 'KYC Pending',
-                          color:   Colors.blue,
+                        'rejected' => (
+                          label: 'KYC Rejected',
+                          color: Colors.red,
                         ),
+                        _ => (label: 'KYC Pending', color: Colors.blue),
                       };
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 8),
