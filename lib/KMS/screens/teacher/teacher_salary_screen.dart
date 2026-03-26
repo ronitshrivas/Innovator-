@@ -257,7 +257,7 @@ class _TeacherSalaryScreenState extends ConsumerState<TeacherSalaryScreen> {
             child: ListView(
               padding: const EdgeInsets.all(20),
               children: [
-                // ── Earnings Overview ──
+                // Earnings Overview
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -341,7 +341,7 @@ class _TeacherSalaryScreenState extends ConsumerState<TeacherSalaryScreen> {
 
                 const SizedBox(height: 20),
 
-                // ── By School ──
+                // By School
                 profileAsync.when(
                   loading: () => const SizedBox.shrink(),
                   error: (_, __) => const SizedBox.shrink(),
@@ -475,7 +475,7 @@ class _TeacherSalaryScreenState extends ConsumerState<TeacherSalaryScreen> {
                   },
                 ),
 
-                // ── Payment History ──
+                // Payment History
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -568,7 +568,7 @@ class _TeacherSalaryScreenState extends ConsumerState<TeacherSalaryScreen> {
   }
 }
 
-// ─── Slip Card ───────────────────────────────────────────────────────────────
+// Slip Card
 
 class _SalarySlipCard extends StatelessWidget {
   final SalarySlipModel slip;
@@ -722,7 +722,7 @@ class _SalarySlipCard extends StatelessWidget {
   }
 }
 
-// ─── Slip Detail Bottom Sheet ────────────────────────────────────────────────
+// Slip Detail Bottom Sheet
 
 class _SalarySlipDetail extends StatelessWidget {
   final SalarySlipModel slip;

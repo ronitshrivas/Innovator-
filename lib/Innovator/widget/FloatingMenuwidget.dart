@@ -240,7 +240,7 @@ class _FloatingMenuWidgetState extends State<FloatingMenuWidget>
         if (!Get.isRegistered<CartStateManager>()) {
           Get.put(CartStateManager(), permanent: true);
         }
-        Get.find<CartStateManager>().refreshCartCount();
+        // Get.find<CartStateManager>().refreshCartCount();
         _nav.push(MaterialPageRoute(builder: (_) => const ShopPage()));
         break;
       case 'view_profile':
