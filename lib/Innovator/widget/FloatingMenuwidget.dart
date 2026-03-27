@@ -559,7 +559,7 @@ class _NavBarState extends State<_NavBar> with SingleTickerProviderStateMixin {
             );
 
     final barContent = Container(
-      // height: 65 + widget.topPadding,
+      height: 65 + widget.topPadding,
       padding: EdgeInsets.only(top: widget.topPadding),
       decoration: BoxDecoration(
         color: Colors.transparent,

@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Login.dart';
+import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/screens/Feed/Inner_Homepage.dart';
 import 'package:innovator/Innovator/screens/Follow/follow_Button.dart';
 import 'package:innovator/Innovator/screens/comment/comment_screen.dart';
@@ -14,8 +15,6 @@ import 'package:innovator/Innovator/controllers/user_controller.dart';
 import 'dart:developer' as developer;
 
 import '../../models/Feed_Content_Model.dart';
-
-const String _kBaseUrl = 'http://182.93.94.220:8005';
 
 class SpecificUserProfilePage extends StatefulWidget {
   final String userId;
@@ -93,7 +92,7 @@ class _SpecificUserProfilePageState extends State<SpecificUserProfilePage>
       final token = _appData.accessToken ?? '';
       final response = await http
           .get(
-            Uri.parse('$_kBaseUrl/api/users/${widget.userId}/'),
+            Uri.parse('${ApiConstants.fetchotheruserprofile}${widget.userId}/'),
             headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json',
@@ -205,7 +204,7 @@ class _SpecificUserProfilePageState extends State<SpecificUserProfilePage>
     final raw = d['profile']?['avatar']?.toString() ?? '';
     if (raw.isEmpty) return null;
     if (raw.startsWith('http')) return raw;
-    return '$_kBaseUrl$raw';
+    return '${ApiConstants.userBase}$raw';
   }
 
   String _followersCount(Map<String, dynamic> d) =>

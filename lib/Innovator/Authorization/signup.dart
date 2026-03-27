@@ -39,14 +39,9 @@ class UsernameCheckState {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Username Notifier — debounced real-time check like Instagram
-// ─────────────────────────────────────────────────────────────────────────────
-
 class UsernameNotifier extends StateNotifier<UsernameCheckState> {
   UsernameNotifier() : super(const UsernameCheckState());
 
-  static const _baseUrl = 'http://182.93.94.220:8005';
   Timer? _debounce;
 
   // Called on every keystroke — debounced 500ms so we don't spam the API
@@ -79,7 +74,7 @@ class UsernameNotifier extends StateNotifier<UsernameCheckState> {
     try {
       final response = await http
           .get(
-            Uri.parse('$_baseUrl/api/users/check-username/?username=$username'),
+            Uri.parse('${ApiConstants.checkusername}?username=$username'),
             headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json',

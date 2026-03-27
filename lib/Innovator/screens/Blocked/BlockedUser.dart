@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:developer' as developer;
 import 'package:innovator/Innovator/App_data/App_data.dart';
+import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/models/Blocked_Model.dart';
 
 class BlockedUsersScreen extends StatefulWidget {
@@ -50,7 +51,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
       }
 
       final response = await http.get(
-        Uri.parse('http://182.93.94.220:8005/api/users/blocked-list/'),
+        Uri.parse(ApiConstants.blocklistuser),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -164,9 +165,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
       final token = AppData().accessToken;
       final response = await http
           .post(
-            Uri.parse(
-              'http://182.93.94.220:8005/api/users/${user.id}/unblock/',
-            ),
+            Uri.parse('${ApiConstants.unblockuser}${user.id}/unblock/'),
             headers: {
               'Content-Type': 'application/json',
               'Authorization': 'Bearer $token',

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
+import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/screens/show_Specific_Profile/Show_Specific_Profile.dart';
 
 class reeactionsheet extends StatefulWidget {
@@ -40,7 +41,7 @@ class _reeactionsheetState extends State<reeactionsheet> {
       final token = AppData().accessToken ?? '';
       final res = await http.get(
         Uri.parse(
-          'http://182.93.94.220:8005/api/posts/${widget.postId}/reactions-list/',
+          '${ApiConstants.fetchreactions}${widget.postId}/reactions-list/',
         ),
         headers: {
           'Authorization': 'Bearer $token',
@@ -209,7 +210,7 @@ class _reeactionsheetState extends State<reeactionsheet> {
                             avatar.isNotEmpty
                                 ? (avatar.startsWith('http')
                                     ? avatar
-                                    : 'http://182.93.94.220:8005$avatar')
+                                    : '${ApiConstants.userBase}$avatar')
                                 : null;
 
                         return ListTile(

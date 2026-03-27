@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:developer' as developer;
 import 'package:innovator/Innovator/App_data/App_data.dart';
+import 'package:innovator/Innovator/constant/api_constants.dart';
 import '../../models/Report_Model.dart';
 
 class ReportsScreen extends StatefulWidget {
@@ -39,7 +40,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       }
 
       final response = await http.get(
-        Uri.parse('http://182.93.94.220:8005/api/users/reports-list/'),
+        Uri.parse(ApiConstants.fetchreports),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',

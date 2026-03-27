@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
+import 'package:innovator/Innovator/constant/api_constants.dart';
 
 // ── Reaction types matching backend REACTION_CHOICES ──────────────────────────
 enum ReactionType { like, love, haha, wow, sad, angry, dislike, celebrate }
@@ -97,7 +98,6 @@ class ReactionResult {
 }
 
 class ContentLikeService {
-  static const String _baseUrl = 'http://182.93.94.220:8005';
   final AppData _appData = AppData();
 
   // Keep baseUrl param for backward-compat but always use _baseUrl internally
@@ -116,7 +116,7 @@ class ContentLikeService {
 
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/api/reactions/'),
+        Uri.parse(ApiConstants.sendreaction),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -159,7 +159,7 @@ class ContentLikeService {
 
     try {
       final response = await http.delete(
-        Uri.parse('$_baseUrl/api/reactions/$reactionId/'),
+        Uri.parse('${ApiConstants.sendreaction}$reactionId/'),
         headers: {
           'Authorization': 'Bearer $token',
           'Accept': 'application/json',

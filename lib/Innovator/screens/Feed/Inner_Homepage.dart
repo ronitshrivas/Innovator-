@@ -10,9 +10,12 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Login.dart';
+import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/controllers/user_controller.dart';
 import 'package:innovator/Innovator/screens/Feed/Optimize%20Media/OptimizeMediaScreen.dart';
-import 'package:innovator/Innovator/screens/Feed/Repost/repost_button.dart';
+import 'package:innovator/Innovator/screens/Feed/Optimize%20Media/full_screen_image_viewer.dart';
+import 'package:innovator/Innovator/screens/Feed/facebook_video_widget.dart';
+import 'package:innovator/Innovator/widget/repost_button.dart';
 import 'package:innovator/Innovator/screens/Feed/Repost/repost_list_screen.dart';
 import 'package:innovator/Innovator/screens/Feed/Repost/sharedrepostcard.dart';
 import 'package:innovator/Innovator/screens/Feed/Update%20Feed/API_Service.dart';
@@ -159,7 +162,7 @@ class FeedApiResponse {
 }
 
 class FeedApiService {
-  static const String baseUrl = 'http://182.93.94.220:8005';
+  //static const String baseUrl = 'http://182.93.94.220:8005';
 
   static Map<String, String> _headers() {
     final token = AppData().accessToken ?? '';
@@ -189,7 +192,7 @@ class FeedApiService {
       final uri =
           cursor != null && cursor.isNotEmpty
               ? Uri.parse(cursor)
-              : Uri.parse('$baseUrl/api/posts/');
+              : Uri.parse(ApiConstants.post);
 
       developer.log('[Feed] GET $uri');
 
@@ -827,7 +830,7 @@ class _Inner_HomePageState extends State<Inner_HomePage> {
   Widget _buildListItem(int index) {
     final adjusted = _getAdjustedContentIndex(index);
     if (adjusted < _allContents.length) {
-      return _buildContentItem(_allContents[adjusted], adjusted);
+      return buildContentItem(_allContents[adjusted], adjusted);
     }
     if (adjusted == _allContents.length && _isLoading) {
       return _buildLoadingIndicator();
@@ -838,7 +841,7 @@ class _Inner_HomePageState extends State<Inner_HomePage> {
     return const SizedBox.shrink();
   }
 
-  Widget _buildContentItem(FeedContent content, int index) {
+  Widget buildContentItem(FeedContent content, int index) {
     return RepaintBoundary(
       key: ValueKey(content.id),
       child: FeedItem(
@@ -1010,9 +1013,7 @@ class _FeedItemState extends State<FeedItem>
       if (token == null || token.isEmpty) return;
       final response = await http
           .post(
-            Uri.parse(
-              'http://182.93.94.220:8005/api/posts/${widget.content.id}/view/',
-            ),
+            Uri.parse('${ApiConstants.recordview}${widget.content.id}/view/'),
             headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json',
@@ -1181,30 +1182,45 @@ class _FeedItemState extends State<FeedItem>
               ),
               child: Row(
                 children: [
-                  Hero(
-                    tag:
-                        'avatar_${widget.content.author.id}_${widget.content.id}',
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: const LinearGradient(
-                          colors: [
-                            Color.fromRGBO(244, 135, 6, 1),
-                            Color.fromRGBO(255, 204, 0, 1),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (_) => FullScreenImageViewer(
+                                imageUrl: widget.content.author.picture,
+                                tag:
+                                    'avatar_${widget.content.author.id}_${widget.content.id}',
+                              ),
+                        ),
+                      );
+                    },
+                    child: Hero(
+                      tag:
+                          'avatar_${widget.content.author.id}_${widget.content.id}',
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color.fromRGBO(244, 135, 6, 1),
+                              Color.fromRGBO(255, 204, 0, 1),
+                            ],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.orangeAccent.shade100,
+                              blurRadius: 12.0,
+                              offset: const Offset(0, 4),
+                            ),
                           ],
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.orangeAccent.shade100,
-                            blurRadius: 12.0,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                        padding: const EdgeInsets.all(2.0),
+                        child: _buildAuthorAvatar(),
                       ),
-                      padding: const EdgeInsets.all(2.0),
-                      child: _buildAuthorAvatar(),
                     ),
                   ),
                   const SizedBox(width: 10.0),
@@ -1636,47 +1652,6 @@ class _FeedItemState extends State<FeedItem>
     );
   }
 
-  Widget _buildReactionBubbles() {
-    // Derive top 3 from categoriesDetail or hardcode from API top_reactions
-    const topTypes = ['like']; // replace with actual top_reactions from API
-    final emojiMap = {
-      'like': '👍',
-      'love': '❤️',
-      'haha': '😂',
-      'wow': '😮',
-      'sad': '😢',
-      'angry': '😡',
-      'celebrate': '🎉',
-      'dislike': '👎',
-    };
-    return SizedBox(
-      width: topTypes.length * 16.0 + 6,
-      height: 22,
-      child: Stack(
-        children: List.generate(topTypes.length, (i) {
-          return Positioned(
-            left: i * 14.0,
-            child: Container(
-              width: 22,
-              height: 22,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.grey.shade100,
-                border: Border.all(color: Colors.white, width: 1.5),
-              ),
-              child: Center(
-                child: Text(
-                  emojiMap[topTypes[i]] ?? '👍',
-                  style: const TextStyle(fontSize: 12),
-                ),
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-
   // ── Media ─────────────────────────────────────────────────────────────────
 
   Widget _buildMediaPreview() {
@@ -1702,27 +1677,9 @@ class _FeedItemState extends State<FeedItem>
       final fileUrl = mediaUrls.first;
       if (FileTypeHelper.isImage(fileUrl)) return _buildSingleImage(fileUrl);
       if (FileTypeHelper.isVideo(fileUrl)) {
-        return FutureBuilder<Size>(
-          future: _getVideoSize(fileUrl),
-          builder: (context, snapshot) {
-            double maxHeight = 250.0;
-            if (snapshot.hasData) {
-              final size = snapshot.data!;
-              final ar = size.width / size.height;
-              if (ar < 1) maxHeight = 400.0;
-            }
-            return Container(
-              color: Colors.black,
-              alignment: Alignment.center,
-              child: LimitedBox(
-                maxHeight: maxHeight,
-                child: GestureDetector(
-                  onTap: () => _showMediaGallery(context, mediaUrls, 0),
-                  child: AutoPlayVideoWidget(url: fileUrl, height: maxHeight),
-                ),
-              ),
-            );
-          },
+        return FacebookVideoWidget(
+          url: fileUrl,
+          thumbnailUrl: widget.content.thumbnailUrl,
         );
       }
       if (FileTypeHelper.isPdf(fileUrl)) {
@@ -1743,24 +1700,6 @@ class _FeedItemState extends State<FeedItem>
       }
     }
     return _buildImageGallery(mediaUrls);
-  }
-
-  Widget _buildVideoPreview(String url) {
-    final originalVideoUrl = widget.content.optimizedFiles
-        .where((f) => f['type'] == 'video')
-        .map((f) => f['original'] ?? f['hls'] ?? f['url'])
-        .firstWhere((u) => u != null, orElse: () => null);
-    final videoUrl = originalVideoUrl ?? url;
-    return Container(
-      color: Colors.black,
-      child: AspectRatio(
-        aspectRatio: 16 / 9,
-        child: AutoPlayVideoWidget(
-          url: widget.content.formatUrl(videoUrl),
-          thumbnailUrl: widget.content.thumbnailUrl,
-        ),
-      ),
-    );
   }
 
   Widget _buildSingleImage(String url) => GestureDetector(
@@ -1890,14 +1829,6 @@ class _FeedItemState extends State<FeedItem>
         ),
       );
 
-  Future<Size> _getVideoSize(String url) async {
-    final ctrl = VideoPlayerController.networkUrl(Uri.parse(url));
-    await ctrl.initialize();
-    final size = ctrl.value.size;
-    ctrl.dispose();
-    return size;
-  }
-
   Widget _buildDocumentPreview(
     String fileUrl,
     String label,
@@ -1931,9 +1862,10 @@ class _FeedItemState extends State<FeedItem>
         context,
         MaterialPageRoute(
           builder:
-              (_) => FullscreenVideoPage(
+              (_) => FacebookFullscreenPage(
+                // ← correct widget
                 url: selectedUrl,
-                thumbnail: widget.content.thumbnailUrl,
+                thumbnailUrl: widget.content.thumbnailUrl,
               ),
         ),
       );
@@ -2077,7 +2009,7 @@ class _FeedItemState extends State<FeedItem>
             ),
       );
       final response = await http.post(
-        Uri.parse('http://182.93.94.220:8005/api/posts/'),
+        Uri.parse(ApiConstants.post),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -2736,7 +2668,7 @@ class _FeedItemState extends State<FeedItem>
       final response = await http
           .post(
             Uri.parse(
-              'http://182.93.94.220:8005/api/users/${widget.content.author.id}/report/',
+              '${ApiConstants.reportuser}${widget.content.author.id}/report/',
             ),
             headers: {
               'Content-Type': 'application/json',
@@ -3022,7 +2954,7 @@ class _FeedItemState extends State<FeedItem>
       final response = await http
           .post(
             Uri.parse(
-              'http://182.93.94.220:8005/api/users/${widget.content.author.id}/block/',
+              '${ApiConstants.blockuser}${widget.content.author.id}/block/',
             ),
             headers: {
               'Content-Type': 'application/json',

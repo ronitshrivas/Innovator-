@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:innovator/Innovator/screens/Feed/Inner_Homepage.dart';
 import 'package:innovator/KMS/core/constants/app_style.dart';
 import 'package:innovator/KMS/core/constants/mediaquery.dart';
 import 'package:innovator/KMS/provider/teacher_provider.dart';
 import 'package:innovator/KMS/provider/user_provider.dart';
 import 'package:innovator/KMS/screens/auth/login_screen.dart';
-import 'package:innovator/KMS/screens/coordinator/coordinator_attendance_approval_screen.dart'; 
+import 'package:innovator/KMS/screens/coordinator/coordinator_attendance_approval_screen.dart';
 import 'package:innovator/KMS/screens/coordinator/coordinator_invoice_screen.dart';
-import 'package:innovator/KMS/screens/coordinator/coordinator_teacher_notes_screen.dart'; 
+import 'package:innovator/KMS/screens/coordinator/coordinator_teacher_notes_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/coordinator_dashboard_screen.dart';
-import 'package:innovator/KMS/screens/dashboard/teacher_dashboard_screen.dart'; 
+import 'package:innovator/KMS/screens/dashboard/teacher_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/constant_screen/under_maintenance_page.dart';
 import 'package:innovator/KMS/screens/dashboard/student_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/teacher/kyc_upload_screen.dart';
@@ -17,6 +18,7 @@ import 'package:innovator/KMS/screens/student/student_examination.dart';
 import 'package:innovator/KMS/screens/teacher/teacher_salary_screen.dart';
 import 'package:innovator/KMS/screens/teacher/teacher_salary_slips.dart';
 import 'package:innovator/KMS/screens/teacher/teacher_school_attendance.dart';
+import 'package:innovator/innovator_home.dart';
 
 final drawerSelectedIndexProvider = StateProvider<int>((ref) => 0);
 
@@ -58,7 +60,7 @@ const List<DrawerItemData> _teacherDrawerItems = [
     screen: InvoiceScreen(),
   ),
 ];
- 
+
 final List<DrawerItemData> _coordinatorDrawerItems = [
   const DrawerItemData(
     title: 'Dashboard',
@@ -139,36 +141,39 @@ class AppDrawer extends ConsumerWidget {
     final userAsync = ref.watch(userDetailsProvider);
 
     return userAsync.when(
-      loading: () => _buildDrawerShell(
-        context: context,
-        ref: ref,
-        selectedIndex: selectedIndex,
-        role: 'teacher',
-        username: '',
-        email: '',
-        items: _teacherDrawerItems,
-        isLoading: true,
-      ),
-      error: (_, __) => _buildDrawerShell(
-        context: context,
-        ref: ref,
-        selectedIndex: selectedIndex,
-        role: 'teacher',
-        username: 'User',
-        email: '',
-        items: _teacherDrawerItems,
-        isLoading: false,
-      ),
-      data: (user) => _buildDrawerShell(
-        context: context,
-        ref: ref,
-        selectedIndex: selectedIndex,
-        role: user.role,
-        username: user.username,
-        email: user.email,
-        items: _getItemsForRole(user.role),
-        isLoading: false,
-      ),
+      loading:
+          () => _buildDrawerShell(
+            context: context,
+            ref: ref,
+            selectedIndex: selectedIndex,
+            role: 'teacher',
+            username: '',
+            email: '',
+            items: _teacherDrawerItems,
+            isLoading: true,
+          ),
+      error:
+          (_, __) => _buildDrawerShell(
+            context: context,
+            ref: ref,
+            selectedIndex: selectedIndex,
+            role: 'teacher',
+            username: 'User',
+            email: '',
+            items: _teacherDrawerItems,
+            isLoading: false,
+          ),
+      data:
+          (user) => _buildDrawerShell(
+            context: context,
+            ref: ref,
+            selectedIndex: selectedIndex,
+            role: user.role,
+            username: user.username,
+            email: user.email,
+            items: _getItemsForRole(user.role),
+            isLoading: false,
+          ),
     );
   }
 
@@ -238,12 +243,15 @@ class AppDrawer extends ConsumerWidget {
                       const SizedBox(height: 4),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 3),
+                          horizontal: 10,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.3)),
+                            color: Colors.white.withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Text(
                           roleLabel,
@@ -256,14 +264,54 @@ class AppDrawer extends ConsumerWidget {
                           ),
                         ),
                       ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 3,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.school_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Innovator',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Switch(
+                              activeColor: Colors.white,
+                              value: true,
+                              onChanged: (value) {
+                                if (value != true) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => Homepage(),
+                                    ),
+                                  );
+                                }
+                              },
+                              inactiveTrackColor: Colors.white.withAlpha(20),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ],
                 ),
               ),
 
               const SizedBox(height: 24),
-              Divider(
-                  color: Colors.white.withValues(alpha: 0.2), thickness: 1),
+              Divider(color: Colors.white.withValues(alpha: 0.2), thickness: 1),
               const SizedBox(height: 12),
 
               // ── Drawer Items ──
@@ -271,9 +319,10 @@ class AppDrawer extends ConsumerWidget {
                 final item = items[index];
                 // Coordinators: only highlight Dashboard (index 0)
                 // Others: highlight current selected index
-                final isSelected = isCoord
-                    ? index == 0 && selectedIndex == 0
-                    : selectedIndex == index;
+                final isSelected =
+                    isCoord
+                        ? index == 0 && selectedIndex == 0
+                        : selectedIndex == index;
 
                 return Column(
                   children: [
@@ -349,34 +398,31 @@ class AppDrawer extends ConsumerWidget {
             // Dashboard — already there, nothing to push
             return;
           }
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => screen),
-          );
+          Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
         } else {
           // Teacher / Student: update index and push
           if (!isSelected) {
             ref.read(drawerSelectedIndexProvider.notifier).state = index;
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => screen),
-            );
+            Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
           }
         }
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected
-              ? Colors.white.withValues(alpha: 0.2)
-              : Colors.transparent,
+          color:
+              isSelected
+                  ? Colors.white.withValues(alpha: 0.2)
+                  : Colors.transparent,
           borderRadius: BorderRadius.circular(14),
-          border: isSelected
-              ? Border.all(
-                  color: Colors.white.withValues(alpha: 0.5), width: 1.2)
-              : null,
+          border:
+              isSelected
+                  ? Border.all(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    width: 1.2,
+                  )
+                  : null,
         ),
         child: Row(
           children: [
@@ -384,9 +430,10 @@ class AppDrawer extends ConsumerWidget {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: isSelected
-                    ? Colors.white.withValues(alpha: 0.2)
-                    : Colors.white.withValues(alpha: 0.08),
+                color:
+                    isSelected
+                        ? Colors.white.withValues(alpha: 0.2)
+                        : Colors.white.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Padding(
@@ -400,8 +447,7 @@ class AppDrawer extends ConsumerWidget {
                 title,
                 style: TextStyle(
                   fontSize: 14,
-                  fontWeight:
-                      isSelected ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   color: Colors.white,
                   fontFamily: 'Inter',
                 ),
@@ -410,8 +456,11 @@ class AppDrawer extends ConsumerWidget {
               ),
             ),
             if (isSelected)
-              const Icon(Icons.chevron_right_rounded,
-                  color: Colors.white, size: 18),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
           ],
         ),
       ),
@@ -421,61 +470,73 @@ class AppDrawer extends ConsumerWidget {
   void _showLogoutDialog(BuildContext context) {
     showAdaptiveDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppStyle.alertDialogColor,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Icon(Icons.logout_rounded, size: 50, color: Colors.red),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            Text('Comeback Soon!', style: AppStyle.heading2),
-            const SizedBox(height: 12),
-            const Text(
-              'Are you sure you want to Logout?',
-              style: TextStyle(
-                  color: Colors.black45, fontSize: 15, fontFamily: 'Inter'),
-              textAlign: TextAlign.center,
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: AppStyle.alertDialogColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            title: const Icon(
+              Icons.logout_rounded,
+              size: 50,
+              color: Colors.red,
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('Cancel', style: AppStyle.errorText),
+                const SizedBox(height: 8),
+                Text('Comeback Soon!', style: AppStyle.heading2),
+                const SizedBox(height: 12),
+                const Text(
+                  'Are you sure you want to Logout?',
+                  style: TextStyle(
+                    color: Colors.black45,
+                    fontSize: 15,
+                    fontFamily: 'Inter',
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                const SizedBox(width: 16),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    minimumSize: const Size(110, 44),
-                    backgroundColor: AppStyle.buttonColor,
-                  ),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const KmsLoginScreen()),
-                      (route) => false,
-                    );
-                  },
-                  child: const Text(
-                    'Yes, Logout',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontFamily: 'Inter'),
-                  ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text('Cancel', style: AppStyle.errorText),
+                    ),
+                    const SizedBox(width: 16),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        minimumSize: const Size(110, 44),
+                        backgroundColor: AppStyle.buttonColor,
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const KmsLoginScreen(),
+                          ),
+                          (route) => false,
+                        );
+                      },
+                      child: const Text(
+                        'Yes, Logout',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
@@ -483,10 +544,11 @@ class AppDrawer extends ConsumerWidget {
     final kycAsync = ref.read(kycStatusProvider);
     kycAsync.when(
       loading: () {},
-      error: (_, __) => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const KycUploadScreen()),
-      ),
+      error:
+          (_, __) => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const KycUploadScreen()),
+          ),
       data: (kyc) {
         if (kyc.isPending) {
           _showKycPendingDialog(context);
@@ -505,83 +567,112 @@ class AppDrawer extends ConsumerWidget {
   void _showKycPendingDialog(BuildContext context) {
     showAdaptiveDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: Colors.white,
-        title: const Icon(Icons.hourglass_top_rounded,
-            size: 48, color: Color(0xffF8BD00)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Verification Pending',
-                style: TextStyle(
+      builder:
+          (dialogContext) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            backgroundColor: Colors.white,
+            title: const Icon(
+              Icons.hourglass_top_rounded,
+              size: 48,
+              color: Color(0xffF8BD00),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Verification Pending',
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
-                    fontFamily: 'Inter')),
-            const SizedBox(height: 10),
-            const Text(
-              'Your KYC documents are currently under review. Please wait while we verify your information.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: 13, color: Colors.black54, fontFamily: 'Inter'),
+                    fontFamily: 'Inter',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Your KYC documents are currently under review. Please wait while we verify your information.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.black54,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppStyle.primaryColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    minimumSize: const Size(double.infinity, 44),
+                  ),
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text(
+                    'OK',
+                    style: TextStyle(color: Colors.white, fontFamily: 'Inter'),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppStyle.primaryColor,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                minimumSize: const Size(double.infinity, 44),
-              ),
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('OK',
-                  style:
-                      TextStyle(color: Colors.white, fontFamily: 'Inter')),
-            ),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
   void _showKycApprovedDialog(BuildContext context) {
     showAdaptiveDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: Colors.white,
-        title: const Icon(Icons.verified_rounded, size: 48, color: Colors.green),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('KYC Verified',
-                style: TextStyle(
+      builder:
+          (dialogContext) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            backgroundColor: Colors.white,
+            title: const Icon(
+              Icons.verified_rounded,
+              size: 48,
+              color: Colors.green,
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'KYC Verified',
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
-                    fontFamily: 'Inter')),
-            const SizedBox(height: 10),
-            const Text(
-              'Your identity has been successfully verified.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: 13, color: Colors.black54, fontFamily: 'Inter'),
+                    fontFamily: 'Inter',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Your identity has been successfully verified.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.black54,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    minimumSize: const Size(double.infinity, 44),
+                  ),
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text(
+                    'Great!',
+                    style: TextStyle(color: Colors.white, fontFamily: 'Inter'),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                minimumSize: const Size(double.infinity, 44),
-              ),
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Great!',
-                  style:
-                      TextStyle(color: Colors.white, fontFamily: 'Inter')),
-            ),
-          ],
-        ),
-      ),
+          ),
     );
   }
 }

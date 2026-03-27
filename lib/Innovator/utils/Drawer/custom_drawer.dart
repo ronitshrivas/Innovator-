@@ -11,6 +11,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Login.dart';
+import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/controllers/user_controller.dart';
 import 'package:innovator/Innovator/screens/Course/home.dart';
 import 'package:innovator/Innovator/screens/Shop/Shop_Page.dart';
@@ -243,7 +244,7 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
       final oldUrl =
           _userPicture!.startsWith('http')
               ? _userPicture!
-              : 'http://182.93.94.220:8005$_userPicture';
+              : '${ApiConstants.userBase}$_userPicture';
       imageCache.evict(CachedNetworkImageProvider(oldUrl));
     }
 
@@ -335,7 +336,7 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
 
       final response = await http
           .get(
-            Uri.parse('http://182.93.94.220:8005/api/users/me/'),
+            Uri.parse(ApiConstants.fetchuserprofile),
             headers: {
               'Content-Type': 'application/json',
               'Authorization': 'Bearer $authToken',
@@ -592,13 +593,12 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
   // ── Profile image ───────────────────────────────────────────────────────────
 
   Widget _buildProfileImage() {
-    const baseUrl = 'http://182.93.94.220:8005';
     String? resolvedUrl;
     if (_userPicture != null && _userPicture!.isNotEmpty) {
       resolvedUrl =
           _userPicture!.startsWith('http')
               ? _userPicture!
-              : '$baseUrl$_userPicture';
+              : '${ApiConstants.userBase}$_userPicture';
     }
     final versionedUrl =
         resolvedUrl != null
@@ -749,7 +749,7 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Innovator App v:1.0.44',
+                'Innovator App v:1.0.50',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -814,7 +814,13 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
                 onPressed: () {
                   AppData().clearAuthToken();
                   InstantCache.clear();
+                  AppData().logout();
                   Navigator.of(dialogContext).pop();
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => LoginPage()),
+                    (Route) => false,
+                  );
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                 child: const Text(

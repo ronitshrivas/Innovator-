@@ -1,19 +1,7 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// SharedPostCard.dart
-//
-// The embedded "quoted post" card rendered inside a repost FeedItem.
-// Handles: text-only, single image, multi-image, and video thumbnails.
-//
-// Usage inside FeedItem.build():
-//   if (widget.content.isRepost && widget.content.sharedPostDetails != null)
-//     SharedPostCard(details: widget.content.sharedPostDetails!),
-// ─────────────────────────────────────────────────────────────────────────────
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:innovator/Innovator/models/Feed_Content_Model.dart';
 
-// App colour constants — mirrors the rest of the app
 const _kOrange = Color.fromRGBO(244, 135, 6, 1);
 const _kOrangeLight = Color.fromRGBO(244, 135, 6, 0.10);
 const _kGold = Color.fromRGBO(255, 204, 0, 1);
@@ -21,14 +9,10 @@ const _kGold = Color.fromRGBO(255, 204, 0, 1);
 class SharedPostCard extends StatelessWidget {
   final SharedPostDetails details;
 
-  /// If true the card is rendered in "compact" mode (e.g. inside the reposts
-  /// list screen) without the full bottom padding.
   final bool compact;
 
   const SharedPostCard({Key? key, required this.details, this.compact = false})
     : super(key: key);
-
-  // ── Helpers ────────────────────────────────────────────────────────────────
 
   String _timeAgo(DateTime dt) {
     final d = DateTime.now().difference(dt);
@@ -39,8 +23,6 @@ class SharedPostCard extends StatelessWidget {
     if (d.inMinutes > 0) return '${d.inMinutes}m ago';
     return 'Just now';
   }
-
-  // ── Avatar ─────────────────────────────────────────────────────────────────
 
   Widget _avatar(String? url, String name) {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
@@ -320,10 +302,6 @@ class SharedPostCard extends StatelessWidget {
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Small helpers
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _GridThumb extends StatelessWidget {
   final String url;

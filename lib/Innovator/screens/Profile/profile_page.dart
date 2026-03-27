@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Login.dart';
+import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/models/Feed_Content_Model.dart';
 import 'package:innovator/Innovator/screens/CreatePost/createpost.dart';
 import 'package:innovator/Innovator/screens/Feed/Inner_Homepage.dart';
@@ -23,10 +24,8 @@ import 'package:get/get.dart';
 import 'package:innovator/Innovator/controllers/user_controller.dart';
 
 // ── New API base (avatar server) ─────────────────────────────────────────────
-const String _newApiBase = 'http://182.93.94.220:8005';
 
 // ── Legacy API base (feed / follow) ──────────────────────────────────────────
-const String _legacyApiBase = 'http://182.93.94.210:3067/api/v1';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Models
@@ -111,7 +110,7 @@ class UserProfileData {
     if (avatar!.startsWith('http://') || avatar!.startsWith('https://')) {
       return avatar;
     }
-    return '$_newApiBase$avatar';
+    return '${ApiConstants.userBase}$avatar';
   }
 }
 
@@ -157,7 +156,7 @@ class FollowerFollowing {
     if (picture!.startsWith('http://') || picture!.startsWith('https://')) {
       return picture;
     }
-    return '$_newApiBase$picture'; // e.g. http://182.93.94.220:8005/media/avatars/IMG.jpg
+    return '${ApiConstants.userBase}$picture'; // e.g. http://182.93.94.220:8005/media/avatars/IMG.jpg
   }
 }
 // ─────────────────────────────────────────────────────────────────────────────
@@ -186,7 +185,7 @@ class UserProfileService {
       throw AuthException('No authentication token found');
     }
 
-    final url = Uri.parse('$_newApiBase/api/users/me/');
+    final url = Uri.parse(ApiConstants.fetchuserprofile);
     final response = await http.get(url, headers: _authHeaders(token));
 
     if (response.statusCode == 200) {
@@ -208,7 +207,7 @@ class UserProfileService {
     }
 
     final filename = path.basename(imageFile.path);
-    final url = Uri.parse('$_newApiBase/api/users/me/avatar/');
+    final url = Uri.parse(ApiConstants.updateuserprofilepicture);
 
     final mimeType =
         filename.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
@@ -256,7 +255,7 @@ class UserProfileService {
     if (token == null || token.isEmpty) throw AuthException('No token');
 
     final response = await http.get(
-      Uri.parse('$_newApiBase/api/users/followers/'), // ← new endpoint
+      Uri.parse(ApiConstants.getfollowers), // ← new endpoint
       headers: _authHeaders(token),
     );
 
@@ -283,7 +282,7 @@ class UserProfileService {
     if (token == null || token.isEmpty) throw AuthException('No token');
 
     final response = await http.get(
-      Uri.parse('$_newApiBase/api/users/following/'), // ← new endpoint
+      Uri.parse(ApiConstants.getfollowing), // ← new endpoint
       headers: _authHeaders(token),
     );
 

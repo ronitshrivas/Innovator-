@@ -5,10 +5,11 @@ import 'dart:convert';
 import 'dart:developer';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
+import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/models/comment_Model.dart';
 
 class CommentService {
-  static const String _base = 'http://182.93.94.220:8005';
+  //static const String _base = 'http://182.93.94.220:8005';
 
   Map<String, String> _headers({bool json = true}) {
     final token = AppData().accessToken ?? '';
@@ -23,7 +24,7 @@ class CommentService {
   // GET /api/comments/?post=<postId>
   Future<List<Comment>> getComments(String postId, {int page = 0}) async {
     try {
-      final uri = Uri.parse('$_base/api/comments/').replace(
+      final uri = Uri.parse(ApiConstants.getcomments).replace(
         queryParameters: {
           'post': postId,
           if (page > 0) 'page': page.toString(),
@@ -56,7 +57,7 @@ class CommentService {
   Future<List<Comment>> getReplies(String commentId) async {
     try {
       final uri = Uri.parse(
-        '$_base/api/replies/',
+        ApiConstants.getcommentreplies,
       ).replace(queryParameters: {'parent': commentId});
       final response = await http.get(uri, headers: _headers(json: false));
       log('[Comment] GET $uri → ${response.statusCode}');
@@ -87,7 +88,7 @@ class CommentService {
     required String content,
   }) async {
     final response = await http.post(
-      Uri.parse('$_base/api/comments/'),
+      Uri.parse(ApiConstants.addcomments),
       headers: _headers(),
       body: jsonEncode({'post': postId, 'content': content}),
     );
@@ -109,7 +110,7 @@ class CommentService {
     required String content,
   }) async {
     final response = await http.post(
-      Uri.parse('$_base/api/replies/'),
+      Uri.parse(ApiConstants.addcommentreplies),
       headers: _headers(),
       body: jsonEncode({'parent': parentCommentId, 'content': content}),
     );
@@ -131,7 +132,7 @@ class CommentService {
     required String content,
   }) async {
     final response = await http.patch(
-      Uri.parse('$_base/api/comments/$commentId/'),
+      Uri.parse('${ApiConstants.updatecomments}$commentId/'),
       headers: _headers(),
       body: jsonEncode({'content': content}),
     );
@@ -151,7 +152,7 @@ class CommentService {
     required String content,
   }) async {
     final response = await http.patch(
-      Uri.parse('$_base/api/replies/$replyId/'),
+      Uri.parse('${ApiConstants.updatecommentreplies}$replyId/'),
       headers: _headers(),
       body: jsonEncode({'content': content}),
     );
@@ -168,7 +169,7 @@ class CommentService {
   // DELETE /api/comments/<id>/
   Future<void> deleteComment(String commentId) async {
     final response = await http.delete(
-      Uri.parse('$_base/api/comments/$commentId/'),
+      Uri.parse('${ApiConstants.deletecomment}$commentId/'),
       headers: _headers(json: false),
     );
     log('[Comment] DELETE /api/comments/$commentId/ → ${response.statusCode}');
@@ -181,7 +182,7 @@ class CommentService {
   // DELETE /api/replies/<id>/
   Future<void> deleteReply(String replyId) async {
     final response = await http.delete(
-      Uri.parse('$_base/api/replies/$replyId/'),
+      Uri.parse('${ApiConstants.deletecommentreplies}$replyId/'),
       headers: _headers(json: false),
     );
     log('[Comment] DELETE /api/replies/$replyId/ → ${response.statusCode}');

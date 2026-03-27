@@ -2,12 +2,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
-import 'package:innovator/Innovator/controllers/user_controller.dart';
-import 'package:get/get.dart';
+import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:innovator/Innovator/screens/show_Specific_Profile/Show_Specific_Profile.dart';
-
-const String _kBaseUrl = 'http://182.93.94.220:8005';
 
 class FollowersFollowingScreen extends StatefulWidget {
   final String userId;
@@ -54,7 +51,9 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
     });
     try {
       final response = await http.get(
-        Uri.parse('$_kBaseUrl/api/users/${widget.userId}/followers/'),
+        Uri.parse(
+          '${ApiConstants.fetchspecificfollowersandfollowing}${widget.userId}/followers/',
+        ),
         headers: {
           'Authorization': 'Bearer ${appData.accessToken}',
           'Content-Type': 'application/json',
@@ -88,7 +87,9 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
     });
     try {
       final response = await http.get(
-        Uri.parse('$_kBaseUrl/api/users/${widget.userId}/following/'),
+        Uri.parse(
+          '${ApiConstants.fetchspecificfollowersandfollowing}${widget.userId}/following/',
+        ),
         headers: {
           'Authorization': 'Bearer ${appData.accessToken}',
           'Content-Type': 'application/json',
@@ -129,7 +130,7 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
   String? _extractAvatarUrl(Map<String, dynamic> user) {
     final raw = user['profile']?['avatar']?.toString() ?? '';
     if (raw.isEmpty) return null;
-    return raw.startsWith('http') ? raw : '$_kBaseUrl$raw';
+    return raw.startsWith('http') ? raw : '${ApiConstants.userBase}$raw';
   }
 
   void _navigateToProfile(Map<String, dynamic> user) {
@@ -461,7 +462,9 @@ class _FollowersFollowingContentState extends State<FollowersFollowingContent>
     });
     try {
       final response = await http.get(
-        Uri.parse('$_kBaseUrl/api/users/${widget.userId}/followers/'),
+        Uri.parse(
+          '${ApiConstants.fetchspecificfollowersandfollowing}${widget.userId}/followers/',
+        ),
         headers: {
           'Authorization': 'Bearer ${appData.accessToken}',
           'Content-Type': 'application/json',
@@ -495,7 +498,9 @@ class _FollowersFollowingContentState extends State<FollowersFollowingContent>
     });
     try {
       final response = await http.get(
-        Uri.parse('$_kBaseUrl/api/users/${widget.userId}/following/'),
+        Uri.parse(
+          '${ApiConstants.fetchspecificfollowersandfollowing}${widget.userId}/following/',
+        ),
         headers: {
           'Authorization': 'Bearer ${appData.accessToken}',
           'Content-Type': 'application/json',
@@ -535,7 +540,7 @@ class _FollowersFollowingContentState extends State<FollowersFollowingContent>
   String? _extractAvatarUrl(Map<String, dynamic> user) {
     final raw = user['profile']?['avatar']?.toString() ?? '';
     if (raw.isEmpty) return null;
-    return raw.startsWith('http') ? raw : '$_kBaseUrl$raw';
+    return raw.startsWith('http') ? raw : '${ApiConstants.userBase}$raw';
   }
 
   void _navigateToProfile(Map<String, dynamic> user) {

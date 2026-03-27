@@ -7,6 +7,11 @@ class ApiConstants {
   static const String studentBase = '$_host:8003/api/student';
   static const String authBase = '$_host:8010/api/auth';
   static const String mediaBase = '$_host:8003';
+  static const String feedBase = '$_host:8005/api';
+  static const String userBase = '$_host:8005';
+
+  //Auth Username Checkusername
+  static const String checkusername = '$feedBase/users/check-username/';
 
   //Auth Endpoints
   static const String tokenRefresh = '$authBase/token/refresh/';
@@ -36,4 +41,69 @@ class ApiConstants {
 
   //Register Endponits
   static const String register = '$authBase/register/';
+
+  //Social Media Endpoints
+  static const String post = '$feedBase/posts/';
+
+  static const String recordview = '$feedBase/posts/';
+
+  static const String reportuser = '$feedBase/users/';
+
+  static const String blockuser = '$feedBase/users/';
+
+  static const String blocklistuser = '$feedBase/users/blocked-list/';
+
+  static const String unblockuser = '$feedBase/users/';
+
+  static const String getcomments = '$feedBase/comments/';
+
+  static const String getcommentreplies = '$feedBase/replies/';
+
+  static const String addcomments = '$feedBase/comments/';
+
+  static const String addcommentreplies = '$feedBase/replies/';
+
+  static const String updatecomments = '$feedBase/comments/';
+
+  static const String updatecommentreplies = '$feedBase/replies/';
+
+  static const String deletecomment = '$feedBase/comments/';
+
+  static const String deletecommentreplies = '$feedBase/replies/';
+
+  // Create Post Fetch Categories
+
+  static const String fetchcategories = '$feedBase/categories/';
+
+  static const String createpost = '$feedBase/posts/';
+
+  static const String fetchuuid = '$feedBase/users/';
+
+  static const String sendFollowrequest = '$feedBase/users/';
+
+  static const String sendreaction = '$feedBase/reactions/';
+
+  static const String fetchreactions = '$feedBase/posts/';
+
+  static const String profile = '$feedBase/profile/';
+
+  static const String avatarurl = '$feedBase/users/me/avatar/';
+
+  static const String fetchuserprofile = '$feedBase/users/me';
+
+  static const String updateuserprofilepicture = '$feedBase/users/me/avatar/';
+
+  static const String getfollowers = '$feedBase/users/followers/';
+
+  static const String getfollowing = '$feedBase/users/following/';
+
+  static const String fetchreports = '$feedBase/users/reports-list/';
+
+  static const String fetchsuggestionusers = '$feedBase/users';
+
+  static const String fetchspecificfollowersandfollowing = '$feedBase/users/';
+
+  static const String fetchotheruserprofile = '$feedBase/users/';
+
+  static const String fetchreporstCount = '$feedBase/posts/';
 }

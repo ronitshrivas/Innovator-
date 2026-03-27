@@ -1,25 +1,15 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// RepostsListScreen.dart
-//
-// Displays all reposts of a given post.
-// GET /api/posts/<postId>/reposts-list/
-//
-// Navigation:
-//   Navigator.push(context, MaterialPageRoute(
-//     builder: (_) => RepostsListScreen(postId: '<original-post-id>'),
-//   ));
-// ─────────────────────────────────────────────────────────────────────────────
-
 import 'dart:convert';
 import 'dart:developer' as developer;
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Login.dart';
-import 'package:innovator/Innovator/models/Feed_Content_Model.dart';
+import 'package:innovator/Innovator/models/repost_model.dart';
 import 'package:innovator/Innovator/screens/Feed/Repost/sharedrepostcard.dart';
+import 'package:innovator/Innovator/screens/Likes/Content-Like-Service.dart';
+import 'package:innovator/Innovator/screens/Likes/content-Like-Button.dart';
+import 'package:innovator/Innovator/screens/comment/comment_section.dart';
 import 'package:innovator/Innovator/widget/Custom_refresh_Indicator.dart';
 
 // ── App colour constants ──────────────────────────────────────────────────────
@@ -27,62 +17,6 @@ const _kOrange = Color.fromRGBO(244, 135, 6, 1);
 const _kOrangeLight = Color.fromRGBO(244, 135, 6, 0.10);
 const _kGold = Color.fromRGBO(255, 204, 0, 1);
 const _kBaseUrl = 'http://182.93.94.220:8005';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Model — a single repost entry from the list
-// ─────────────────────────────────────────────────────────────────────────────
-
-class RepostEntry {
-  final String id;
-  final String userId;
-  final String username;
-  final String avatar;
-  final String content; // reposter's caption
-  final int reactionsCount;
-  final int commentsCount;
-  final int viewsCount;
-  final DateTime createdAt;
-  final SharedPostDetails? sharedPostDetails;
-
-  const RepostEntry({
-    required this.id,
-    required this.userId,
-    required this.username,
-    required this.avatar,
-    required this.content,
-    required this.reactionsCount,
-    required this.commentsCount,
-    required this.viewsCount,
-    required this.createdAt,
-    this.sharedPostDetails,
-  });
-
-  factory RepostEntry.fromJson(Map<String, dynamic> j) {
-    SharedPostDetails? details;
-    final rawShared = j['shared_post_details'];
-    if (rawShared is Map<String, dynamic>) {
-      details = SharedPostDetails.fromJson(rawShared);
-    }
-    return RepostEntry(
-      id: j['id']?.toString() ?? '',
-      userId: j['user_id']?.toString() ?? '',
-      username: j['username']?.toString() ?? '',
-      avatar: j['avatar']?.toString() ?? '',
-      content: j['content']?.toString() ?? '',
-      reactionsCount: (j['reactions_count'] as num?)?.toInt() ?? 0,
-      commentsCount: (j['comments_count'] as num?)?.toInt() ?? 0,
-      viewsCount: (j['views_count'] as num?)?.toInt() ?? 0,
-      createdAt:
-          DateTime.tryParse(j['created_at']?.toString() ?? '') ??
-          DateTime.now(),
-      sharedPostDetails: details,
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// API Service
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _RepostsApiService {
   static Map<String, String> _headers() {
@@ -145,10 +79,6 @@ class _RepostsApiService {
         .toList();
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// RepostsListScreen
-// ─────────────────────────────────────────────────────────────────────────────
 
 class RepostsListScreen extends StatefulWidget {
   final String postId;
@@ -239,7 +169,6 @@ class _RepostsListScreenState extends State<RepostsListScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
       body: CustomRefreshIndicator(
         onRefresh: _load,
         child: CustomScrollView(
@@ -279,7 +208,7 @@ class _RepostsListScreenState extends State<RepostsListScreen>
     return SliverAppBar(
       pinned: true,
       // expandedHeight: 130,
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
       elevation: 0,
       shadowColor: Colors.black12,
       //surfaceTintColor: Colors.transparent,
@@ -464,19 +393,17 @@ class CountPill extends StatelessWidget {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// _RepostEntryCard — one repost in the list
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _RepostEntryCard extends StatefulWidget {
   final RepostEntry entry;
   final int index;
   final String Function(DateTime) timeAgo;
+  //final FeedContent content;
 
   const _RepostEntryCard({
     required this.entry,
     required this.index,
     required this.timeAgo,
+    //required this.content,
   });
 
   @override
@@ -488,10 +415,18 @@ class _RepostEntryCardState extends State<_RepostEntryCard>
   late AnimationController _ctrl;
   late Animation<double> _fade;
   late Animation<Offset> _slide;
+  bool _showComments = false; // ← ADD THIS
+  int _localLikeCount = 0;
+  late int _localCommentCount;
 
+  final ContentLikeService likeService = ContentLikeService(
+    baseUrl: 'http://182.93.94.220:8005',
+  );
   @override
   void initState() {
     super.initState();
+    _localLikeCount = widget.entry.reactionsCount; // ← ADD THIS
+    _localCommentCount = widget.entry.commentsCount; // ← shadow the final field
     _ctrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 380),
@@ -560,7 +495,7 @@ class _RepostEntryCardState extends State<_RepostEntryCard>
   @override
   Widget build(BuildContext context) {
     final e = widget.entry;
-
+    ;
     return FadeTransition(
       opacity: _fade,
       child: SlideTransition(
@@ -675,7 +610,6 @@ class _RepostEntryCardState extends State<_RepostEntryCard>
                   ),
                 ),
 
-                // ── Reposter's caption ─────────────────────────────────────
                 if (e.content.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(14, 10, 14, 2),
@@ -703,30 +637,104 @@ class _RepostEntryCardState extends State<_RepostEntryCard>
                   ),
 
                 // ── Stats row ──────────────────────────────────────────────
+                // ── Action bar ──────────────────────────────────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 6, 14, 14),
+                  padding: const EdgeInsets.fromLTRB(14, 6, 14, 0),
                   child: Row(
                     children: [
-                      _StatChip(
-                        icon: Icons.favorite_border_rounded,
-                        value: e.reactionsCount,
-                        color: Colors.red.shade400,
+                      // Like button — owns count internally, no external counter needed
+                      LikeButton(
+                        contentId: e.id,
+                        initialLikeStatus: false,
+                        likeService: likeService,
+                        showLabel: true,
+                        initialCount: e.reactionsCount,
                       ),
-                      const SizedBox(width: 14),
-                      _StatChip(
-                        icon: Icons.chat_bubble_outline_rounded,
-                        value: e.commentsCount,
-                        color: Colors.blue.shade500,
+
+                      const SizedBox(width: 20),
+
+                      // Comment toggle button
+                      // Comment toggle button — use _localCommentCount
+                      InkWell(
+                        onTap:
+                            () =>
+                                setState(() => _showComments = !_showComments),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 4,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.chat_bubble_outline_rounded,
+                                size: 20,
+                                color:
+                                    _showComments
+                                        ? Colors.blue.shade700
+                                        : Colors.grey.shade600,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                '$_localCommentCount', // ← use local mutable count
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color:
+                                      _showComments
+                                          ? Colors.blue.shade700
+                                          : Colors.grey.shade600,
+                                  fontFamily: 'InterThin',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                      const SizedBox(width: 14),
+
+                      const Spacer(),
+
+                      // Views — read-only
                       _StatChip(
                         icon: Icons.visibility_outlined,
                         value: e.viewsCount,
-                        color: Colors.grey.shade500,
+                        color: Colors.grey.shade400,
                       ),
                     ],
                   ),
                 ),
+
+                // ── Inline comments (AnimatedSize collapse/expand) ──────────────────────
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  child:
+                      _showComments
+                          ? Container(
+                            margin: const EdgeInsets.only(top: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: const BorderRadius.only(
+                                bottomLeft: Radius.circular(20),
+                                bottomRight: Radius.circular(20),
+                              ),
+                            ),
+                            padding: const EdgeInsets.all(12),
+                            child: CommentSection(
+                              contentId: e.id,
+                              // In CommentSection onCommentAdded:
+                              onCommentAdded: () {
+                                if (!mounted) return;
+                                setState(() => _localCommentCount++);
+                              },
+                            ),
+                          )
+                          : const SizedBox.shrink(),
+                ),
+
+                const SizedBox(height: 10),
               ],
             ),
           ),

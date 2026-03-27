@@ -3,10 +3,9 @@ import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
+import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/screens/Feed/Repost/repost_list_screen.dart';
 import 'package:innovator/Innovator/screens/Feed/Repost/repost_sheet.dart';
-
-const _kBaseUrl = 'http://182.93.94.220:8005';
 
 class RepostButton extends StatefulWidget {
   final String postId;
@@ -69,7 +68,7 @@ class _RepostButtonState extends State<RepostButton>
       };
 
       final uri = Uri.parse(
-        '$_kBaseUrl/api/posts/${widget.postId}/reposts-list/',
+        '${ApiConstants.fetchreporstCount}${widget.postId}/reposts-list/',
       );
       final response = await http
           .get(uri, headers: headers)

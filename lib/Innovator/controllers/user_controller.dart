@@ -4,34 +4,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:innovator/Innovator/App_data/App_data.dart';
+import 'package:innovator/Innovator/constant/api_constants.dart';
 
-// ── API base URL ──────────────────────────────────────────────────────────────
-const String _newApiBase = 'http://182.93.94.220:8005';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// UserController
-//
-// Architecture mirrors Facebook/Instagram/LinkedIn feed avatar loading:
-//
-//  Phase 1 — Parse & cache  (inside ContentData.fromNewFeedApi, zero latency)
-//    Every post in the API response already carries user_id + username + avatar.
-//    We store all of them in a simple in-memory HashMap BEFORE the first frame
-//    is painted.  No extra network round-trip, no dedicated "fetch user" call.
-//
-//  Phase 2 — Parallel prefetch  (after setState, off the UI thread)
-//    CachedNetworkImage's image cache (backed by flutter_cache_manager) is
-//    primed by calling precacheImage() in parallel (Future.wait) for the first
-//    N visible avatars.  Subsequent scrolls hit the disk cache, not the network.
-//
-//  Phase 3 — Display  (inside _buildAuthorAvatar)
-//    CachedNetworkImage serves the image from memory → disk → network.
-//    Because we already primed the cache in Phase 2, 90 % of avatars are
-//    served from memory with zero jank — the same trick Instagram uses.
-//
-//  Phase 4 — Eviction
-//    Entries older than 2 hours are evicted lazily.  The map is capped at 500
-//    entries; when full the 50 oldest are dropped (LRU approximation).
-// ─────────────────────────────────────────────────────────────────────────────
 class UserController extends GetxController {
   static UserController get to => Get.find();
 
@@ -265,7 +239,7 @@ class UserController extends GetxController {
   /// this just future-proofs against relative paths.
   String _toAbsolute(String url) {
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    return '$_newApiBase${url.startsWith('/') ? url : '/$url'}';
+    return '${ApiConstants.userBase}${url.startsWith('/') ? url : '/$url'}';
   }
 
   void _maybeEvict() {

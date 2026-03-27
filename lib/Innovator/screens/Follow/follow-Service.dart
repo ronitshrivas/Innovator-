@@ -2,10 +2,9 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
+import 'package:innovator/Innovator/constant/api_constants.dart';
 
 class FollowService {
-  static const String _base = 'http://182.93.94.220:8005';
-
   // UUID v4 pattern
   static final _uuidRegex = RegExp(
     r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}'
@@ -42,7 +41,7 @@ class FollowService {
 
     try {
       final uri = Uri.parse(
-        '$_base/api/users/',
+        ApiConstants.fetchuuid,
       ).replace(queryParameters: {'username': value});
       final response = await http
           .get(uri, headers: _headers())
@@ -96,7 +95,7 @@ class FollowService {
     _assertAuth();
 
     final userId = await resolveToUuid(userIdOrUsername);
-    final url = Uri.parse('$_base/api/users/$userId/follow/');
+    final url = Uri.parse('${ApiConstants.sendFollowrequest}$userId/follow/');
     debugPrint('[FollowService] POST $url');
 
     final response = await http
@@ -135,7 +134,7 @@ class FollowService {
     _assertAuth();
 
     final userId = await resolveToUuid(userIdOrUsername);
-    final url = Uri.parse('$_base/api/users/$userId/unfollow/');
+    final url = Uri.parse('${ApiConstants.sendFollowrequest}$userId/unfollow/');
     debugPrint('[FollowService] POST $url');
 
     final response = await http

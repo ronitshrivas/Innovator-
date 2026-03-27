@@ -1,182 +1,31 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:http/http.dart' as http;
-import 'package:innovator/Innovator/App_data/App_data.dart';
-
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:innovator/Innovator/screens/Search/search_provider.dart';
 import 'package:innovator/Innovator/screens/show_Specific_Profile/Show_Specific_Profile.dart';
-import 'package:innovator/Innovator/widget/FloatingMenuwidget.dart';
-import '../../controllers/user_controller.dart';
 
-class SearchPage extends StatefulWidget {
+class SearchPage extends ConsumerStatefulWidget {
   const SearchPage({Key? key}) : super(key: key);
 
   @override
-  _SearchPageState createState() => _SearchPageState();
+  ConsumerState<SearchPage> createState() => _SearchPageState();
 }
 
-class _SearchPageState extends State<SearchPage> {
+class _SearchPageState extends ConsumerState<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
-  final AppData _appData = AppData();
-  final UserController userController = Get.find<UserController>();
-
-  List<dynamic> _searchResults = [];
-  List<dynamic> _suggestedUsers = [];
-  bool _isLoading = false;
-  bool _isSearching = false;
   bool _isSuggestedUsersExpanded = false;
 
   @override
-  void initState() {
-    super.initState();
-    _fetchSuggestedUsers();
-  }
-
-  List<dynamic> _filterUniqueUsers(List<dynamic> users) {
-    final uniqueEmails = <String>{};
-    return users.where((user) {
-      final email = user['email'] ?? '';
-      if (email.isEmpty || uniqueEmails.contains(email)) {
-        return false;
-      }
-      uniqueEmails.add(email);
-      return true;
-    }).toList();
-  }
-
-  Future<void> _fetchSuggestedUsers() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final response = await http.get(
-        Uri.parse('http://182.93.94.210:3067/api/v1/users'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'authorization': 'Bearer ${_appData.accessToken}',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = _filterUniqueUsers(json.decode(response.body)['data']);
-
-        setState(() {
-          _suggestedUsers = data.take(10).toList();
-          _isLoading = false;
-        });
-
-        // ENHANCED: Cache and preload with user data
-        await _cacheAndPreloadUsers(_suggestedUsers);
-      } else {
-        throw Exception('Failed to load suggestions');
-      }
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      _showErrorMessage('Error loading suggestions');
-      debugPrint('Error fetching suggested users: $e');
-    }
-  }
-
-  Future<void> _searchUsers(String query) async {
-    if (query.isEmpty) {
-      setState(() {
-        _searchResults = [];
-        _isSearching = false;
-      });
-      return;
-    }
-
-    setState(() {
-      _isSearching = true;
-      _isLoading = true;
-    });
-
-    try {
-      final response = await http.get(
-        Uri.parse('http://182.93.94.210:3067/api/v1/users'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'authorization': 'Bearer ${_appData.accessToken}',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = _filterUniqueUsers(json.decode(response.body)['data']);
-
-        final filteredResults =
-            data
-                .where(
-                  (user) =>
-                      user['name']?.toLowerCase().contains(
-                        query.toLowerCase(),
-                      ) ??
-                      false,
-                )
-                .toList();
-
-        setState(() {
-          _searchResults = filteredResults;
-          _isLoading = false;
-        });
-
-        // ENHANCED: Cache and preload search results
-        await _cacheAndPreloadUsers(filteredResults);
-      } else {
-        throw Exception('Failed to search users');
-      }
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      _showErrorMessage('Error searching users');
-      debugPrint('Error searching users: $e');
-    }
-  }
-
-  // NEW: Enhanced caching and preloading method
-  Future<void> _cacheAndPreloadUsers(List<dynamic> users) async {
-    if (users.isEmpty) return;
-
-    try {
-      // Cache all users first using existing bulkCacheUsers method
-      final usersToCache = users.cast<Map<String, dynamic>>();
-      userController.bulkCacheUsers(usersToCache);
-      debugPrint('Cached ${users.length} users in search');
-
-      // Preload images using existing preloadVisibleUsers method
-      final userIds = users.map((user) => user['_id'] as String).toList();
-      await userController.preloadVisibleUsers(userIds, context);
-
-      debugPrint('Preloaded ${userIds.length} user images in search');
-
-      // Force UI refresh to ensure cached images are displayed
-      if (mounted) {
-        setState(() {});
-      }
-    } catch (e) {
-      debugPrint('Error caching/preloading users: $e');
-    }
-  }
-
-  void _showErrorMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.redAccent,
-        duration: const Duration(seconds: 3),
-      ),
-    );
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final searchState = ref.watch(searchProvider);
+    final notifier = ref.read(searchProvider.notifier);
+
     return Scaffold(
-      // backgroundColor: Colors.grey[50],
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
@@ -184,13 +33,12 @@ class _SearchPageState extends State<SearchPage> {
           child: Column(
             children: [
               _buildSimpleHeader(),
-              _buildSimpleSearchBar(),
-              Expanded(child: _buildContent()),
+              _buildSimpleSearchBar(notifier),
+              Expanded(child: _buildContent(searchState, notifier)),
             ],
           ),
         ),
       ),
-      //floatingActionButton: FloatingMenuWidget(),
     );
   }
 
@@ -231,26 +79,26 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  Widget _buildSimpleSearchBar() {
+  Widget _buildSimpleSearchBar(SearchNotifier notifier) {
     return SearchBar(
-      elevation: WidgetStatePropertyAll(0),
+      elevation: const WidgetStatePropertyAll(0),
       backgroundColor: WidgetStatePropertyAll(Colors.grey[100]!),
       hintText: 'Search for people...',
-      onChanged: (value) {
-        _searchUsers(value);
-      },
       controller: _searchController,
+      onChanged: (value) {
+        notifier.search(value);
+      },
       onTap: () {
         _searchController.clear();
-        _searchUsers('');
+        notifier.fetchSuggested();
         setState(() {});
       },
       leading: const Icon(Icons.search, color: Colors.grey),
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
+  Widget _buildContent(SearchState searchState, SearchNotifier notifier) {
+    if (searchState.isLoading) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -273,7 +121,9 @@ class _SearchPageState extends State<SearchPage> {
             child: Row(
               children: [
                 Text(
-                  _isSearching ? 'Search Results' : 'Suggested People',
+                  searchState.isSearching
+                      ? 'Search Results'
+                      : 'Suggested People',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -281,7 +131,7 @@ class _SearchPageState extends State<SearchPage> {
                   ),
                 ),
                 const Spacer(),
-                if (!_isSearching) // Show button only when not searching
+                if (!searchState.isSearching)
                   TextButton(
                     onPressed: () {
                       setState(() {
@@ -299,22 +149,19 @@ class _SearchPageState extends State<SearchPage> {
               ],
             ),
           ),
-          Expanded(child: _buildUserList()),
+          Expanded(child: _buildUserList(searchState)),
         ],
       ),
     );
   }
 
-  Widget _buildUserList() {
+  Widget _buildUserList(SearchState searchState) {
     final users =
-        _isSearching
-            ? _searchResults
-            : _isSuggestedUsersExpanded
-            ? _suggestedUsers
-            : _suggestedUsers.take(3).toList();
+        searchState.isSearching || _isSuggestedUsersExpanded
+            ? searchState.users
+            : searchState.users.take(3).toList();
 
-    // If searching and no results, show "No results found"
-    if (_isSearching && users.isEmpty) {
+    if (searchState.isSearching && users.isEmpty) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -339,50 +186,22 @@ class _SearchPageState extends State<SearchPage> {
       );
     }
 
-    // Show the user list (either search results or limited/full suggested users)
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       itemCount: users.length,
       itemBuilder: (context, index) {
-        final user = users[index];
-        return _buildUserCard(user);
+        return _buildUserCard(users[index]);
       },
     );
   }
 
-  Widget _buildUserCard(Map<String, dynamic> user) {
-    final userId = user['_id'] ?? '';
-    final userName = user['name'] ?? 'Unknown';
-    final userPicture = user['picture'] ?? '';
-
-    // Debug logging for problematic users
-    if (userName.toLowerCase().contains('nepatronix')) {
-      debugPrint('DEBUG NepaTronix in search:');
-      debugPrint('  - User ID: $userId');
-      debugPrint('  - Name: $userName');
-      debugPrint('  - Picture: $userPicture');
-      debugPrint('  - Is cached: ${userController.isUserCached(userId)}');
-      debugPrint(
-        '  - Cached URL: ${userController.getOtherUserFullProfilePicturePath(userId)}',
-      );
-    }
-
-    // Force cache the user if not already cached
-    if (userId.isNotEmpty && !userController.isUserCached(userId)) {
-      debugPrint('Force caching user in search: $userName ($userId)');
-      userController.cacheUserProfilePicture(
-        userId,
-        userPicture.isNotEmpty ? userPicture : null,
-        userName,
-      );
-    }
-
+  Widget _buildUserCard(SearchUser user) {
     return InkWell(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => SpecificUserProfilePage(userId: userId),
+            builder: (context) => SpecificUserProfilePage(userId: user.id),
           ),
         );
       },
@@ -391,17 +210,14 @@ class _SearchPageState extends State<SearchPage> {
         children: [
           Row(
             children: [
-              // Enhanced avatar with better fallback handling
-              _buildSearchAvatar(userId, userName, userPicture),
-
+              _buildSearchAvatar(user),
               const SizedBox(width: 12),
-
               Expanded(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      userName,
+                      user.username,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -419,41 +235,16 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  Widget _buildSearchAvatar(
-    String userId,
-    String userName,
-    String userPicture,
-  ) {
-    // Try to get cached URL first
-    String? imageUrl = userController.getOtherUserFullProfilePicturePath(
-      userId,
-    );
-
-    // If no cached URL, build direct URL from user data
-    if (imageUrl == null && userPicture.isNotEmpty) {
-      imageUrl =
-          userPicture.startsWith('http')
-              ? userPicture
-              : 'http://182.93.94.210:3067${userPicture.startsWith('/') ? userPicture : '/$userPicture'}';
-    }
-
+  // NetworkImage instead of FileImage — avatar URL comes straight from API
+  Widget _buildSearchAvatar(SearchUser user) {
     return CircleAvatar(
       radius: 20,
       backgroundColor: Colors.grey[300],
-      backgroundImage:
-          imageUrl != null && imageUrl.isNotEmpty
-              ? NetworkImage(imageUrl)
-              : null,
-      onBackgroundImageError:
-          imageUrl != null
-              ? (error, stackTrace) {
-                debugPrint('Avatar image error for $userName: $error');
-              }
-              : null,
+      backgroundImage: user.avatar != null ? NetworkImage(user.avatar!) : null,
       child:
-          imageUrl == null || imageUrl.isEmpty
+          user.avatar == null
               ? Text(
-                userName.isNotEmpty ? userName[0].toUpperCase() : '?',
+                user.username.isNotEmpty ? user.username[0].toUpperCase() : '?',
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -462,11 +253,5 @@ class _SearchPageState extends State<SearchPage> {
               )
               : null,
     );
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
   }
 }

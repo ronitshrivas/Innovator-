@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
+import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/innovator_home.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -13,9 +14,6 @@ import 'package:path/path.dart' as path;
 import 'package:http_parser/http_parser.dart';
 
 // ── API constants ─────────────────────────────────────────────────────────────
-const String _baseUrl = 'http://182.93.94.220:8005';
-const String _profileUrl = '$_baseUrl/api/profile/'; // PATCH
-const String _avatarUrl = '$_baseUrl/api/users/me/avatar/'; // POST multipart
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({Key? key}) : super(key: key);
@@ -158,7 +156,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
   String? _resolveUrl(String? raw) {
     if (raw == null || raw.isEmpty) return null;
     if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
-    return '$_baseUrl$raw';
+    return '${ApiConstants.userBase}$raw';
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -191,7 +189,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
         filename.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
 
     final request =
-        http.MultipartRequest('POST', Uri.parse(_avatarUrl))
+        http.MultipartRequest('POST', Uri.parse(ApiConstants.avatarurl))
           ..headers['Authorization'] = 'Bearer $token'
           ..files.add(
             http.MultipartFile(
@@ -288,10 +286,10 @@ class _EditProfileScreenState extends State<EditProfileScreen>
       if (_selectedDob != null)
         body['date_of_birth'] = DateFormat('yyyy-MM-dd').format(_selectedDob!);
 
-      developer.log('[EditProfile] PATCH $_profileUrl  body: $body');
+      developer.log('[EditProfile] PATCH ${ApiConstants.profile}  body: $body');
 
       final response = await http.patch(
-        Uri.parse(_profileUrl),
+        Uri.parse(ApiConstants.profile),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ${appData.accessToken}',
