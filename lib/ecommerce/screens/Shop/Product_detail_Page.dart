@@ -118,7 +118,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   }
 
   // ─ Category-details dialog 
-  void _showCategoryDetailsDialog(dynamic details) {
+  void _showCategoryDetailsDialog(dynamic details ) {
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -135,7 +135,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: _kOrange.withOpacity(0.1),
+                      color: _kOrange.withAlpha(26),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(Icons.category_outlined,
@@ -537,8 +537,8 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: inStock
-            ? Colors.green.withOpacity(0.12)
-            : Colors.red.withOpacity(0.12),
+            ? Colors.green.withAlpha(26)
+            : Colors.red.withAlpha(26),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
