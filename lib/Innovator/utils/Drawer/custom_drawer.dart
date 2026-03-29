@@ -24,6 +24,7 @@ import 'package:innovator/Innovator/screens/Profile/profile_page.dart';
 import 'package:innovator/Innovator/screens/Report/Report_screen.dart';
 import 'package:innovator/Innovator/screens/Settings/settings.dart';
 import 'package:innovator/Innovator/utils/Drawer/drawer_cache_manager.dart';
+import 'package:innovator/KMS/core/constants/service/auth_wrapper.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -572,10 +573,10 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
                       onChanged: (value) {
                         setState(() => _KMSEnabled = value);
                         if (value) {
-                          // Navigator.push(
-                          //   context,
-                          //   MaterialPageRoute(builder: (_) => AuthWrapper()),
-                          // );
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => AuthWrapper()),
+                          );
                         }
                       },
                       inactiveTrackColor: AppColors.whitecolor.withAlpha(20),

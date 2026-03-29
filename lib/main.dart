@@ -15,13 +15,10 @@ import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/screens/Shop/CardIconWidget/cart_state_manager.dart';
 import 'package:innovator/Innovator/screens/Shop/Shop_Page.dart';
 import 'package:innovator/Innovator/screens/Splash_Screen/splash_screen.dart';
-// import 'package:innovator/KMS/screens/auth/login_screen.dart';
-// import 'package:innovator/KMS/screens/dashboard/admin_dashboard_screen.dart';
-// import 'package:innovator/KMS/screens/dashboard/student_dashboard_screen.dart';
-// import 'package:innovator/KMS/screens/dashboard/teacher_dashboard_screen.dart';
-// import 'package:innovator/KMS/screens/teacher/partner_assigned_school.dart';
-// import 'package:innovator/KMS/screens/teacher/partner_assignment_management.dart';
-// import 'package:innovator/KMS/screens/teacher/partner_attendance_specific_grade.dart';
+import 'package:innovator/KMS/screens/auth/login_screen.dart';
+import 'package:innovator/KMS/screens/dashboard/admin_dashboard_screen.dart';
+import 'package:innovator/KMS/screens/dashboard/student_dashboard_screen.dart';
+import 'package:innovator/KMS/screens/dashboard/teacher_dashboard_screen.dart';
 import 'dart:developer' as developer;
 import 'package:device_info_plus/device_info_plus.dart';
 
@@ -380,17 +377,17 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
       navigatorKey: navigatorKey,
       home: SplashScreen(),
 
-      // routes: {
-      //   '/kms/login': (_) => KmsLoginScreen(),
-      //   '/kms/adminDasboard': (_) => AdminDashboardScreen(),
-      //   '/kms/partnerDashboard': (_) => TeacherDashboardScreen(),
-      //   '/kms/studentDashboard': (_) => StudentDashboardScreen(),
-      //   '/kms/partnerAssignedSchool': (_) => PartnerAssignedSchoolScreen(),
-      //   '/kms/partnerAssignmentMgmt':
-      //       (_) => PartnerAssignmentManagementScreen(),
-      //   '/kms/partnerAttendanceSpecificGrade':
-      //       (_) => PartnerAttendanceSpecificGradeScreen(),
-      // },
+      routes: {
+        '/kms/login': (_) => KmsLoginScreen(),
+        '/kms/adminDasboard': (_) => AdminDashboardScreen(),
+        '/kms/partnerDashboard': (_) => TeacherDashboardScreen(),
+        '/kms/studentDashboard': (_) => StudentDashboardScreen(),
+        // '/kms/partnerAssignedSchool': (_) => PartnerAssignedSchoolScreen(),
+        // '/kms/partnerAssignmentMgmt':
+        //     (_) => PartnerAssignmentManagementScreen(),
+        // '/kms/partnerAttendanceSpecificGrade':
+        //     (_) => PartnerAttendanceSpecificGradeScreen(),
+      },
       title: 'Innovator',
       theme: _buildAppTheme(),
       debugShowCheckedModeBanner: false,
