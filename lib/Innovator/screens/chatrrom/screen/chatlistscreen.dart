@@ -186,10 +186,7 @@ final mutualFriendsProvider = StateNotifierProvider.autoDispose<
 /// Non-autoDispose — survives navigation so the FAB on the home screen
 /// can always read the latest unread count even after ChatListScreen is popped.
 final chatUnreadCountProvider = StateProvider<int>((ref) => 0);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ChatListScreen
-// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
 
 class ChatListScreen extends ConsumerWidget {
   const ChatListScreen({super.key});
@@ -204,7 +201,7 @@ class ChatListScreen extends ConsumerWidget {
     });
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: Colors.white,
       body: NestedScrollView(
         headerSliverBuilder:
             (context, innerBoxIsScrolled) => [
@@ -224,13 +221,12 @@ class ChatListScreen extends ConsumerWidget {
     bool innerBoxIsScrolled,
   ) {
     return SliverAppBar(
-      floating: false,
-      pinned: true,
-      snap: false,
-      elevation: innerBoxIsScrolled ? 4 : 0,
+      // floating: false,
+      // pinned: true,
+      // snap: false,
+      //elevation: innerBoxIsScrolled ? 4 : 0,
       backgroundColor: Colors.white,
-      surfaceTintColor: Colors.white,
-      shadowColor: Colors.black12,
+      //shadowColor: Colors.black12,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
         color: Colors.black87,

@@ -12,21 +12,20 @@ class FullScreenImageViewer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: IconButton(
+        icon: const Icon(Icons.close, color: Colors.white),
+        onPressed: () => Navigator.pop(context),
+      ),
       //  IconButton(
       //         icon: const Icon(Icons.close),
       //         onPressed: () => Navigator.pop(context),
       //       ),
       backgroundColor: Colors.black,
-      body: GestureDetector(
-        onTap: () {
-          Navigator.pop(context);
-        },
-        child: Center(
-          child: Hero(
-            tag: tag,
-            child: InteractiveViewer(
-              child: Image.network(imageUrl, fit: BoxFit.contain),
-            ),
+      body: Center(
+        child: Hero(
+          tag: tag,
+          child: InteractiveViewer(
+            child: Image.network(imageUrl, fit: BoxFit.contain),
           ),
         ),
       ),

@@ -1304,6 +1304,7 @@ class _FeedItemState extends State<FeedItem>
                                     initialFollowStatus:
                                         widget.content.isFollowed,
                                     onFollowSuccess: () {
+                                      SoundPlayer().FollowSound();
                                       developer.log(
                                         'Follow success: \${widget.content.author.name}',
                                       );
@@ -1316,6 +1317,7 @@ class _FeedItemState extends State<FeedItem>
                                       }
                                     },
                                     onUnfollowSuccess: () {
+                                      SoundPlayer().FollowSound();
                                       developer.log(
                                         'Unfollow success: \${widget.content.author.name}',
                                       );

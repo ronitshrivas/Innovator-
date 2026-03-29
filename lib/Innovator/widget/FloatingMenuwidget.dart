@@ -8,12 +8,11 @@ import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/screens/Course/home.dart';
 import 'package:innovator/Innovator/screens/CreatePost/createpost.dart';
 import 'package:innovator/Innovator/screens/Events/Events.dart';
-import 'package:innovator/Innovator/screens/Shop/CardIconWidget/cart_state_manager.dart';
 import 'package:innovator/Innovator/utils/Drawer/custom_drawer.dart';
 import 'package:innovator/Innovator/Notification/Notification_Listscreen.dart';
+import 'package:innovator/ecommerce/screens/Shop/Shop_Page.dart';
 import 'package:innovator/innovator_home.dart';
 import 'package:innovator/Innovator/screens/Search/Searchpage.dart';
-import 'package:innovator/Innovator/screens/Shop/Shop_Page.dart';
 
 const double _kEdgeThreshold = 80.0;
 
@@ -238,10 +237,10 @@ class _FloatingMenuWidgetState extends State<FloatingMenuWidget>
         _nav.push(MaterialPageRoute(builder: (_) => EventsHomePage()));
         break;
       case 'open_shop':
-        if (!Get.isRegistered<CartStateManager>()) {
-          Get.put(CartStateManager(), permanent: true);
-        }
-        Get.find<CartStateManager>().refreshCartCount();
+        // if (!Get.isRegistered<CartStateManager>()) {
+        //   Get.put(CartStateManager(), permanent: true);
+        // }
+        // Get.find<CartStateManager>().refreshCartCount();
         _nav.push(MaterialPageRoute(builder: (_) => const ShopPage()));
         break;
       case 'view_profile':
@@ -396,7 +395,7 @@ class _FloatingMenuWidgetState extends State<FloatingMenuWidget>
           setState(() => _selectedNavIndex = i);
           _handleAction(_navItems[i]['action']);
         },
-        // ✅ LongPressDraggable used inside _NavBar so normal taps pass through
+        //  LongPressDraggable used inside _NavBar so normal taps pass through
         onDragEnd: (d) => _onNavBarDragEnd(d, size),
       ),
     );

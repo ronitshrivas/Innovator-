@@ -12,15 +12,15 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
-import 'package:innovator/Innovator/screens/Shop/CardIconWidget/cart_state_manager.dart';
-import 'package:innovator/Innovator/screens/Shop/Shop_Page.dart';
 import 'package:innovator/Innovator/screens/Splash_Screen/splash_screen.dart';
+import 'package:innovator/Innovator/services/fcm_services.dart';
 import 'package:innovator/KMS/screens/auth/login_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/admin_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/student_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/teacher_dashboard_screen.dart';
 import 'dart:developer' as developer;
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:innovator/ecommerce/screens/Shop/Shop_Page.dart';
 
 late Size mq;
 //late FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
@@ -180,6 +180,9 @@ void main() async {
   );
 }
 
+final FlutterLocalNotificationsPlugin _localNotifications =
+    FlutterLocalNotificationsPlugin();
+
 class InnovatorHomePage extends ConsumerStatefulWidget {
   const InnovatorHomePage({super.key});
 
@@ -189,14 +192,15 @@ class InnovatorHomePage extends ConsumerStatefulWidget {
 
 class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
     with WidgetsBindingObserver {
-  // final NotificationPollingService _pollingService =
-  //     NotificationPollingService();
+  // Declare at class level — NOT inside the function
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
+  bool _localNotificationsInitialized = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // WidgetsBinding.instance.addObserver(this);
     developer.log('InnovatorHomePage initialized');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _setupFCM();
@@ -205,38 +209,62 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
 
   @override
   void dispose() {
-    //WidgetsBinding.instance.removeObserver(this);
-    // _pollingService.stopPolling();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
-  // @override
-  // void didChangeAppLifecycleState(AppLifecycleState state) {
-  //   super.didChangeAppLifecycleState(state);
-
-  //   switch (state) {
-  //     case AppLifecycleState.resumed:
-  //       developer.log('📱 App resumed - restarting notification polling');
-  //       _pollingService.startPolling();
-  //       _pollingService.forceCheck(); // Immediate check
-  //       break;
-  //     case AppLifecycleState.paused:
-  //       developer.log(' App paused - pausing notification polling');
-  //       _pollingService.stopPolling();
-  //       break;
-  //     case AppLifecycleState.inactive:
-  //     case AppLifecycleState.detached:
-  //     case AppLifecycleState.hidden:
-  //       break;
-  //   }
-  // }
-
-  // Ronit
-
   Future<void> _setupFCM() async {
     try {
-      // Ask permission (required on iOS, good on Android too)
+      // ── 1. Initialize Local Notifications FIRST ──────────────────────────
+      const androidSettings = AndroidInitializationSettings(
+        '@mipmap/ic_launcher',
+      );
+      const iosSettings = DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
+      const initSettings = InitializationSettings(
+        android: androidSettings,
+        iOS: iosSettings,
+      );
+
+      await _localNotifications.initialize(
+        initSettings,
+        onDidReceiveNotificationResponse: (NotificationResponse details) {
+          developer.log('Local notification tapped: ${details.payload}');
+          if (details.payload != null) {
+            try {
+              final data = jsonDecode(details.payload!) as Map<String, dynamic>;
+              _handleNotificationData(data);
+            } catch (e) {
+              developer.log('Payload parse error: $e');
+            }
+          }
+        },
+      );
+
+      // ── 2. Create Android Notification Channel ───────────────────────────
+      const AndroidNotificationChannel channel = AndroidNotificationChannel(
+        'high_importance_channel',
+        'High Importance Notifications',
+        description: 'This channel is used for important notifications',
+        importance: Importance.max, // ← MAX not HIGH
+        playSound: true,
+        enableVibration: true,
+        showBadge: true,
+      );
+
+      await _localNotifications
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.createNotificationChannel(channel);
+
+      _localNotificationsInitialized = true;
+      developer.log('Local notifications initialized ');
+
+      // ── 3. Request Permission ────────────────────────────────────────────
       NotificationSettings settings = await FirebaseMessaging.instance
           .requestPermission(alert: true, badge: true, sound: true);
 
@@ -247,124 +275,126 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
         return;
       }
 
-      // Get this device's FCM token
-      String? token = await FirebaseMessaging.instance.getToken();
-      developer.log('FCM Token: $token');
+      // ── 4. iOS foreground options ────────────────────────────────────────
+      await FirebaseMessaging.instance
+          .setForegroundNotificationPresentationOptions(
+            alert: true,
+            badge: true,
+            sound: true,
+          );
 
-      // Send token to your Django backend
-      if (token != null) {
-        await _sendTokenToDjango(token);
-      }
+      // ── 5. Register FCM Token ────────────────────────────────────────────
+      await FCMService().registerToken();
 
-      // Listen for token refresh (token can change, keep Django updated)
-      FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+      // ── 6. Token Refresh ─────────────────────────────────────────────────
+      FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
         developer.log('FCM Token refreshed: $newToken');
-        _sendTokenToDjango(newToken);
+        await FCMService().registerToken();
       });
 
-      // App is OPEN — notification arrives
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        developer.log(
-          'Foreground notification: ${message.notification?.title}',
-        );
         _showForegroundNotification(message);
       });
 
-      // App was in BACKGROUND — user tapped the notification
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
         developer.log('Notification tapped from background');
         _handleNotificationTap(message);
       });
 
-      // App was KILLED — user tapped the notification to open app
       RemoteMessage? initialMessage =
           await FirebaseMessaging.instance.getInitialMessage();
       if (initialMessage != null) {
         developer.log('App opened from killed state via notification');
+        await Future.delayed(const Duration(milliseconds: 500));
         _handleNotificationTap(initialMessage);
       }
+
+      developer.log('FCM setup completed ');
     } catch (e) {
       developer.log('FCM setup error: $e');
     }
   }
 
-  Future<void> _sendTokenToDjango(String token) async {
+  void _showForegroundNotification(RemoteMessage message) {
     try {
-      final accessToken = AppData().accessToken;
-      if (accessToken == null || accessToken.isEmpty) return;
-
-      // Get real device name
-      final deviceInfo = DeviceInfoPlugin();
-      String deviceName = 'Unknown Device';
-
-      if (Platform.isAndroid) {
-        final androidInfo = await deviceInfo.androidInfo;
-        deviceName = '${androidInfo.manufacturer} ${androidInfo.model}';
-        // e.g. "Samsung Galaxy S24"
-      } else if (Platform.isIOS) {
-        final iosInfo = await deviceInfo.iosInfo;
-        deviceName = iosInfo.utsname.machine;
-        // e.g. "iPhone15,2"
+      if (!_localNotificationsInitialized) {
+        developer.log(' Local notifications not initialized yet');
+        return;
       }
 
-      final response = await http.post(
-        Uri.parse('http://182.93.94.220:8005/api/fcm-tokens/'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $accessToken',
-        },
-        body: jsonEncode({'token': token, 'device_name': deviceName}),
+      // Works for BOTH notification messages AND data-only messages
+      final title =
+          message.notification?.title ??
+          message.data['title']?.toString() ??
+          message.data['senderName']?.toString() ??
+          'New Notification';
+
+      final body =
+          message.notification?.body ??
+          message.data['body']?.toString() ??
+          message.data['message']?.toString() ??
+          '';
+
+      developer.log('Showing local notification — title: $title, body: $body');
+
+      final androidDetails = AndroidNotificationDetails(
+        'high_importance_channel',
+        'High Importance Notifications',
+        channelDescription: 'This channel is used for important notifications',
+        importance: Importance.max, // ← MAX
+        priority: Priority.max, // ← MAX
+        playSound: true,
+        enableVibration: true,
+        visibility: NotificationVisibility.public,
+        icon: '@mipmap/ic_launcher',
+        // This forces heads-up popup on Android
+        fullScreenIntent: false,
+        ticker: title,
       );
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        developer.log('FCM token registered successfully');
-      } else {
-        developer.log(
-          'FCM registration failed: ${response.statusCode} ${response.body}',
-        );
-      }
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      _localNotifications.show(
+        DateTime.now().millisecondsSinceEpoch ~/ 1000, // unique ID
+        title,
+        body,
+        NotificationDetails(android: androidDetails, iOS: iosDetails),
+        payload: jsonEncode(message.data),
+      );
+
+      developer.log('Local notification shown ');
     } catch (e) {
-      developer.log('Failed to send FCM token: $e');
+      developer.log('Show foreground notification error: $e');
     }
   }
 
-  void _showForegroundNotification(RemoteMessage message) {
-    final title = message.notification?.title ?? 'New notification';
-    final body = message.notification?.body ?? '';
-
-    Get.snackbar(
-      title,
-      body,
-      snackPosition: SnackPosition.TOP,
-      backgroundColor: const Color.fromRGBO(244, 135, 6, 0.95),
-      colorText: Colors.white,
-      duration: const Duration(seconds: 4),
-      margin: const EdgeInsets.all(16),
-      borderRadius: 12,
-      isDismissible: true,
-    );
+  void _handleNotificationTap(RemoteMessage message) {
+    _handleNotificationData(message.data);
   }
 
-  // ✅ ADD THIS — Navigate based on notification type
-  void _handleNotificationTap(RemoteMessage message) {
-    final data = message.data;
-    final type = data['type']?.toString() ?? '';
+  void _handleNotificationData(Map<String, dynamic> data) {
+    try {
+      final type = data['type']?.toString() ?? '';
+      developer.log('Handling notification type: $type');
 
-    developer.log('Notification tapped — type: $type, data: $data');
-
-    switch (type) {
-      case 'follow':
-        // Navigate to profile
-        // Get.toNamed('/profile', arguments: {'user_id': data['user_id']});
-        break;
-      case 'reaction':
-      case 'comment':
-        // Navigate to post
-        // Get.toNamed('/post', arguments: {'post_id': data['post_id']});
-        break;
-      default:
-        // Go to home feed
-        break;
+      switch (type) {
+        case 'follow':
+          break;
+        case 'reaction':
+        case 'comment':
+          break;
+        case 'chat':
+        case 'message':
+          break;
+        default:
+          break;
+      }
+    } catch (e) {
+      developer.log('Handle notification data error: $e');
     }
   }
 
@@ -400,9 +430,9 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
         GetPage(
           name: '/shop',
           page: () => const ShopPage(),
-          binding: BindingsBuilder(() {
-            Get.lazyPut<CartStateManager>(() => CartStateManager());
-          }),
+          // binding: BindingsBuilder(() {
+          //   Get.lazyPut<CartStateManager>(() => CartStateManager());
+          // }),
         ),
       ],
 
@@ -451,5 +481,3 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
     );
   }
 }
-
-class AppAppColors {}

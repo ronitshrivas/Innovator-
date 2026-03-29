@@ -1,5 +1,4 @@
 import 'package:get/get.dart';
-import 'package:innovator/Innovator/models/Shop_cart_model.dart';
 import 'dart:developer' as developer;
 
 class CartStateManager extends GetxController {

@@ -15,7 +15,6 @@ import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/controllers/user_controller.dart';
 import 'package:innovator/Innovator/screens/Course/home.dart';
-import 'package:innovator/Innovator/screens/Shop/Shop_Page.dart';
 import 'package:innovator/Innovator/screens/Eliza_ChatBot/Elizahomescreen.dart';
 import 'package:innovator/Innovator/screens/Events/Events.dart';
 import 'package:innovator/Innovator/screens/F&Q/F&Qscreen.dart';
@@ -23,8 +22,10 @@ import 'package:innovator/Innovator/screens/Privacy_Policy/privacy_screen.dart';
 import 'package:innovator/Innovator/screens/Profile/profile_page.dart';
 import 'package:innovator/Innovator/screens/Report/Report_screen.dart';
 import 'package:innovator/Innovator/screens/Settings/settings.dart';
+import 'package:innovator/Innovator/services/fcm_services.dart';
 import 'package:innovator/Innovator/utils/Drawer/drawer_cache_manager.dart';
 import 'package:innovator/KMS/core/constants/service/auth_wrapper.dart';
+import 'package:innovator/ecommerce/screens/Shop/Shop_Page.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -812,7 +813,8 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
                 child: const Text('Cancel'),
               ),
               ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
+                  await FCMService().clearToken();
                   AppData().clearAuthToken();
                   InstantCache.clear();
                   AppData().logout();

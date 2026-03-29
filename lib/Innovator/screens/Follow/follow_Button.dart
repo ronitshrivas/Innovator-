@@ -98,6 +98,16 @@ class _FollowButtonState extends State<FollowButton>
       if (!mounted) return;
       setState(() => _isFollowing = true);
       widget.onFollowSuccess?.call();
+      Get.snackbar(
+        'Follow',
+        'You are now following this user',
+        backgroundColor: Colors.green.shade600,
+        colorText: AppColors.whitecolor,
+        snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 10,
+        duration: const Duration(seconds: 2),
+      );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text(

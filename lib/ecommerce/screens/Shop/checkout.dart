@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:innovator/Innovator/models/payment_model.dart';
-import 'package:innovator/Innovator/Payment/payment_provider.dart'; 
-import 'package:innovator/Innovator/models/Shop_cart_model.dart';
+
 import 'package:path/path.dart' as path;
 
 class DottedLine extends StatelessWidget {
@@ -102,7 +100,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
   final _formKey = GlobalKey<FormState>();
 
   File? _paymentScreenshot;
-  final ImagePicker _picker = ImagePicker(); 
+  final ImagePicker _picker = ImagePicker();
 
   bool _isProcessing = false;
   bool isCOD = false;
@@ -120,14 +118,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
   final Color _cardColor = Colors.white;
   final Color _textColor = Colors.blueGrey.shade800;
 
-  List<PaymentModel> _onlinePayments = [];
+  // List<PaymentModel> _onlinePayments = [];
   bool _hasOnlinePayments = false;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
-    ref.refresh(paymentProvider);
+    // ref.refresh(paymentProvider);
 
     _qrTabController = TabController(length: 1, vsync: this);
     _qrTabController.addListener(_handleTabChange);
@@ -154,7 +152,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
       if (newCod) {
         method = 'COD';
       } else {
-        method = _onlinePayments[idx].name;
+        // method = _onlinePayments[idx].name;
       }
 
       if (newCod != isCOD || _selectedPaymentMethod != method) {
@@ -171,26 +169,26 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
     return isCOD ? 2 : (_hasOnlinePayments ? 3 : 2);
   }
 
-  List<Widget> get _pageViewChildren {
-    final pages = <Widget>[_buildCustomerInfoTab(), _buildQRPaymentTab()];
-    if (!isCOD && _hasOnlinePayments) {
-      pages.add(_buildUploadProofTab());
-    }
-    return pages;
-  }
+  // List<Widget> get _pageViewChildren {
+  //   // final pages = <Widget>[_buildCustomerInfoTab(), _buildQRPaymentTab()];
+  //   if (!isCOD && _hasOnlinePayments) {
+  //     pages.add(_buildUploadProofTab());
+  //   }
+  //   return pages;
+  // }
 
   double get _finalTotal {
     return isCOD ? widget.totalAmount + codFee : widget.totalAmount;
   }
 
-  CustomerInfo get _customerInfo => CustomerInfo(
-    name: _nameController.text.trim(),
-    phone: _phoneController.text.trim(),
-    address: _addressController.text.trim(),
-  );
+  // CustomerInfo get _customerInfo => CustomerInfo(
+  //   name: _nameController.text.trim(),
+  //   phone: _phoneController.text.trim(),
+  //   address: _addressController.text.trim(),
+  // );
 
   void _nextStep() {
-    ref.refresh(paymentProvider);
+    // ref.refresh(paymentProvider);
     if (_currentStep == 0 && !_formKey.currentState!.validate()) {
       _showSnackBar('Please fill all required fields', Colors.red);
       return;
@@ -213,7 +211,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
   }
 
   void _previousStep() {
-    ref.refresh(paymentProvider);
+    // ref.refresh(paymentProvider);
     if (_currentStep == 0) return;
     setState(() => _currentStep--);
     _pageController.previousPage(
@@ -274,10 +272,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
     }
   }
 
-  void _finishSuccess(CheckoutResponse response) {
-    setState(() => _isProcessing = false);
-    _showOrderSuccessDialog(response);
-  }
+  // void _finishSuccess(CheckoutResponse response) {
+  //   setState(() => _isProcessing = false);
+  //   _showOrderSuccessDialog(response);
+  // }
 
   void _handleError(Object e) {
     setState(() => _isProcessing = false);
@@ -357,84 +355,84 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
     );
   }
 
-  void _showOrderSuccessDialog(CheckoutResponse response) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder:
-          (_) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: _accentColor.withAlpha(10),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.check_circle,
-                    color: Colors.green,
-                    size: 60,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Order Placed Successfully!',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  response.data?.message ?? 'Your order is being processed.',
-                ),
-                if (response.data?.orders.isNotEmpty == true) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: _primaryColor.withAlpha(10),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      children: [
-                        const Text(
-                          'Order Numbers:',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        ...response.data!.orders.map(
-                          (o) => Text(
-                            o.orderNumber,
-                            style: const TextStyle(
-                              color: Colors.orange,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed:
-                      () => Navigator.of(
-                        context,
-                      ).popUntil((route) => route.isFirst),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _primaryColor,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('Continue Shopping'),
-                ),
-              ],
-            ),
-          ),
-    );
-  }
+  // void _showOrderSuccessDialog(CheckoutResponse response) {
+  //   showDialog(
+  //     context: context,
+  //     barrierDismissible: false,
+  //     builder:
+  //         (_) => AlertDialog(
+  //           shape: RoundedRectangleBorder(
+  //             borderRadius: BorderRadius.circular(20),
+  //           ),
+  //           content: Column(
+  //             mainAxisSize: MainAxisSize.min,
+  //             children: [
+  //               Container(
+  //                 padding: const EdgeInsets.all(20),
+  //                 decoration: BoxDecoration(
+  //                   color: _accentColor.withAlpha(10),
+  //                   shape: BoxShape.circle,
+  //                 ),
+  //                 child: const Icon(
+  //                   Icons.check_circle,
+  //                   color: Colors.green,
+  //                   size: 60,
+  //                 ),
+  //               ),
+  //               const SizedBox(height: 20),
+  //               const Text(
+  //                 'Order Placed Successfully!',
+  //                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+  //               ),
+  //               const SizedBox(height: 10),
+  //               Text(
+  //                 response.data?.message ?? 'Your order is being processed.',
+  //               ),
+  //               if (response.data?.orders.isNotEmpty == true) ...[
+  //                 const SizedBox(height: 16),
+  //                 Container(
+  //                   padding: const EdgeInsets.all(12),
+  //                   decoration: BoxDecoration(
+  //                     color: _primaryColor.withAlpha(10),
+  //                     borderRadius: BorderRadius.circular(8),
+  //                   ),
+  //                   child: Column(
+  //                     children: [
+  //                       const Text(
+  //                         'Order Numbers:',
+  //                         style: TextStyle(fontWeight: FontWeight.bold),
+  //                       ),
+  //                       const SizedBox(height: 8),
+  //                       ...response.data!.orders.map(
+  //                         (o) => Text(
+  //                           o.orderNumber,
+  //                           style: const TextStyle(
+  //                             color: Colors.orange,
+  //                             fontWeight: FontWeight.w500,
+  //                           ),
+  //                         ),
+  //                       ),
+  //                     ],
+  //                   ),
+  //                 ),
+  //               ],
+  //               const SizedBox(height: 20),
+  //               ElevatedButton(
+  //                 onPressed:
+  //                     () => Navigator.of(
+  //                       context,
+  //                     ).popUntil((route) => route.isFirst),
+  //                 style: ElevatedButton.styleFrom(
+  //                   backgroundColor: _primaryColor,
+  //                   foregroundColor: Colors.white,
+  //                 ),
+  //                 child: const Text('Continue Shopping'),
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //   );
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -463,7 +461,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
               child: PageView(
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
-                children: _pageViewChildren,
+                // children: _pageViewChildren,
                 onPageChanged: (i) => setState(() => _currentStep = i),
               ),
             ),
@@ -797,146 +795,146 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
     );
   }
 
-  Widget _buildQRPaymentTab() {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          Consumer(
-            builder: (context, ref, child) {
-              final paymentAsync = ref.watch(paymentProvider);
-              const baseUrlImage = 'http://182.93.94.210:3067';
+  // Widget _buildQRPaymentTab() {
+  //   return SingleChildScrollView(
+  //     child: Column(
+  //       children: [
+  //         Consumer(
+  //           builder: (context, ref, child) {
+  //             // final paymentAsync = ref.watch(paymentProvider);
+  //             const baseUrlImage = 'http://182.93.94.210:3067';
 
-              return paymentAsync.when(
-                data: (payments) {
-                  _onlinePayments =
-                      payments
-                          .where(
-                            (p) => p.active && p.qrImage.isNotEmpty && !p.cod,
-                          )
-                          .toList();
-                  _hasOnlinePayments = _onlinePayments.isNotEmpty;
-                  final totalTabs = _onlinePayments.length + 1;
+  //             return paymentAsync.when(
+  //               data: (payments) {
+  //                 // _onlinePayments =
+  //                 //     payments
+  //                 //         .where(
+  //                 //           (p) => p.active && p.qrImage.isNotEmpty && !p.cod,
+  //                 //         )
+  //                 //         .toList();
+  //                 // _hasOnlinePayments = _onlinePayments.isNotEmpty;
+  //                 final totalTabs = _onlinePayments.length + 1;
 
-                  if (_qrTabController.length != totalTabs) {
-                    _qrTabController.dispose();
-                    _qrTabController = TabController(
-                      length: totalTabs,
-                      vsync: this,
-                    );
-                    _qrTabController.addListener(_handleTabChange);
-                  }
+  //                 if (_qrTabController.length != totalTabs) {
+  //                   _qrTabController.dispose();
+  //                   _qrTabController = TabController(
+  //                     length: totalTabs,
+  //                     vsync: this,
+  //                   );
+  //                   _qrTabController.addListener(_handleTabChange);
+  //                 }
 
-                  if (!_hasOnlinePayments && _qrTabController.index == 0) {
-                    _qrTabController.index = totalTabs - 1;
-                    isCOD = true;
-                  }
+  //                 if (!_hasOnlinePayments && _qrTabController.index == 0) {
+  //                   _qrTabController.index = totalTabs - 1;
+  //                   isCOD = true;
+  //                 }
 
-                  return Column(
-                    children: [
-                      TabBar(
-                        controller: _qrTabController,
-                        isScrollable: true,
-                        tabAlignment: TabAlignment.start,
-                        dividerColor: Colors.transparent,
-                        indicatorSize: TabBarIndicatorSize.tab,
-                        unselectedLabelColor: Colors.grey,
-                        labelColor: Colors.white,
-                        labelStyle: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                        unselectedLabelStyle: const TextStyle(
-                          fontWeight: FontWeight.w500,
-                        ),
-                        indicator: BoxDecoration(
-                          borderRadius: BorderRadius.circular(14),
-                          color: _primaryColor,
-                        ),
-                        tabs: [
-                          ..._onlinePayments.map(
-                            (p) => Tab(
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.qr_code_scanner, size: 16),
-                                  const SizedBox(width: 4),
-                                  Text(p.name),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const Tab(
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.payment, size: 16),
-                                SizedBox(width: 4),
-                                Text('COD'),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        height: 300,
-                        child: TabBarView(
-                          controller: _qrTabController,
-                          children: [
-                            ..._onlinePayments.map(
-                              (p) => _buildQRCodeTab(p, baseUrlImage),
-                            ),
-                            _buildCodTab(),
-                          ],
-                        ),
-                      ),
-                    ],
-                  );
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error:
-                    (_, __) => const Center(
-                      child: Text('Failed to load payment methods'),
-                    ),
-              );
-            },
-          ),
-          const SizedBox(height: 16),
-          if (!isCOD && _hasOnlinePayments) ...[
-            _buildPaymentDetailsCard(),
-            const SizedBox(height: 16),
-            _buildInstructionsCard(),
-          ],
-        ],
-      ),
-    );
-  }
+  //                 return Column(
+  //                   children: [
+  //                     TabBar(
+  //                       controller: _qrTabController,
+  //                       isScrollable: true,
+  //                       tabAlignment: TabAlignment.start,
+  //                       dividerColor: Colors.transparent,
+  //                       indicatorSize: TabBarIndicatorSize.tab,
+  //                       unselectedLabelColor: Colors.grey,
+  //                       labelColor: Colors.white,
+  //                       labelStyle: const TextStyle(
+  //                         fontWeight: FontWeight.bold,
+  //                       ),
+  //                       unselectedLabelStyle: const TextStyle(
+  //                         fontWeight: FontWeight.w500,
+  //                       ),
+  //                       indicator: BoxDecoration(
+  //                         borderRadius: BorderRadius.circular(14),
+  //                         color: _primaryColor,
+  //                       ),
+  //                       tabs: [
+  //                         ..._onlinePayments.map(
+  //                           (p) => Tab(
+  //                             child: Row(
+  //                               mainAxisSize: MainAxisSize.min,
+  //                               children: [
+  //                                 const Icon(Icons.qr_code_scanner, size: 16),
+  //                                 const SizedBox(width: 4),
+  //                                 Text(p.name),
+  //                               ],
+  //                             ),
+  //                           ),
+  //                         ),
+  //                         const Tab(
+  //                           child: Row(
+  //                             mainAxisSize: MainAxisSize.min,
+  //                             children: [
+  //                               Icon(Icons.payment, size: 16),
+  //                               SizedBox(width: 4),
+  //                               Text('COD'),
+  //                             ],
+  //                           ),
+  //                         ),
+  //                       ],
+  //                     ),
+  //                     const SizedBox(height: 16),
+  //                     SizedBox(
+  //                       height: 300,
+  //                       child: TabBarView(
+  //                         controller: _qrTabController,
+  //                         children: [
+  //                           ..._onlinePayments.map(
+  //                             (p) => _buildQRCodeTab(p, baseUrlImage),
+  //                           ),
+  //                           _buildCodTab(),
+  //                         ],
+  //                       ),
+  //                     ),
+  //                   ],
+  //                 );
+  //               },
+  //               loading: () => const Center(child: CircularProgressIndicator()),
+  //               error:
+  //                   (_, __) => const Center(
+  //                     child: Text('Failed to load payment methods'),
+  //                   ),
+  //             );
+  //           },
+  //         ),
+  //         const SizedBox(height: 16),
+  //         if (!isCOD && _hasOnlinePayments) ...[
+  //           _buildPaymentDetailsCard(),
+  //           const SizedBox(height: 16),
+  //           _buildInstructionsCard(),
+  //         ],
+  //       ],
+  //     ),
+  //   );
+  // }
 
-  Widget _buildQRCodeTab(PaymentModel payment, String baseUrl) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 250,
-              height: 250,
-              child: Image.network(
-                '$baseUrl${payment.qrImage}',
-                fit: BoxFit.contain,
-                loadingBuilder:
-                    (context, child, progress) =>
-                        progress == null
-                            ? child
-                            : const CircularProgressIndicator(),
-                errorBuilder: (_, __, ___) => const Icon(Icons.error, size: 60),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // Widget _buildQRCodeTab(PaymentModel payment, String baseUrl) {
+  //   return Center(
+  //     child: Padding(
+  //       padding: const EdgeInsets.all(24.0),
+  //       child: Column(
+  //         mainAxisSize: MainAxisSize.min,
+  //         children: [
+  //           SizedBox(
+  //             width: 250,
+  //             height: 250,
+  //             child: Image.network(
+  //               '$baseUrl${payment.qrImage}',
+  //               fit: BoxFit.contain,
+  //               loadingBuilder:
+  //                   (context, child, progress) =>
+  //                       progress == null
+  //                           ? child
+  //                           : const CircularProgressIndicator(),
+  //               errorBuilder: (_, __, ___) => const Icon(Icons.error, size: 60),
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _buildCodTab() {
     return Center(
