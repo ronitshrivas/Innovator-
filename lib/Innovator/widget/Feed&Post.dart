@@ -2,16 +2,15 @@
 // You can add this to both Homepage and VideoFeedPage for better UX
 
 import 'package:flutter/material.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/innovator_home.dart';
 import 'package:innovator/Innovator/screens/Feed/Video_Feed.dart';
 
 class _SwipeIndicator extends StatefulWidget {
   final bool isLeftSwipe;
-  
-  const _SwipeIndicator({
-    Key? key,
-    required this.isLeftSwipe,
-  }) : super(key: key);
+
+  const _SwipeIndicator({Key? key, required this.isLeftSwipe})
+    : super(key: key);
 
   @override
   __SwipeIndicatorState createState() => __SwipeIndicatorState();
@@ -30,17 +29,14 @@ class __SwipeIndicatorState extends State<_SwipeIndicator>
       duration: const Duration(seconds: 2),
       vsync: this,
     );
-    
+
     _animation = Tween<double>(
       begin: 0.0,
       end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOut,
-    ));
-    
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+
     _controller.repeat(reverse: true);
-    
+
     // Hide indicator after 5 seconds
     Future.delayed(Duration(seconds: 5), () {
       if (mounted) {
@@ -60,7 +56,7 @@ class __SwipeIndicatorState extends State<_SwipeIndicator>
   @override
   Widget build(BuildContext context) {
     if (!_isVisible) return SizedBox.shrink();
-    
+
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
@@ -68,18 +64,20 @@ class __SwipeIndicatorState extends State<_SwipeIndicator>
           opacity: 0.5 + (_animation.value * 0.5),
           child: Transform.translate(
             offset: Offset(
-              widget.isLeftSwipe ? _animation.value * 20 : -_animation.value * 20,
+              widget.isLeftSwipe
+                  ? _animation.value * 20
+                  : -_animation.value * 20,
               0,
             ),
             child: Container(
               padding: EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white.withAlpha(20),
+                color: AppColors.whitecolor.withAlpha(20),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 widget.isLeftSwipe ? Icons.chevron_right : Icons.chevron_left,
-                color: Colors.white,
+                color: AppColors.whitecolor,
                 size: 30,
               ),
             ),
@@ -128,4 +126,3 @@ class _FeedNavigatorState extends State<FeedNavigator> {
     );
   }
 }
-

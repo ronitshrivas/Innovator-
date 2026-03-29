@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Login.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Theme constants
@@ -262,7 +263,7 @@ class _RepostSheetState extends State<RepostSheet>
           SnackBar(
             content: const Row(
               children: [
-                Icon(Icons.repeat, color: Colors.white, size: 18),
+                Icon(Icons.repeat, color: AppColors.whitecolor, size: 18),
                 SizedBox(width: 10),
                 Text(
                   'Reposted successfully!',
@@ -307,7 +308,7 @@ class _RepostSheetState extends State<RepostSheet>
       scale: _scaleAnim,
       child: Container(
         decoration: const BoxDecoration(
-          color: Colors.white,
+          color: AppColors.whitecolor,
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         padding: EdgeInsets.only(
@@ -417,7 +418,7 @@ class _RepostSheetState extends State<RepostSheet>
                                   : '?',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                                color: AppColors.whitecolor,
                               ),
                             ),
                   ),
@@ -508,7 +509,7 @@ class _RepostSheetState extends State<RepostSheet>
                     onPressed: _isLoading ? null : _submit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _kOrange,
-                      foregroundColor: Colors.white,
+                      foregroundColor: AppColors.whitecolor,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       elevation: 0,
                       shape: RoundedRectangleBorder(
@@ -528,7 +529,7 @@ class _RepostSheetState extends State<RepostSheet>
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2.5,
-                                color: Colors.white,
+                                color: AppColors.whitecolor,
                               ),
                             )
                             : const Row(

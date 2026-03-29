@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:innovator/KMS/core/constants/app_style.dart';
 import 'package:innovator/KMS/screens/constant_screen/custom_scroll.dart';
 import 'package:innovator/KMS/screens/school/tutor_attendance.dart';
+
 class SchoolAttendanceScreen extends ConsumerStatefulWidget {
   const SchoolAttendanceScreen({super.key});
 
@@ -16,19 +17,79 @@ class _SchoolAttendanceScreenState
     extends ConsumerState<SchoolAttendanceScreen> {
   String selectedClass = "All Class";
   String status = 'All Status';
-    final List<Map<String, String>> gradeDate = [
-    {'sn': '1', 'name': 'Karthik Sharma', 'attendance': 'Absent', 'present': '5', 'absent': '5'},
-    {'sn': '2', 'name': 'Kishore Pandey', 'attendance': 'Present', 'present': '10', 'absent': '10'},
-    {'sn': '3', 'name': 'Anubhav Khanal', 'attendance': 'Present', 'present': '5', 'absent': '5'},
-    {'sn': '4', 'name': 'Kristina Shrestha', 'attendance': 'Absent', 'present': '1', 'absent': '1'},
-    {'sn': '5', 'name': 'Pratistha Shrestha', 'attendance': 'Present', 'present': '13', 'absent': '13'},
-    {'sn': '6', 'name': 'Raju Shrestha', 'attendance': 'Present', 'present': '11', 'absent': '5'},
-    {'sn': '7', 'name': 'Ronit Shresta', 'attendance': 'Present', 'present': '16', 'absent': '3'},
-    {'sn': '8', 'name': 'Sabin Nyaju', 'attendance': 'Present', 'present': '20', 'absent': '5'},
-    {'sn': '9', 'name': 'John Bahun', 'attendance': 'Absent', 'present': '10', 'absent': '3'},
-    {'sn': '10', 'name': 'Pooja Gupta', 'attendance': 'Present', 'present': '160', 'absent': '5'},
+  final List<Map<String, String>> gradeDate = [
+    {
+      'sn': '1',
+      'name': 'Karthik Sharma',
+      'attendance': 'Absent',
+      'present': '5',
+      'absent': '5',
+    },
+    {
+      'sn': '2',
+      'name': 'Kishore Pandey',
+      'attendance': 'Present',
+      'present': '10',
+      'absent': '10',
+    },
+    {
+      'sn': '3',
+      'name': 'Anubhav Khanal',
+      'attendance': 'Present',
+      'present': '5',
+      'absent': '5',
+    },
+    {
+      'sn': '4',
+      'name': 'Kristina Shrestha',
+      'attendance': 'Absent',
+      'present': '1',
+      'absent': '1',
+    },
+    {
+      'sn': '5',
+      'name': 'Pratistha Shrestha',
+      'attendance': 'Present',
+      'present': '13',
+      'absent': '13',
+    },
+    {
+      'sn': '6',
+      'name': 'Raju Shrestha',
+      'attendance': 'Present',
+      'present': '11',
+      'absent': '5',
+    },
+    {
+      'sn': '7',
+      'name': 'Ronit Shresta',
+      'attendance': 'Present',
+      'present': '16',
+      'absent': '3',
+    },
+    {
+      'sn': '8',
+      'name': 'Sabin Nyaju',
+      'attendance': 'Present',
+      'present': '20',
+      'absent': '5',
+    },
+    {
+      'sn': '9',
+      'name': 'John Bahun',
+      'attendance': 'Absent',
+      'present': '10',
+      'absent': '3',
+    },
+    {
+      'sn': '10',
+      'name': 'Pooja Gupta',
+      'attendance': 'Present',
+      'present': '160',
+      'absent': '5',
+    },
   ];
-    // Filter the data based on selected status
+  // Filter the data based on selected status
   List<Map<String, String>> get filteredStatus {
     if (status == 'All Status') {
       return gradeDate;
@@ -179,7 +240,7 @@ class _SchoolAttendanceScreenState
 
                   value: status,
                   items:
-                      [ "All Status","Present", "Absent"]
+                      ["All Status", "Present", "Absent"]
                           .map(
                             (statusItem) => DropdownMenuItem(
                               value: statusItem,
@@ -439,7 +500,6 @@ class _SchoolAttendanceScreenState
       ],
     );
   }
- 
 
   Widget _classCategorizing() {
     return SingleChildScrollView(
@@ -510,19 +570,19 @@ class _SchoolAttendanceScreenState
             ),
           ),
         ],
- 
 
-         rows: filteredStatus
-            .map<DataRow>(
-              (teacher) => _classCategorizingRow(
-                teacher['sn']!,
-                teacher['name']!,
-                teacher['attendance']!,
-                teacher['present']!,
-                teacher['absent']!,
-              ),
-            )
-            .toList(),
+        rows:
+            filteredStatus
+                .map<DataRow>(
+                  (teacher) => _classCategorizingRow(
+                    teacher['sn']!,
+                    teacher['name']!,
+                    teacher['attendance']!,
+                    teacher['present']!,
+                    teacher['absent']!,
+                  ),
+                )
+                .toList(),
       ),
     );
   }

@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/Authorization/Login.dart';
 import 'package:innovator/Innovator/Authorization/OTP_Validation.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/helper/dialogs.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -196,7 +197,7 @@ class _SignupState extends ConsumerState<Signup> {
             data: ThemeData.light().copyWith(
               colorScheme: ColorScheme.light(
                 primary: preciseGreen,
-                onPrimary: Colors.white,
+                onPrimary: AppColors.whitecolor,
                 onSurface: Colors.black,
               ),
             ),
@@ -378,7 +379,7 @@ class _SignupState extends ConsumerState<Signup> {
                         fontSize: 28,
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.w700,
-                        color: Colors.white,
+                        color: AppColors.whitecolor,
                       ),
                     ),
                     Align(
@@ -401,7 +402,7 @@ class _SignupState extends ConsumerState<Signup> {
                 width: mq.width,
                 height: mq.height / 1.6,
                 decoration: const BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.whitecolor,
                   borderRadius: BorderRadius.only(topLeft: Radius.circular(70)),
                 ),
                 child: Padding(
@@ -545,7 +546,7 @@ class _SignupState extends ConsumerState<Signup> {
                               children: [
                                 Checkbox(
                                   activeColor: preciseGreen,
-                                  checkColor: Colors.white,
+                                  checkColor: AppColors.whitecolor,
                                   value: rememberMe,
                                   onChanged:
                                       (v) => setState(() => rememberMe = v!),
@@ -568,7 +569,7 @@ class _SignupState extends ConsumerState<Signup> {
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: preciseGreen,
-                            foregroundColor: Colors.white,
+                            foregroundColor: AppColors.whitecolor,
                             elevation: 10,
                             minimumSize: const Size(200, 50),
                             shape: RoundedRectangleBorder(
@@ -582,7 +583,7 @@ class _SignupState extends ConsumerState<Signup> {
                                     width: 20,
                                     height: 20,
                                     child: CircularProgressIndicator(
-                                      color: Colors.white,
+                                      color: AppColors.whitecolor,
                                       strokeWidth: 2,
                                     ),
                                   )
@@ -590,7 +591,7 @@ class _SignupState extends ConsumerState<Signup> {
                           label: Text(
                             isLoading ? 'Creating Account...' : 'Sign Up',
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: AppColors.whitecolor,
                               fontSize: 16,
                               letterSpacing: 1.1,
                             ),
@@ -974,7 +975,7 @@ class _SuggestionChipState extends State<_SuggestionChip> {
             Icon(
               Icons.alternate_email,
               size: 13,
-              color: _pressed ? Colors.white : widget.preciseGreen,
+              color: _pressed ? AppColors.whitecolor : widget.preciseGreen,
             ),
             const SizedBox(width: 4),
             Text(
@@ -982,7 +983,7 @@ class _SuggestionChipState extends State<_SuggestionChip> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: _pressed ? Colors.white : widget.preciseGreen,
+                color: _pressed ? AppColors.whitecolor : widget.preciseGreen,
               ),
             ),
           ],

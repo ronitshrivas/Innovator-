@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/constant/api_constants.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 
 class OtpValidationScreen extends StatefulWidget {
   final String email;
@@ -288,7 +289,7 @@ class _OtpValidationScreenState extends State<OtpValidationScreen>
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle, color: Colors.white),
+            const Icon(Icons.check_circle, color: AppColors.whitecolor),
             const SizedBox(width: 8),
             Text(message),
           ],
@@ -456,7 +457,7 @@ class _OtpValidationScreenState extends State<OtpValidationScreen>
             decoration: InputDecoration(
               counterText: '',
               filled: true,
-              fillColor: Colors.white,
+              fillColor: AppColors.whitecolor,
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: Colors.grey[300]!, width: 2),
@@ -516,7 +517,7 @@ class _OtpValidationScreenState extends State<OtpValidationScreen>
         onPressed: _isLoading ? null : _verifyOtp,
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
-          foregroundColor: Colors.white,
+          foregroundColor: AppColors.whitecolor,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -529,7 +530,9 @@ class _OtpValidationScreenState extends State<OtpValidationScreen>
                   height: 24,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppColors.whitecolor,
+                    ),
                   ),
                 )
                 : const Text(

@@ -43,8 +43,11 @@ class CoordinatorSessionsScreen extends ConsumerWidget {
                   color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.refresh_rounded,
-                    size: 18, color: Colors.white),
+                child: const Icon(
+                  Icons.refresh_rounded,
+                  size: 18,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
@@ -55,29 +58,33 @@ class CoordinatorSessionsScreen extends ConsumerWidget {
           sessionsAsync.when(
             loading: () => const SizedBox.shrink(),
             error: (_, __) => const SizedBox.shrink(),
-            data: (data) => Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-              child: Row(
-                children: [
-                  CoordinatorMiniStat(
-                      label: 'Total',
-                      value: '${data.totalSessions}',
-                      color: Colors.white),
-                  const SizedBox(width: 10),
-                  CoordinatorMiniStat(
-                      label: 'Teachers',
-                      value:
-                          '${data.sessions.map((s) => s.teacherId).toSet().length}',
-                      color: Colors.amberAccent.shade100),
-                  const SizedBox(width: 10),
-                  CoordinatorMiniStat(
-                      label: 'Students',
-                      value:
-                          '${data.sessions.fold(0, (sum, s) => sum + s.studentCount)}',
-                      color: Colors.greenAccent.shade200),
-                ],
-              ),
-            ),
+            data:
+                (data) => Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  child: Row(
+                    children: [
+                      CoordinatorMiniStat(
+                        label: 'Total',
+                        value: '${data.totalSessions}',
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 10),
+                      CoordinatorMiniStat(
+                        label: 'Teachers',
+                        value:
+                            '${data.sessions.map((s) => s.teacherId).toSet().length}',
+                        color: Colors.amberAccent.shade100,
+                      ),
+                      const SizedBox(width: 10),
+                      CoordinatorMiniStat(
+                        label: 'Students',
+                        value:
+                            '${data.sessions.fold(0, (sum, s) => sum + s.studentCount)}',
+                        color: Colors.greenAccent.shade200,
+                      ),
+                    ],
+                  ),
+                ),
           ),
           const SizedBox(height: 12),
 
@@ -100,12 +107,16 @@ class CoordinatorSessionsScreen extends ConsumerWidget {
 
                   Expanded(
                     child: sessionsAsync.when(
-                      loading: () => const Center(
-                          child: CircularProgressIndicator()),
-                      error: (e, _) => Center(
-                        child: Text('Error: $e',
-                            style: const TextStyle(fontFamily: 'Inter')),
-                      ),
+                      loading:
+                          () =>
+                              const Center(child: CircularProgressIndicator()),
+                      error:
+                          (e, _) => Center(
+                            child: Text(
+                              'Error: $e',
+                              style: const TextStyle(fontFamily: 'Inter'),
+                            ),
+                          ),
                       data: (data) {
                         if (data.sessions.isEmpty) {
                           return const CoordinatorEmptyState(
@@ -115,20 +126,21 @@ class CoordinatorSessionsScreen extends ConsumerWidget {
                         }
 
                         return ListView.builder(
-                          padding:
-                              const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                           itemCount: data.sessions.length,
                           itemBuilder: (context, i) {
                             final session = data.sessions[i];
                             return GestureDetector(
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      CoordinatorSessionDetailScreen(
-                                          session: session),
-                                ),
-                              ),
+                              onTap:
+                                  () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (_) => CoordinatorSessionDetailScreen(
+                                            session: session,
+                                          ),
+                                    ),
+                                  ),
                               child: _SessionListTile(session: session),
                             );
                           },
@@ -165,50 +177,52 @@ class _SessionFilterChips extends ConsumerWidget {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: options.map((f) {
-          final isSelected = filter == f;
-          final color = colors[f]!;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: GestureDetector(
-              onTap: () =>
-                  ref.read(_sessionFilterProvider.notifier).state = f,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: isSelected ? color : Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: isSelected ? color : Colors.grey.shade200,
-                    width: 1.5,
+        children:
+            options.map((f) {
+              final isSelected = filter == f;
+              final color = colors[f]!;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: GestureDetector(
+                  onTap:
+                      () => ref.read(_sessionFilterProvider.notifier).state = f,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected ? color : Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isSelected ? color : Colors.grey.shade200,
+                        width: 1.5,
+                      ),
+                      boxShadow:
+                          isSelected
+                              ? [
+                                BoxShadow(
+                                  color: color.withValues(alpha: 0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ]
+                              : [],
+                    ),
+                    child: Text(
+                      f,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w600,
+                        color: isSelected ? Colors.white : Colors.grey.shade600,
+                      ),
+                    ),
                   ),
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: color.withValues(alpha: 0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
-                          )
-                        ]
-                      : [],
                 ),
-                child: Text(
-                  f,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w600,
-                    color: isSelected
-                        ? Colors.white
-                        : Colors.grey.shade600,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
+              );
+            }).toList(),
       ),
     );
   }
@@ -245,32 +259,42 @@ class _SessionListTile extends StatelessWidget {
               color: AppStyle.primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(Icons.menu_book_rounded,
-                color: AppStyle.primaryColor, size: 22),
+            child: Icon(
+              Icons.menu_book_rounded,
+              color: AppStyle.primaryColor,
+              size: 22,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(session.teacherName,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                        fontFamily: 'Inter',
-                        color: Colors.black87)),
-                Text(session.classroomName,
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade500,
-                        fontFamily: 'Inter')),
+                Text(
+                  session.teacherName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    fontFamily: 'Inter',
+                    color: Colors.black87,
+                  ),
+                ),
+                Text(
+                  session.classroomName,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade500,
+                    fontFamily: 'Inter',
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Text(
                   session.notes,
                   style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                      fontFamily: 'Inter'),
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                    fontFamily: 'Inter',
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -281,15 +305,17 @@ class _SessionListTile extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(session.date,
-                  style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey.shade400,
-                      fontFamily: 'Inter')),
+              Text(
+                session.date,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey.shade400,
+                  fontFamily: 'Inter',
+                ),
+              ),
               const SizedBox(height: 4),
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: AppStyle.primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -297,17 +323,21 @@ class _SessionListTile extends StatelessWidget {
                 child: Text(
                   '${session.studentCount} students',
                   style: TextStyle(
-                      fontSize: 10,
-                      color: AppStyle.primaryColor,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w600),
+                    fontSize: 10,
+                    color: AppStyle.primaryColor,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(width: 8),
-          Icon(Icons.chevron_right_rounded,
-              size: 18, color: Colors.grey.shade300),
+          Icon(
+            Icons.chevron_right_rounded,
+            size: 18,
+            color: Colors.grey.shade300,
+          ),
         ],
       ),
     );
@@ -318,8 +348,7 @@ class _SessionListTile extends StatelessWidget {
 
 class CoordinatorSessionDetailScreen extends ConsumerStatefulWidget {
   final TeacherSessionModel session;
-  const CoordinatorSessionDetailScreen(
-      {super.key, required this.session});
+  const CoordinatorSessionDetailScreen({super.key, required this.session});
 
   @override
   ConsumerState<CoordinatorSessionDetailScreen> createState() =>
@@ -369,91 +398,109 @@ class _CoordinatorSessionDetailScreenState
   void _snack(String msg, Color color, IconData icon) {
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
-      ..showSnackBar(SnackBar(
-        content: Row(children: [
-          Icon(icon, color: Colors.white, size: 18),
-          const SizedBox(width: 8),
-          Text(msg, style: const TextStyle(fontFamily: 'Inter')),
-        ]),
-        backgroundColor: color,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12)),
-      ));
+      ..showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(icon, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Text(msg, style: const TextStyle(fontFamily: 'Inter')),
+            ],
+          ),
+          backgroundColor: color,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
   }
 
   void _showRejectDialog() {
     final ctrl = TextEditingController();
     showAdaptiveDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20)),
-        backgroundColor: Colors.white,
-        title: const Text('Reason for Rejection',
-            style: TextStyle(
+      builder:
+          (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            backgroundColor: Colors.white,
+            title: const Text(
+              'Reason for Rejection',
+              style: TextStyle(
                 fontFamily: 'Inter',
                 fontWeight: FontWeight.bold,
-                fontSize: 16)),
-        content: TextField(
-          controller: ctrl,
-          maxLines: 3,
-          autofocus: true,
-          style: const TextStyle(fontFamily: 'Inter', fontSize: 14),
-          decoration: InputDecoration(
-            hintText: 'Enter reason for rejecting this log...',
-            hintStyle: TextStyle(
-                color: Colors.grey.shade400,
-                fontFamily: 'Inter',
-                fontSize: 13),
-            filled: true,
-            fillColor: const Color(0xFFF5F7FA),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+                fontSize: 16,
+              ),
             ),
-            contentPadding: const EdgeInsets.all(12),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel',
-                style: TextStyle(
-                    color: Colors.grey.shade500, fontFamily: 'Inter')),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade400,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-              elevation: 0,
+            content: TextField(
+              controller: ctrl,
+              maxLines: 3,
+              autofocus: true,
+              style: const TextStyle(fontFamily: 'Inter', fontSize: 14),
+              decoration: InputDecoration(
+                hintText: 'Enter reason for rejecting this log...',
+                hintStyle: TextStyle(
+                  color: Colors.grey.shade400,
+                  fontFamily: 'Inter',
+                  fontSize: 13,
+                ),
+                filled: true,
+                fillColor: const Color(0xFFF5F7FA),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.all(12),
+              ),
             ),
-            onPressed: () {
-              Navigator.pop(ctx);
-              _verify('reject', coordinatorNotes: ctrl.text.trim());
-            },
-            child: const Text('Reject',
-                style: TextStyle(
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(
+                    color: Colors.grey.shade500,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade400,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  elevation: 0,
+                ),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _verify('reject', coordinatorNotes: ctrl.text.trim());
+                },
+                child: const Text(
+                  'Reject',
+                  style: TextStyle(
                     color: Colors.white,
                     fontFamily: 'Inter',
-                    fontWeight: FontWeight.w600)),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold( 
-        backgroundColor: AppStyle.backgroundColor,
+    return Scaffold(
+      backgroundColor: AppStyle.backgroundColor,
       appBar: AppBar(
         backgroundColor: AppStyle.primaryColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded,
-              color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
@@ -463,11 +510,10 @@ class _CoordinatorSessionDetailScreenState
             fontWeight: FontWeight.bold,
             fontFamily: 'Inter',
             fontSize: 18,
-          ), 
+          ),
         ),
       ),
       body: Container(
-    
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -497,22 +543,31 @@ class _CoordinatorSessionDetailScreenState
                         color: AppStyle.primaryColor.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.menu_book_rounded,
-                          color: AppStyle.primaryColor, size: 32),
+                      child: Icon(
+                        Icons.menu_book_rounded,
+                        color: AppStyle.primaryColor,
+                        size: 32,
+                      ),
                     ),
                     const SizedBox(height: 12),
-                    Text(widget.session.teacherName,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                            fontFamily: 'Inter',
-                            color: Colors.black87)),
+                    Text(
+                      widget.session.teacherName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        fontFamily: 'Inter',
+                        color: Colors.black87,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text(widget.session.classroomName,
-                        style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey.shade500,
-                            fontFamily: 'Inter')),
+                    Text(
+                      widget.session.classroomName,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade500,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -528,28 +583,31 @@ class _CoordinatorSessionDetailScreenState
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3)),
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
                   ],
                 ),
                 child: Column(
                   children: [
                     _InfoRow(
-                        icon: Icons.calendar_today_rounded,
-                        label: 'Date',
-                        value: widget.session.date),
+                      icon: Icons.calendar_today_rounded,
+                      label: 'Date',
+                      value: widget.session.date,
+                    ),
                     const Divider(height: 20),
                     _InfoRow(
-                        icon: Icons.people_rounded,
-                        label: 'Students',
-                        value:
-                            '${widget.session.studentCount} students'),
+                      icon: Icons.people_rounded,
+                      label: 'Students',
+                      value: '${widget.session.studentCount} students',
+                    ),
                     const Divider(height: 20),
                     _InfoRow(
-                        icon: Icons.class_rounded,
-                        label: 'Classroom',
-                        value: widget.session.classroomName),
+                      icon: Icons.class_rounded,
+                      label: 'Classroom',
+                      value: widget.session.classroomName,
+                    ),
                   ],
                 ),
               ),
@@ -565,28 +623,34 @@ class _CoordinatorSessionDetailScreenState
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3)),
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
                   ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(children: [
-                      Icon(Icons.lightbulb_outline_rounded,
-                          size: 16, color: AppStyle.primaryColor),
-                      const SizedBox(width: 8),
-                      Text(
-                        'What was taught',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w700,
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.lightbulb_outline_rounded,
+                          size: 16,
                           color: AppStyle.primaryColor,
                         ),
-                      ),
-                    ]),
+                        const SizedBox(width: 8),
+                        Text(
+                          'What was taught',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w700,
+                            color: AppStyle.primaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 12),
                     Container(
                       width: double.infinity,
@@ -595,17 +659,17 @@ class _CoordinatorSessionDetailScreenState
                         color: AppStyle.primaryColor.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color:
-                              AppStyle.primaryColor.withValues(alpha: 0.15),
+                          color: AppStyle.primaryColor.withValues(alpha: 0.15),
                         ),
                       ),
                       child: Text(
                         widget.session.notes,
                         style: const TextStyle(
-                            fontSize: 14,
-                            fontFamily: 'Inter',
-                            color: Colors.black87,
-                            height: 1.6),
+                          fontSize: 14,
+                          fontFamily: 'Inter',
+                          color: Colors.black87,
+                          height: 1.6,
+                        ),
                       ),
                     ),
                   ],
@@ -622,14 +686,16 @@ class _CoordinatorSessionDetailScreenState
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 18),
                   decoration: BoxDecoration(
-                    color: _approved
-                        ? Colors.green.withValues(alpha: 0.1)
-                        : Colors.red.withValues(alpha: 0.1),
+                    color:
+                        _approved
+                            ? Colors.green.withValues(alpha: 0.1)
+                            : Colors.red.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: _approved
-                          ? Colors.green.shade300
-                          : Colors.red.shade300,
+                      color:
+                          _approved
+                              ? Colors.green.shade300
+                              : Colors.red.shade300,
                     ),
                   ),
                   child: Center(
@@ -647,9 +713,10 @@ class _CoordinatorSessionDetailScreenState
                         Text(
                           _approved ? 'Log Approved' : 'Log Rejected',
                           style: TextStyle(
-                            color: _approved
-                                ? Colors.green.shade700
-                                : Colors.red.shade600,
+                            color:
+                                _approved
+                                    ? Colors.green.shade700
+                                    : Colors.red.shade600,
                             fontWeight: FontWeight.bold,
                             fontFamily: 'Inter',
                             fontSize: 16,
@@ -670,16 +737,18 @@ class _CoordinatorSessionDetailScreenState
                           decoration: BoxDecoration(
                             color: Colors.red.shade50,
                             borderRadius: BorderRadius.circular(14),
-                            border:
-                                Border.all(color: Colors.red.shade200),
+                            border: Border.all(color: Colors.red.shade200),
                           ),
                           child: Center(
-                            child: Text('Reject Log',
-                                style: TextStyle(
-                                    color: Colors.red.shade600,
-                                    fontWeight: FontWeight.w700,
-                                    fontFamily: 'Inter',
-                                    fontSize: 15)),
+                            child: Text(
+                              'Reject Log',
+                              style: TextStyle(
+                                color: Colors.red.shade600,
+                                fontWeight: FontWeight.w700,
+                                fontFamily: 'Inter',
+                                fontSize: 15,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -693,16 +762,18 @@ class _CoordinatorSessionDetailScreenState
                           decoration: BoxDecoration(
                             color: Colors.green.shade50,
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                                color: Colors.green.shade300),
+                            border: Border.all(color: Colors.green.shade300),
                           ),
                           child: Center(
-                            child: Text('Approve Log',
-                                style: TextStyle(
-                                    color: Colors.green.shade700,
-                                    fontWeight: FontWeight.w700,
-                                    fontFamily: 'Inter',
-                                    fontSize: 15)),
+                            child: Text(
+                              'Approve Log',
+                              style: TextStyle(
+                                color: Colors.green.shade700,
+                                fontWeight: FontWeight.w700,
+                                fontFamily: 'Inter',
+                                fontSize: 15,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -724,8 +795,11 @@ class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
 
-  const _InfoRow(
-      {required this.icon, required this.label, required this.value});
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -733,18 +807,24 @@ class _InfoRow extends StatelessWidget {
       children: [
         Icon(icon, size: 18, color: Colors.grey.shade400),
         const SizedBox(width: 12),
-        Text(label,
-            style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey.shade500,
-                fontFamily: 'Inter')),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            color: Colors.grey.shade500,
+            fontFamily: 'Inter',
+          ),
+        ),
         const Spacer(),
-        Text(value,
-            style: const TextStyle(
-                fontSize: 13,
-                color: Colors.black87,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w600)),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 13,
+            color: Colors.black87,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ],
     );
   }

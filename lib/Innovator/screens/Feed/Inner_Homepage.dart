@@ -5,16 +5,20 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Login.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/controllers/user_controller.dart';
 import 'package:innovator/Innovator/screens/Feed/Optimize%20Media/OptimizeMediaScreen.dart';
 import 'package:innovator/Innovator/screens/Feed/Optimize%20Media/full_screen_image_viewer.dart';
 import 'package:innovator/Innovator/screens/Feed/facebook_video_widget.dart';
+import 'package:innovator/Innovator/screens/chatrrom/screen/chatlistscreen.dart';
+import 'package:innovator/Innovator/widget/CustomizeFAB.dart';
 import 'package:innovator/Innovator/widget/repost_button.dart';
 import 'package:innovator/Innovator/screens/Feed/Repost/repost_list_screen.dart';
 import 'package:innovator/Innovator/screens/Feed/Repost/sharedrepostcard.dart';
@@ -359,14 +363,14 @@ class ContentData {
 // Inner_HomePage
 // ─────────────────────────────────────────────────────────────────────────────
 
-class Inner_HomePage extends StatefulWidget {
+class Inner_HomePage extends ConsumerStatefulWidget {
   const Inner_HomePage({Key? key}) : super(key: key);
 
   @override
   _Inner_HomePageState createState() => _Inner_HomePageState();
 }
 
-class _Inner_HomePageState extends State<Inner_HomePage> {
+class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
   final List<FeedContent> _allContents = [];
   final ScrollController _scrollController = ScrollController();
   final AppData _appData = AppData();
@@ -707,12 +711,27 @@ class _Inner_HomePageState extends State<Inner_HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final unreadCount = ref.watch(chatUnreadCountProvider);
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.whitecolor,
       body: CustomRefreshIndicator(
         onRefresh: _refresh,
         gifPath: 'animation/IdeaBulb.gif',
         child: _buildContent(),
+      ),
+      floatingActionButton: CountBadgeFAB(
+        count: unreadCount, // ← drives the red badge
+        gifAsset: 'animation/chaticon.gif',
+        backgroundColor: Colors.transparent,
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ChatListScreen()),
+          ).then((_) {
+            // Re-read count when user returns from chat list
+            ref.invalidate(mutualFriendsProvider);
+          });
+        },
       ),
     );
   }
@@ -761,7 +780,7 @@ class _Inner_HomePageState extends State<Inner_HomePage> {
               label: const Text('Refresh'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.whitecolor,
               ),
             ),
             const SizedBox(width: 12),
@@ -771,7 +790,7 @@ class _Inner_HomePageState extends State<Inner_HomePage> {
               label: const Text('Retry'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.whitecolor,
               ),
             ),
           ],
@@ -1085,7 +1104,7 @@ class _FeedItemState extends State<FeedItem>
           initial,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: AppColors.whitecolor,
             fontSize: 16,
           ),
         ),
@@ -1120,7 +1139,7 @@ class _FeedItemState extends State<FeedItem>
                 initial,
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: AppColors.whitecolor,
                 ),
               ),
             ),
@@ -1143,7 +1162,7 @@ class _FeedItemState extends State<FeedItem>
         //   top: BorderSide(color: Colors.grey.shade200, width: 1.0),
         //   bottom: BorderSide(color: Colors.grey.shade200, width: 1.0),
         // ),
-        color: Colors.white,
+        color: AppColors.whitecolor,
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(20.0),
           bottomRight: Radius.circular(20.0),
@@ -1175,7 +1194,7 @@ class _FeedItemState extends State<FeedItem>
               padding: const EdgeInsets.all(16.0),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.white, Colors.grey.shade50],
+                  colors: [AppColors.whitecolor, Colors.grey.shade50],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -1522,6 +1541,8 @@ class _FeedItemState extends State<FeedItem>
                         contentId: widget.content.id,
                         initialLikeStatus: widget.content.isLiked,
                         likeService: likeService,
+                        initialReactionType:
+                            widget.content.currentUserReaction, // ← add this
                         onLikeToggled: (isLiked) {
                           widget.onLikeToggled(isLiked);
                           SoundPlayer().playlikeSound();
@@ -1780,7 +1801,7 @@ class _FeedItemState extends State<FeedItem>
                       child: Text(
                         '+${urls.length - 4}',
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.whitecolor,
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1823,7 +1844,7 @@ class _FeedItemState extends State<FeedItem>
             errorWidget:
                 (_, __, ___) => Container(
                   color: Colors.grey[300],
-                  child: const Icon(Icons.error, color: Colors.white),
+                  child: const Icon(Icons.error, color: AppColors.whitecolor),
                 ),
           ),
         ),
@@ -1894,7 +1915,7 @@ class _FeedItemState extends State<FeedItem>
       builder:
           (_) => Container(
             decoration: const BoxDecoration(
-              color: Colors.white,
+              color: AppColors.whitecolor,
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
             child: Padding(
@@ -1988,7 +2009,7 @@ class _FeedItemState extends State<FeedItem>
           'Error',
           'Authentication required to share content',
           backgroundColor: Colors.red,
-          colorText: Colors.white,
+          colorText: AppColors.whitecolor,
         );
         return;
       }
@@ -2026,7 +2047,11 @@ class _FeedItemState extends State<FeedItem>
             SnackBar(
               content: const Row(
                 children: [
-                  Icon(Icons.check_circle, color: Colors.white, size: 18),
+                  Icon(
+                    Icons.check_circle,
+                    color: AppColors.whitecolor,
+                    size: 18,
+                  ),
                   SizedBox(width: 10),
                   Text(
                     'Post shared successfully',
@@ -2070,7 +2095,7 @@ class _FeedItemState extends State<FeedItem>
       builder:
           (_) => Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.whitecolor,
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(24),
               ),
@@ -2115,7 +2140,7 @@ class _FeedItemState extends State<FeedItem>
           'Copied',
           'Content copied to clipboard',
           backgroundColor: Colors.green.withAlpha(80),
-          colorText: Colors.white,
+          colorText: AppColors.whitecolor,
           duration: const Duration(seconds: 1),
         );
       }
@@ -2131,7 +2156,7 @@ class _FeedItemState extends State<FeedItem>
       builder:
           (_) => Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.whitecolor,
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(24),
               ),
@@ -2237,7 +2262,7 @@ class _FeedItemState extends State<FeedItem>
                       'Error',
                       'Content cannot be empty',
                       backgroundColor: Colors.red,
-                      colorText: Colors.white,
+                      colorText: AppColors.whitecolor,
                     );
                     return;
                   }
@@ -2245,7 +2270,7 @@ class _FeedItemState extends State<FeedItem>
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFF48706),
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.whitecolor,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -2285,7 +2310,7 @@ class _FeedItemState extends State<FeedItem>
         SnackBar(
           content: const Row(
             children: [
-              Icon(Icons.check_circle, color: Colors.white, size: 18),
+              Icon(Icons.check_circle, color: AppColors.whitecolor, size: 18),
               SizedBox(width: 10),
               Text(
                 'Content updated successfully',
@@ -2306,7 +2331,7 @@ class _FeedItemState extends State<FeedItem>
         SnackBar(
           content: const Row(
             children: [
-              Icon(Icons.error_outline, color: Colors.white, size: 18),
+              Icon(Icons.error_outline, color: AppColors.whitecolor, size: 18),
               SizedBox(width: 10),
               Text(
                 'Failed to update. Please try again.',
@@ -2395,7 +2420,7 @@ class _FeedItemState extends State<FeedItem>
                 onPressed: () => Navigator.pop(context, true),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red.shade600,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.whitecolor,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20,
                     vertical: 10,
@@ -2447,7 +2472,7 @@ class _FeedItemState extends State<FeedItem>
         SnackBar(
           content: const Row(
             children: [
-              Icon(Icons.check_circle, color: Colors.white, size: 18),
+              Icon(Icons.check_circle, color: AppColors.whitecolor, size: 18),
               SizedBox(width: 10),
               Text(
                 'Post deleted successfully',
@@ -2468,7 +2493,7 @@ class _FeedItemState extends State<FeedItem>
         SnackBar(
           content: const Row(
             children: [
-              Icon(Icons.error_outline, color: Colors.white, size: 18),
+              Icon(Icons.error_outline, color: AppColors.whitecolor, size: 18),
               SizedBox(width: 10),
               Text(
                 'Failed to delete post. Please try again.',
@@ -2587,7 +2612,7 @@ class _FeedItemState extends State<FeedItem>
                           : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red.shade600,
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppColors.whitecolor,
                   ),
                   child: const Text('Report'),
                 ),
@@ -2620,7 +2645,7 @@ class _FeedItemState extends State<FeedItem>
                     horizontal: 24,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppColors.whitecolor,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Column(
@@ -2657,8 +2682,8 @@ class _FeedItemState extends State<FeedItem>
           'Error',
           'Authentication required to report user',
           backgroundColor: Colors.red,
-          colorText: Colors.white,
-          icon: const Icon(Icons.error, color: Colors.white),
+          colorText: AppColors.whitecolor,
+          icon: const Icon(Icons.error, color: AppColors.whitecolor),
         );
         return;
       }
@@ -2691,7 +2716,11 @@ class _FeedItemState extends State<FeedItem>
             SnackBar(
               content: const Row(
                 children: [
-                  Icon(Icons.check_circle, color: Colors.white, size: 18),
+                  Icon(
+                    Icons.check_circle,
+                    color: AppColors.whitecolor,
+                    size: 18,
+                  ),
                   SizedBox(width: 10),
                   Text(
                     'Report submitted successfully',
@@ -2869,7 +2898,7 @@ class _FeedItemState extends State<FeedItem>
                           : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red.shade600,
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppColors.whitecolor,
                   ),
                   child: const Text('Block User'),
                 ),
@@ -2902,7 +2931,7 @@ class _FeedItemState extends State<FeedItem>
                     horizontal: 24,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppColors.whitecolor,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Column(
@@ -2939,8 +2968,8 @@ class _FeedItemState extends State<FeedItem>
           'Error',
           'Authentication required to block user',
           backgroundColor: Colors.red,
-          colorText: Colors.white,
-          icon: const Icon(Icons.error, color: Colors.white),
+          colorText: AppColors.whitecolor,
+          icon: const Icon(Icons.error, color: AppColors.whitecolor),
         );
         return;
       }
@@ -2978,8 +3007,8 @@ class _FeedItemState extends State<FeedItem>
           'User Blocked',
           msg,
           backgroundColor: Colors.green,
-          colorText: Colors.white,
-          icon: const Icon(Icons.block, color: Colors.white),
+          colorText: AppColors.whitecolor,
+          icon: const Icon(Icons.block, color: AppColors.whitecolor),
           duration: const Duration(seconds: 3),
         );
       } else if (response.statusCode == 401) {
@@ -2998,8 +3027,8 @@ class _FeedItemState extends State<FeedItem>
           'Already Blocked',
           msg,
           backgroundColor: Colors.orange,
-          colorText: Colors.white,
-          icon: const Icon(Icons.info, color: Colors.white),
+          colorText: AppColors.whitecolor,
+          icon: const Icon(Icons.info, color: AppColors.whitecolor),
         );
       } else {
         final data =
@@ -3011,8 +3040,8 @@ class _FeedItemState extends State<FeedItem>
           'Error',
           msg,
           backgroundColor: Colors.red,
-          colorText: Colors.white,
-          icon: const Icon(Icons.error, color: Colors.white),
+          colorText: AppColors.whitecolor,
+          icon: const Icon(Icons.error, color: AppColors.whitecolor),
         );
         developer.log('Block failed: ${response.statusCode} ${response.body}');
       }
@@ -3023,8 +3052,8 @@ class _FeedItemState extends State<FeedItem>
         'Error',
         'Network error. Please check your connection.',
         backgroundColor: Colors.red,
-        colorText: Colors.white,
-        icon: const Icon(Icons.error, color: Colors.white),
+        colorText: AppColors.whitecolor,
+        icon: const Icon(Icons.error, color: AppColors.whitecolor),
       );
     }
   }
@@ -3209,7 +3238,7 @@ class _FullscreenVideoPageState extends State<FullscreenVideoPage>
                             padding: const EdgeInsets.all(8),
                             child: const Icon(
                               Icons.arrow_back,
-                              color: Colors.white,
+                              color: AppColors.whitecolor,
                               size: 24,
                             ),
                           ),
@@ -3234,7 +3263,7 @@ class _FullscreenVideoPageState extends State<FullscreenVideoPage>
                     child: const Icon(
                       Icons.play_arrow,
                       size: 50,
-                      color: Colors.white,
+                      color: AppColors.whitecolor,
                     ),
                   ),
                 ),
@@ -3277,7 +3306,7 @@ class _FullscreenVideoPageState extends State<FullscreenVideoPage>
                             ),
                             child: Icon(
                               _isMuted ? Icons.volume_off : Icons.volume_up,
-                              color: Colors.white,
+                              color: AppColors.whitecolor,
                               size: 24,
                             ),
                           ),
@@ -3567,7 +3596,7 @@ class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
       child: Container(
         height: widget.height ?? MediaQuery.of(context).size.height,
         width: widget.width ?? MediaQuery.of(context).size.width,
-        color: Colors.white,
+        color: AppColors.whitecolor,
         child:
             !_initialized || _controller == null
                 ? _buildLoadingOrThumbnail()
@@ -3596,7 +3625,7 @@ class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
             (_, __, ___) => Container(
               color: Colors.grey,
               child: const Center(
-                child: Icon(Icons.videocam_off, color: Colors.white),
+                child: Icon(Icons.videocam_off, color: AppColors.whitecolor),
               ),
             ),
       );
@@ -3646,7 +3675,7 @@ class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
                     child: const Icon(
                       Icons.play_arrow,
                       size: 50,
-                      color: Colors.white,
+                      color: AppColors.whitecolor,
                     ),
                   ),
                 ),
@@ -3662,7 +3691,7 @@ class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
                     ),
                     child: const Icon(
                       Icons.fullscreen,
-                      color: Colors.white,
+                      color: AppColors.whitecolor,
                       size: 20,
                     ),
                   ),
@@ -3681,13 +3710,13 @@ class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
                       color: Colors.black54,
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: Colors.white.withAlpha(30),
+                        color: AppColors.whitecolor.withAlpha(30),
                         width: 1,
                       ),
                     ),
                     child: Icon(
                       _isMuted ? Icons.volume_off : Icons.volume_up,
-                      color: Colors.white,
+                      color: AppColors.whitecolor,
                       size: 20,
                     ),
                   ),
@@ -3723,7 +3752,7 @@ class _SBox extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.whitecolor,
         borderRadius: BorderRadius.circular(radius),
       ),
     );
@@ -3741,7 +3770,7 @@ class _SCircle extends StatelessWidget {
       width: size,
       height: size,
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: AppColors.whitecolor,
         shape: BoxShape.circle,
       ),
     );
@@ -3798,7 +3827,7 @@ class _PostSkeleton extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 0),
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.whitecolor,
         border: Border(
           top: BorderSide(color: Colors.grey.shade200, width: 1.0),
           bottom: BorderSide(color: Colors.grey.shade200, width: 3.0),
@@ -3979,7 +4008,7 @@ class _DeleteLoadingDialog extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 48),
         padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.whitecolor,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -4032,7 +4061,7 @@ class _SaveLoadingDialog extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 48),
         padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.whitecolor,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(

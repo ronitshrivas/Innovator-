@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -922,11 +923,11 @@ class _EventsHomePageState extends State<EventsHomePage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.whitecolor,
       appBar: AppBar(
         title: Text(
           'Global Tech Events',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: AppColors.whitecolor),
         ),
         backgroundColor: Color.fromRGBO(244, 135, 6, 1),
         actions: [
@@ -952,10 +953,10 @@ class _EventsHomePageState extends State<EventsHomePage>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.filter_list, color: Colors.white),
+                  Icon(Icons.filter_list, color: AppColors.whitecolor),
                   Text(
                     ' $selectedCountry',
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(color: AppColors.whitecolor),
                   ),
                 ],
               ),
@@ -963,11 +964,11 @@ class _EventsHomePageState extends State<EventsHomePage>
           ),
         ],
         bottom: TabBar(
-          indicatorColor: Colors.white,
+          indicatorColor: AppColors.whitecolor,
 
-          unselectedLabelStyle: TextStyle(color: Colors.white),
+          unselectedLabelStyle: TextStyle(color: AppColors.whitecolor),
           labelStyle: TextStyle(
-            color: Colors.white,
+            color: AppColors.whitecolor,
             fontWeight: FontWeight.bold,
           ),
           controller: _tabController,
@@ -975,15 +976,15 @@ class _EventsHomePageState extends State<EventsHomePage>
             Tab(
               text: 'All Events',
 
-              icon: Icon(Icons.event, color: Colors.white),
+              icon: Icon(Icons.event, color: AppColors.whitecolor),
             ),
             Tab(
               text: 'Favorites',
-              icon: Icon(Icons.favorite, color: Colors.white),
+              icon: Icon(Icons.favorite, color: AppColors.whitecolor),
             ),
             Tab(
               text: 'Categories',
-              icon: Icon(Icons.category, color: Colors.white),
+              icon: Icon(Icons.category, color: AppColors.whitecolor),
             ),
           ],
         ),
@@ -1087,7 +1088,7 @@ class _EventsHomePageState extends State<EventsHomePage>
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
-      color: Colors.white,
+      color: AppColors.whitecolor,
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
@@ -1172,7 +1173,7 @@ class _EventsHomePageState extends State<EventsHomePage>
                     child: Text(
                       event.category,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.whitecolor,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
@@ -1218,7 +1219,7 @@ class _EventsHomePageState extends State<EventsHomePage>
                               ? 'Tomorrow'
                               : '$daysUntil days',
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: AppColors.whitecolor,
                             fontSize: 10,
                             fontWeight: FontWeight.w500,
                           ),
@@ -1264,13 +1265,13 @@ class _EventsHomePageState extends State<EventsHomePage>
         return Card(
           margin: EdgeInsets.only(bottom: 12),
           child: ListTile(
-            tileColor: Colors.white,
+            tileColor: AppColors.whitecolor,
 
             leading: CircleAvatar(
               backgroundColor: _getCategoryColor(category),
               child: Icon(
                 _getCategoryIcon(category),
-                color: Colors.white,
+                color: AppColors.whitecolor,
                 size: 20,
               ),
             ),
@@ -1463,7 +1464,10 @@ class _EventDetailPageState extends State<EventDetailPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Event Details', style: TextStyle(color: Colors.white)),
+        title: Text(
+          'Event Details',
+          style: TextStyle(color: AppColors.whitecolor),
+        ),
         backgroundColor: Color.fromRGBO(244, 135, 6, 1),
       ),
       body:
@@ -1559,7 +1563,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Color.fromRGBO(244, 135, 6, 1),
-                          foregroundColor: Colors.white,
+                          foregroundColor: AppColors.whitecolor,
                           minimumSize: Size(double.infinity, 48),
                         ),
                         onPressed: () {

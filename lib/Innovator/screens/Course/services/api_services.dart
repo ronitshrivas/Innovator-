@@ -114,10 +114,6 @@ class ApiService {
     return null;
   }
 
-  // ── Courses ───────────────────────────────────────────────────────────────
-
-  /// GET /api/student/courses/
-  /// Response includes a nested `contents` list on each course object.
   static Future<List<Map<String, dynamic>>> getCourses() async {
     final url = Uri.parse('$_base/courses/');
     developer.log('[API] GET $url');

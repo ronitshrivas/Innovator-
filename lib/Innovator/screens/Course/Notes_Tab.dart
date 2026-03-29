@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/models/Course_models.dart';
 import 'package:innovator/Innovator/screens/Course/services/api_services.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
@@ -8,11 +9,7 @@ class NotesTab extends StatefulWidget {
   final String? courseId;
   final List<Note>? notes; // Accept notes directly from parent
 
-  const NotesTab({
-    Key? key, 
-    this.courseId,
-    this.notes,
-  }) : super(key: key);
+  const NotesTab({Key? key, this.courseId, this.notes}) : super(key: key);
 
   @override
   State<NotesTab> createState() => _NotesTabState();
@@ -61,7 +58,7 @@ class _NotesTabState extends State<NotesTab> {
       // Since your API structure has notes as part of course data,
       // we would need a specific endpoint for getting course details
       // For now, we'll show empty state and recommend passing notes from parent
-      
+
       setState(() {
         _notes = [];
         _isLoading = false;
@@ -80,15 +77,16 @@ class _NotesTabState extends State<NotesTab> {
 
   void _openPdfViewer(Note note) {
     final String fullPdfUrl = ApiService.getFullMediaUrl(note.fileUrl);
-    
+
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => PdfViewerScreen(
-          pdfUrl: fullPdfUrl,
-          title: note.title,
-          note: note,
-        ),
+        builder:
+            (context) => PdfViewerScreen(
+              pdfUrl: fullPdfUrl,
+              title: note.title,
+              note: note,
+            ),
       ),
     );
   }
@@ -100,148 +98,149 @@ class _NotesTabState extends State<NotesTab> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       isScrollControlled: true,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      builder:
+          (context) => Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color.fromRGBO(235, 111, 70, 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.picture_as_pdf,
-                    color: Color.fromRGBO(244, 135, 6, 1),
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        note.title,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color.fromRGBO(235, 111, 70, 0.1),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        note.description,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
+                      child: const Icon(
+                        Icons.picture_as_pdf,
+                        color: Color.fromRGBO(244, 135, 6, 1),
+                        size: 24,
                       ),
-                    ],
-                  ),
-                ),
-                if (note.premium)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.amber,
-                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Text(
-                      'PREMIUM',
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            note.title,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            note.description,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (note.premium)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.amber,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text(
+                          'PREMIUM',
+                          style: TextStyle(
+                            color: AppColors.whitecolor,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Icon(Icons.download, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${note.metadata.downloadCount} downloads',
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    ),
+                    const Spacer(),
+                    Text(
+                      note.fileType.toUpperCase(),
                       style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
+                        color: Colors.grey[600],
                       ),
                     ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Icon(Icons.download, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 8),
-                Text(
-                  '${note.metadata.downloadCount} downloads',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
+                  ],
                 ),
-                const Spacer(),
-                Text(
-                  note.fileType.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                // Expanded(
-                //   child: OutlinedButton(
-                //     onPressed: () {
-                //       Navigator.pop(context);
-                //       // Implement download functionality
-                //       _downloadNote(note);
-                //     },
-                //     style: OutlinedButton.styleFrom(
-                //       side: const BorderSide(color: Color.fromRGBO(244, 135, 6, 1)),
-                //       foregroundColor: const Color.fromRGBO(244, 135, 6, 1),
-                //       padding: const EdgeInsets.symmetric(vertical: 12),
-                //       shape: RoundedRectangleBorder(
-                //         borderRadius: BorderRadius.circular(8),
-                //       ),
-                //     ),
-                //     child: const Row(
-                //       mainAxisAlignment: MainAxisAlignment.center,
-                //       children: [
-                //         Icon(Icons.download, size: 18),
-                //         SizedBox(width: 8),
-                //         Text('Download'),
-                //       ],
-                //     ),
-                //   ),
-                // ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _openPdfViewer(note);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color.fromRGBO(244, 135, 6, 1),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    // Expanded(
+                    //   child: OutlinedButton(
+                    //     onPressed: () {
+                    //       Navigator.pop(context);
+                    //       // Implement download functionality
+                    //       _downloadNote(note);
+                    //     },
+                    //     style: OutlinedButton.styleFrom(
+                    //       side: const BorderSide(color: Color.fromRGBO(244, 135, 6, 1)),
+                    //       foregroundColor: const Color.fromRGBO(244, 135, 6, 1),
+                    //       padding: const EdgeInsets.symmetric(vertical: 12),
+                    //       shape: RoundedRectangleBorder(
+                    //         borderRadius: BorderRadius.circular(8),
+                    //       ),
+                    //     ),
+                    //     child: const Row(
+                    //       mainAxisAlignment: MainAxisAlignment.center,
+                    //       children: [
+                    //         Icon(Icons.download, size: 18),
+                    //         SizedBox(width: 8),
+                    //         Text('Download'),
+                    //       ],
+                    //     ),
+                    //   ),
+                    // ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _openPdfViewer(note);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color.fromRGBO(244, 135, 6, 1),
+                          foregroundColor: AppColors.whitecolor,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.visibility, size: 18),
+                            SizedBox(width: 8),
+                            Text('View'),
+                          ],
+                        ),
                       ),
                     ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.visibility, size: 18),
-                        SizedBox(width: 8),
-                        Text('View'),
-                      ],
-                    ),
-                  ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
@@ -253,7 +252,7 @@ class _NotesTabState extends State<NotesTab> {
         backgroundColor: const Color.fromRGBO(244, 135, 6, 1),
         action: SnackBarAction(
           label: 'View',
-          textColor: Colors.white,
+          textColor: AppColors.whitecolor,
           onPressed: () => _openPdfViewer(note),
         ),
       ),
@@ -315,10 +314,7 @@ class _NotesTabState extends State<NotesTab> {
             const SizedBox(height: 8),
             Text(
               _errorMessage,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -326,8 +322,11 @@ class _NotesTabState extends State<NotesTab> {
               onPressed: _fetchNotesForCourse,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color.fromRGBO(244, 135, 6, 1),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                foregroundColor: AppColors.whitecolor,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
@@ -368,10 +367,7 @@ class _NotesTabState extends State<NotesTab> {
             const SizedBox(height: 8),
             Text(
               'Notes will appear here when available',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[500],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
             ),
           ],
         ),
@@ -407,7 +403,7 @@ class _NotesTabState extends State<NotesTab> {
             child: Container(
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.whitecolor,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
@@ -442,7 +438,7 @@ class _NotesTabState extends State<NotesTab> {
                           ),
                           child: const Icon(
                             Icons.picture_as_pdf,
-                            color: Colors.white,
+                            color: AppColors.whitecolor,
                             size: 24,
                           ),
                         ),
@@ -479,7 +475,7 @@ class _NotesTabState extends State<NotesTab> {
                                       child: const Text(
                                         'PREMIUM',
                                         style: TextStyle(
-                                          color: Colors.white,
+                                          color: AppColors.whitecolor,
                                           fontSize: 8,
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -593,24 +589,26 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
         title: Text(
           widget.title,
           style: const TextStyle(
-            color: Colors.white,
+            color: AppColors.whitecolor,
             fontWeight: FontWeight.bold,
           ),
         ),
         backgroundColor: const Color.fromRGBO(244, 135, 6, 1),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: AppColors.whitecolor),
         elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.zoom_in),
             onPressed: () {
-              _pdfViewerController.zoomLevel = _pdfViewerController.zoomLevel + 0.25;
+              _pdfViewerController.zoomLevel =
+                  _pdfViewerController.zoomLevel + 0.25;
             },
           ),
           IconButton(
             icon: const Icon(Icons.zoom_out),
             onPressed: () {
-              _pdfViewerController.zoomLevel = _pdfViewerController.zoomLevel - 0.25;
+              _pdfViewerController.zoomLevel =
+                  _pdfViewerController.zoomLevel - 0.25;
             },
           ),
           PopupMenuButton<String>(
@@ -635,28 +633,29 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                   break;
               }
             },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'download',
-                child: Row(
-                  children: [
-                    Icon(Icons.download),
-                    SizedBox(width: 8),
-                    Text('Download'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'share',
-                child: Row(
-                  children: [
-                    Icon(Icons.share),
-                    SizedBox(width: 8),
-                    Text('Share'),
-                  ],
-                ),
-              ),
-            ],
+            itemBuilder:
+                (context) => [
+                  const PopupMenuItem(
+                    value: 'download',
+                    child: Row(
+                      children: [
+                        Icon(Icons.download),
+                        SizedBox(width: 8),
+                        Text('Download'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'share',
+                    child: Row(
+                      children: [
+                        Icon(Icons.share),
+                        SizedBox(width: 8),
+                        Text('Share'),
+                      ],
+                    ),
+                  ),
+                ],
           ),
         ],
       ),
@@ -667,7 +666,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
               // PDF Info Header
               Container(
                 padding: const EdgeInsets.all(16),
-                color: Colors.white,
+                color: AppColors.whitecolor,
                 child: Row(
                   children: [
                     Container(
@@ -707,7 +706,10 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                     ),
                     if (widget.note.premium)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.amber,
                           borderRadius: BorderRadius.circular(12),
@@ -715,7 +717,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                         child: const Text(
                           'PREMIUM',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: AppColors.whitecolor,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
@@ -729,7 +731,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                 child: Container(
                   margin: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppColors.whitecolor,
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
@@ -749,9 +751,13 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                           _isLoading = false;
                           _totalPages = details.document.pages.count;
                         });
-                        developer.log('PDF loaded successfully: $_totalPages pages');
+                        developer.log(
+                          'PDF loaded successfully: $_totalPages pages',
+                        );
                       },
-                      onDocumentLoadFailed: (PdfDocumentLoadFailedDetails details) {
+                      onDocumentLoadFailed: (
+                        PdfDocumentLoadFailedDetails details,
+                      ) {
                         setState(() {
                           _isLoading = false;
                           _error = 'Failed to load PDF: ${details.error}';
@@ -771,7 +777,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
           ),
           if (_isLoading)
             Container(
-              color: Colors.white,
+              color: AppColors.whitecolor,
               child: const Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -796,7 +802,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
             ),
           if (_error != null)
             Container(
-              color: Colors.white,
+              color: AppColors.whitecolor,
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -809,10 +815,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                     const SizedBox(height: 16),
                     Text(
                       _error!,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.red,
-                      ),
+                      style: const TextStyle(fontSize: 16, color: Colors.red),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 16),
@@ -822,7 +825,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color.fromRGBO(244, 135, 6, 1),
-                        foregroundColor: Colors.white,
+                        foregroundColor: AppColors.whitecolor,
                       ),
                       child: const Text('Go Back'),
                     ),

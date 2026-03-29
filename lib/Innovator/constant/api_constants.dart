@@ -106,4 +106,16 @@ class ApiConstants {
   static const String fetchotheruserprofile = '$feedBase/users/';
 
   static const String fetchreporstCount = '$feedBase/posts/';
+
+  // For chatting
+  static const String mutualfriends = '$feedBase/users/mutual-friends/';
+
+  static const String chatshistry = '$feedBase/chats/';
+
+  static const String deleteconversation =
+      '$feedBase/chats/delete-conversation/';
+
+  static const String markasread = '$feedBase/chats/mark-as-read/';
+
+  static const String connect = '$userBase/ws/chat/';
 }

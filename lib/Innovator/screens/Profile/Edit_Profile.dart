@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/innovator_home.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -347,7 +348,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle, color: Colors.white),
+            const Icon(Icons.check_circle, color: AppColors.whitecolor),
             const SizedBox(width: 8),
             Text(msg),
           ],
@@ -364,7 +365,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.error_outline, color: Colors.white),
+            const Icon(Icons.error_outline, color: AppColors.whitecolor),
             const SizedBox(width: 8),
             Expanded(child: Text(msg)),
           ],
@@ -387,7 +388,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
             data: Theme.of(ctx).copyWith(
               colorScheme: const ColorScheme.light(
                 primary: _primary,
-                onPrimary: Colors.white,
+                onPrimary: AppColors.whitecolor,
               ),
             ),
             child: child!,
@@ -414,7 +415,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.whitecolor,
                 borderRadius: BorderRadius.circular(10),
                 boxShadow: [
                   BoxShadow(
@@ -614,7 +615,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
                     decoration: BoxDecoration(
                       color: _primary,
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 3),
+                      border: Border.all(color: AppColors.whitecolor, width: 3),
                     ),
                     child:
                         _isUploading
@@ -622,13 +623,13 @@ class _EditProfileScreenState extends State<EditProfileScreen>
                               width: 18,
                               height: 18,
                               child: CircularProgressIndicator(
-                                color: Colors.white,
+                                color: AppColors.whitecolor,
                                 strokeWidth: 2,
                               ),
                             )
                             : const Icon(
                               Icons.camera_alt,
-                              color: Colors.white,
+                              color: AppColors.whitecolor,
                               size: 18,
                             ),
                   ),
@@ -677,7 +678,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.whitecolor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -883,14 +884,14 @@ class _EditProfileScreenState extends State<EditProfileScreen>
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: const [
-            Icon(Icons.save, color: Colors.white),
+            Icon(Icons.save, color: AppColors.whitecolor),
             SizedBox(width: 8),
             Text(
               'Save Changes',
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: AppColors.whitecolor,
               ),
             ),
           ],

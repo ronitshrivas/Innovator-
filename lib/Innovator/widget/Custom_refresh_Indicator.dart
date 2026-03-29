@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 
 class CustomRefreshIndicator extends StatefulWidget {
   final Widget child;
@@ -93,7 +94,7 @@ class _CustomRefreshIndicatorState extends State<CustomRefreshIndicator>
             triggerMode: RefreshIndicatorTriggerMode.onEdge,
             strokeWidth: 2.5,
             color: Colors.blue,
-            backgroundColor: Colors.white,
+            backgroundColor: AppColors.whitecolor,
             child: widget.child,
           ),
         ),
@@ -107,7 +108,7 @@ class _CustomRefreshIndicatorState extends State<CustomRefreshIndicator>
               child: Container(
                 padding: EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.whitecolor,
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: [
                     BoxShadow(

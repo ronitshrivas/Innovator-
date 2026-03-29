@@ -69,7 +69,7 @@ class PartnerAssignedSchoolScreen extends ConsumerWidget {
           GridView(
             shrinkWrap: true,
             padding: EdgeInsets.zero,
-                  physics: NeverScrollableScrollPhysics(),
+            physics: NeverScrollableScrollPhysics(),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
               childAspectRatio: 1.6,
@@ -103,7 +103,7 @@ class PartnerAssignedSchoolScreen extends ConsumerWidget {
               ),
             ],
           ),
-          SizedBox(height: 30,),
+          SizedBox(height: 30),
           Container(
             clipBehavior: Clip.antiAlias,
             width: double.infinity,

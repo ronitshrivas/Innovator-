@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:innovator/Innovator/App_data/App_data.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/models/Author_model.dart';
 import 'package:innovator/Innovator/controllers/user_controller.dart';
 
@@ -92,7 +93,7 @@ class InstantProfilePicture extends StatelessWidget {
                 style: TextStyle(
                   fontSize: radius * 0.7,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: AppColors.whitecolor,
                 ),
               )
               : null,
@@ -125,7 +126,7 @@ class InstantProfilePicture extends StatelessWidget {
                             style: TextStyle(
                               fontSize: radius * 0.7,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: AppColors.whitecolor,
                             ),
                           ),
                         ),
@@ -137,7 +138,7 @@ class InstantProfilePicture extends StatelessWidget {
                 style: TextStyle(
                   fontSize: radius * 0.7,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: AppColors.whitecolor,
                 ),
               ),
     );

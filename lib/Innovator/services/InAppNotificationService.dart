@@ -7,6 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'dart:developer' as developer;
 
+import 'package:innovator/Innovator/constant/app_colors.dart';
+
 class InAppNotificationService {
   static final InAppNotificationService _instance =
       InAppNotificationService._internal();
@@ -151,13 +153,13 @@ class InAppNotificationService {
         body,
         snackPosition: SnackPosition.TOP,
         backgroundColor: backgroundColor ?? const Color(0xFFF48706),
-        colorText: Colors.white,
+        colorText: AppColors.whitecolor,
         duration: const Duration(seconds: 4),
         margin: const EdgeInsets.all(16),
         borderRadius: 12,
         icon: Icon(
           icon ?? Icons.notifications_active,
-          color: Colors.white,
+          color: AppColors.whitecolor,
           size: 28,
         ),
         shouldIconPulse: true,
@@ -174,7 +176,7 @@ class InAppNotificationService {
                   child: const Text(
                     'View',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.whitecolor,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -296,7 +298,7 @@ class _NotificationWidgetState extends State<_NotificationWidget>
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.whitecolor,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
@@ -313,7 +315,10 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [bgColor.withOpacity(0.05), Colors.white],
+                        colors: [
+                          bgColor.withOpacity(0.05),
+                          AppColors.whitecolor,
+                        ],
                       ),
                     ),
                     child: Column(
@@ -454,7 +459,7 @@ class _NotificationWidgetState extends State<_NotificationWidget>
       ),
       child: Icon(
         widget.icon ?? Icons.notifications_active,
-        color: Colors.white,
+        color: AppColors.whitecolor,
         size: 26,
       ),
     );

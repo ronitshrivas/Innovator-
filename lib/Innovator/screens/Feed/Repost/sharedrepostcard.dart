@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/models/Feed_Content_Model.dart';
 
 const _kOrange = Color.fromRGBO(244, 135, 6, 1);
@@ -35,7 +36,7 @@ class SharedPostCard extends StatelessWidget {
           style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: AppColors.whitecolor,
           ),
         ),
       );
@@ -61,7 +62,10 @@ class SharedPostCard extends StatelessWidget {
               backgroundColor: Colors.grey.shade300,
               child: Text(
                 initial,
-                style: const TextStyle(color: Colors.white, fontSize: 11),
+                style: const TextStyle(
+                  color: AppColors.whitecolor,
+                  fontSize: 11,
+                ),
               ),
             ),
       ),
@@ -164,7 +168,7 @@ class SharedPostCard extends StatelessWidget {
                           child: Text(
                             '+${images.length - 3}',
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: AppColors.whitecolor,
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
                             ),
@@ -215,7 +219,7 @@ class SharedPostCard extends StatelessWidget {
                   ),
                   child: const Icon(
                     Icons.repeat_rounded,
-                    color: Colors.white,
+                    color: AppColors.whitecolor,
                     size: 10,
                   ),
                 ),
@@ -358,7 +362,7 @@ class _VideoThumb extends StatelessWidget {
           ),
           child: const Icon(
             Icons.play_arrow_rounded,
-            color: Colors.white,
+            color: AppColors.whitecolor,
             size: 34,
           ),
         ),
@@ -374,12 +378,16 @@ class _VideoThumb extends StatelessWidget {
             child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.videocam_rounded, color: Colors.white, size: 12),
+                Icon(
+                  Icons.videocam_rounded,
+                  color: AppColors.whitecolor,
+                  size: 12,
+                ),
                 SizedBox(width: 4),
                 Text(
                   'Video',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.whitecolor,
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),

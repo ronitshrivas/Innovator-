@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/screens/Search/search_provider.dart';
 import 'package:innovator/Innovator/screens/show_Specific_Profile/Show_Specific_Profile.dart';
 
@@ -26,7 +27,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     final notifier = ref.read(searchProvider.notifier);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.whitecolor,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.only(right: 10, left: 10),
@@ -45,7 +46,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   Widget _buildSimpleHeader() {
     return Container(
       padding: const EdgeInsets.all(20),
-      color: Colors.white,
+      color: AppColors.whitecolor,
       child: Row(
         children: [
           Container(
@@ -54,7 +55,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               color: Colors.orange,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.search, color: Colors.white, size: 24),
+            child: const Icon(
+              Icons.search,
+              color: AppColors.whitecolor,
+              size: 24,
+            ),
           ),
           const SizedBox(width: 16),
           const Column(
@@ -248,7 +253,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: AppColors.whitecolor,
                 ),
               )
               : null,

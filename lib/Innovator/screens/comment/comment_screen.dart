@@ -2,6 +2,7 @@
 // Updated for http://182.93.94.220:8005
 
 import 'package:flutter/material.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/models/comment_Model.dart';
 import 'package:innovator/Innovator/screens/comment/comment_services.dart';
 import 'package:innovator/Innovator/App_data/App_data.dart';
@@ -200,11 +201,11 @@ class _CommentScreenState extends State<CommentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.whitecolor,
       appBar: AppBar(
         title: const Text('Comments'),
         backgroundColor: const Color.fromRGBO(244, 135, 6, 1),
-        foregroundColor: Colors.white,
+        foregroundColor: AppColors.whitecolor,
         elevation: 0,
       ),
       body: Column(
@@ -278,7 +279,7 @@ class _CommentScreenState extends State<CommentScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.whitecolor,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.06),

@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Login.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/screens/Feed/Inner_Homepage.dart';
 import 'package:innovator/Innovator/screens/Follow/follow_Button.dart';
 import 'package:innovator/Innovator/screens/comment/comment_screen.dart';
@@ -248,7 +249,8 @@ class _SpecificUserProfilePageState extends State<SpecificUserProfilePage>
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDarkMode ? const Color(0xFF0A0A0A) : Colors.white,
+      backgroundColor:
+          isDarkMode ? const Color(0xFF0A0A0A) : AppColors.whitecolor,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -262,7 +264,7 @@ class _SpecificUserProfilePageState extends State<SpecificUserProfilePage>
           iconSize: 25,
           icon: Icon(
             Icons.arrow_back_ios_new,
-            color: isDarkMode ? Colors.white : Colors.black,
+            color: isDarkMode ? AppColors.whitecolor : Colors.black,
           ),
           onPressed: () => Navigator.of(context).pop(),
         ),
@@ -446,7 +448,7 @@ class _SpecificUserProfilePageState extends State<SpecificUserProfilePage>
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white : Colors.black,
+                      color: isDarkMode ? AppColors.whitecolor : Colors.black,
                     ),
                   ),
                 ),
@@ -492,7 +494,7 @@ class _SpecificUserProfilePageState extends State<SpecificUserProfilePage>
                 child: Text(
                   profileData['role'].toString().toUpperCase(),
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.whitecolor,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
                   ),
@@ -508,7 +510,7 @@ class _SpecificUserProfilePageState extends State<SpecificUserProfilePage>
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 15,
-                    color: isDarkMode ? Colors.white70 : Colors.black87,
+                    color: isDarkMode ? AppColors.whitecolor : Colors.black87,
                     fontStyle: FontStyle.italic,
                   ),
                   maxLines: 3,
@@ -535,7 +537,7 @@ class _SpecificUserProfilePageState extends State<SpecificUserProfilePage>
           style: TextStyle(
             fontSize: radius * 0.55,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: AppColors.whitecolor,
           ),
         ),
       );
@@ -563,7 +565,7 @@ class _SpecificUserProfilePageState extends State<SpecificUserProfilePage>
                 initial,
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: AppColors.whitecolor,
                 ),
               ),
             ),
@@ -621,7 +623,7 @@ class _SpecificUserProfilePageState extends State<SpecificUserProfilePage>
     return GestureDetector(
       onTap: onTap,
       child: Card(
-        color: Colors.white,
+        color: AppColors.whitecolor,
         elevation: 0,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -796,7 +798,7 @@ class _SpecificUserProfilePageState extends State<SpecificUserProfilePage>
                   value,
                   style: TextStyle(
                     fontSize: 16,
-                    color: isDarkMode ? Colors.white : Colors.black87,
+                    color: isDarkMode ? AppColors.whitecolor : Colors.black87,
                   ),
                 ),
               ],
@@ -932,7 +934,7 @@ class _SpecificUserProfilePageState extends State<SpecificUserProfilePage>
               child: const Text(
                 'Try Again',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.whitecolor,
                   fontWeight: FontWeight.w600,
                 ),
               ),

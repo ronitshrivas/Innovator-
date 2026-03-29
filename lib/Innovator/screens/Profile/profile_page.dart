@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Login.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/models/Feed_Content_Model.dart';
 import 'package:innovator/Innovator/screens/CreatePost/createpost.dart';
 import 'package:innovator/Innovator/screens/Feed/Inner_Homepage.dart';
@@ -443,7 +444,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       context: context,
       builder:
           (_) => Dialog(
-            backgroundColor: Colors.white,
+            backgroundColor: AppColors.whitecolor,
             insetPadding: const EdgeInsets.all(16),
             child: Container(
               padding: const EdgeInsets.all(16),
@@ -642,13 +643,13 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                                       width: 16,
                                       height: 16,
                                       child: CircularProgressIndicator(
-                                        color: Colors.white,
+                                        color: AppColors.whitecolor,
                                         strokeWidth: 2,
                                       ),
                                     )
                                     : const Icon(
                                       Icons.camera_alt,
-                                      color: Colors.white,
+                                      color: AppColors.whitecolor,
                                       size: 16,
                                     ),
                           ),
@@ -914,7 +915,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
   void _showMoreOptions(BuildContext context, UserProfileData profile) {
     showModalBottomSheet(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.whitecolor,
       context: context,
       builder:
           (_) => Column(
@@ -929,7 +930,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                     context: context,
                     builder:
                         (_) => AlertDialog(
-                          backgroundColor: Colors.white,
+                          backgroundColor: AppColors.whitecolor,
                           content: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -1039,7 +1040,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.whitecolor,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leading: IconButton(
@@ -1093,7 +1094,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                               ),
                               child: const Text(
                                 'Try Again',
-                                style: TextStyle(color: Colors.white),
+                                style: TextStyle(color: AppColors.whitecolor),
                               ),
                             ),
                           ],
@@ -1181,7 +1182,7 @@ class ProfileInfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 2,
-      color: Colors.white,
+      color: AppColors.whitecolor,
       margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
         padding: const EdgeInsets.all(16),

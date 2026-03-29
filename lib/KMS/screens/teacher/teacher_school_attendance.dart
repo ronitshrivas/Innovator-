@@ -863,7 +863,6 @@
 //   }
 // }
 
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/KMS/core/constants/app_style.dart';
@@ -923,14 +922,14 @@ class TeacherSchoolAttendanceScreen extends ConsumerWidget {
                 ),
               ),
               child: profileAsync.when(
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(
-                  child: Text(
-                    'Error loading schools: $e',
-                    style: const TextStyle(fontFamily: 'Inter'),
-                  ),
-                ),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error:
+                    (e, _) => Center(
+                      child: Text(
+                        'Error loading schools: $e',
+                        style: const TextStyle(fontFamily: 'Inter'),
+                      ),
+                    ),
                 data: (profile) {
                   final schools = profile.earnings.schools;
                   if (schools.isEmpty) {
@@ -938,15 +937,17 @@ class TeacherSchoolAttendanceScreen extends ConsumerWidget {
                       child: Text(
                         'No schools assigned yet.',
                         style: TextStyle(
-                            fontFamily: 'Inter', color: Colors.grey),
+                          fontFamily: 'Inter',
+                          color: Colors.grey,
+                        ),
                       ),
                     );
                   }
                   return ListView.builder(
                     padding: const EdgeInsets.all(20),
                     itemCount: schools.length,
-                    itemBuilder: (context, i) =>
-                        _SchoolCard(school: schools[i]),
+                    itemBuilder:
+                        (context, i) => _SchoolCard(school: schools[i]),
                   );
                 },
               ),
@@ -969,12 +970,12 @@ class _SchoolCard extends StatelessWidget {
         if (school.classrooms.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content:
-                  const Text('No classrooms assigned for this school.'),
+              content: const Text('No classrooms assigned for this school.'),
               backgroundColor: Colors.orange.shade600,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           );
           return;
@@ -1010,8 +1011,11 @@ class _SchoolCard extends StatelessWidget {
                   color: AppStyle.primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(Icons.school_rounded,
-                    color: AppStyle.primaryColor, size: 28),
+                child: Icon(
+                  Icons.school_rounded,
+                  color: AppStyle.primaryColor,
+                  size: 28,
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -1041,33 +1045,35 @@ class _SchoolCard extends StatelessWidget {
                       Wrap(
                         spacing: 6,
                         runSpacing: 4,
-                        children: school.classrooms
-                            .map(
-                              (c) => Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: AppStyle.backgroundColor,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  c.name,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: AppStyle.primaryColor,
-                                    fontWeight: FontWeight.w600,
-                                    fontFamily: 'Inter',
+                        children:
+                            school.classrooms
+                                .map(
+                                  (c) => Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppStyle.backgroundColor,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      c.name,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: AppStyle.primaryColor,
+                                        fontWeight: FontWeight.w600,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
-                            )
-                            .toList(),
+                                )
+                                .toList(),
                       ),
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right_rounded,
-                  color: Colors.grey.shade400),
+              Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
             ],
           ),
         ),
@@ -1083,16 +1089,26 @@ class ClassSelectionScreen extends ConsumerWidget {
   final TeacherSchoolEarning school;
   const ClassSelectionScreen({super.key, required this.school});
 
-  String _monthName(int m) => [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  String _monthName(int m) =>
+      [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
       ][m - 1];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final today = DateTime.now();
-    final dateStr =
-        '${today.day} ${_monthName(today.month)} ${today.year}';
+    final dateStr = '${today.day} ${_monthName(today.month)} ${today.year}';
 
     return Scaffold(
       backgroundColor: AppStyle.primaryColor,
@@ -1130,8 +1146,7 @@ class ClassSelectionScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             child: Text(
               'Select Classroom',
               style: TextStyle(
@@ -1152,8 +1167,7 @@ class ClassSelectionScreen extends ConsumerWidget {
               ),
               child: GridView.builder(
                 padding: const EdgeInsets.all(20),
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   childAspectRatio: 1.3,
                   crossAxisSpacing: 14,
@@ -1163,16 +1177,18 @@ class ClassSelectionScreen extends ConsumerWidget {
                 itemBuilder: (context, i) {
                   final classroom = school.classrooms[i];
                   return GestureDetector(
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => AttendanceMarkingScreen(
-                          schoolName: school.schoolName,
-                          schoolId: school.schoolId,
-                          classroom: classroom,
+                    onTap:
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (_) => AttendanceMarkingScreen(
+                                  schoolName: school.schoolName,
+                                  schoolId: school.schoolId,
+                                  classroom: classroom,
+                                ),
+                          ),
                         ),
-                      ),
-                    ),
                     child: Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -1192,8 +1208,9 @@ class ClassSelectionScreen extends ConsumerWidget {
                             width: 48,
                             height: 48,
                             decoration: BoxDecoration(
-                              color: AppStyle.primaryColor
-                                  .withValues(alpha: 0.1),
+                              color: AppStyle.primaryColor.withValues(
+                                alpha: 0.1,
+                              ),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
@@ -1204,8 +1221,7 @@ class ClassSelectionScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 8),
                           Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
                             child: Text(
                               classroom.name,
                               style: const TextStyle(
@@ -1222,27 +1238,33 @@ class ClassSelectionScreen extends ConsumerWidget {
                           const SizedBox(height: 6),
                           // ── Add Student button per classroom ──
                           GestureDetector(
-                            onTap: () => _showAddStudentSheet(
-                              context,
-                              ref,
-                              schoolId: school.schoolId,
-                              classroomId: classroom.id,
-                              classroomName: classroom.name,
-                            ),
+                            onTap:
+                                () => _showAddStudentSheet(
+                                  context,
+                                  ref,
+                                  schoolId: school.schoolId,
+                                  classroomId: classroom.id,
+                                  classroomName: classroom.name,
+                                ),
                             child: Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 4),
+                                horizontal: 12,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
-                                color: AppStyle.primaryColor
-                                    .withValues(alpha: 0.1),
+                                color: AppStyle.primaryColor.withValues(
+                                  alpha: 0.1,
+                                ),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.person_add_rounded,
-                                      size: 12,
-                                      color: AppStyle.primaryColor),
+                                  Icon(
+                                    Icons.person_add_rounded,
+                                    size: 12,
+                                    color: AppStyle.primaryColor,
+                                  ),
                                   const SizedBox(width: 4),
                                   Text(
                                     'Add Student',
@@ -1281,12 +1303,13 @@ class ClassSelectionScreen extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (sheetContext) => _AddStudentSheet(
-        schoolId: schoolId,
-        classroomId: classroomId,
-        classroomName: classroomName,
-        onAdded: () => ref.refresh(studentsProvider),
-      ),
+      builder:
+          (sheetContext) => _AddStudentSheet(
+            schoolId: schoolId,
+            classroomId: classroomId,
+            classroomName: classroomName,
+            onAdded: () => ref.refresh(studentsProvider),
+          ),
     );
   }
 }
@@ -1328,11 +1351,13 @@ class _AttendanceMarkingScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text(
-              'Please add a comment about what you taught today.'),
+            'Please add a comment about what you taught today.',
+          ),
           backgroundColor: Colors.orange.shade600,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12)),
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       return;
@@ -1368,23 +1393,23 @@ class _AttendanceMarkingScreenState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Row(children: [
-              Icon(Icons.check_circle, color: Colors.white, size: 18),
-              SizedBox(width: 8),
-              Text('Attendance submitted successfully!'),
-            ]),
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white, size: 18),
+                SizedBox(width: 8),
+                Text('Attendance submitted successfully!'),
+              ],
+            ),
             backgroundColor: AppStyle.primaryColor,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
-        Future.delayed(
-          const Duration(milliseconds: 800),
-          () {
-            if (mounted) Navigator.pop(context);
-          },
-        );
+        Future.delayed(const Duration(milliseconds: 800), () {
+          if (mounted) Navigator.pop(context);
+        });
       }
     } catch (e) {
       setState(() => _isSubmitting = false);
@@ -1395,7 +1420,8 @@ class _AttendanceMarkingScreenState
             backgroundColor: Colors.red.shade400,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -1447,29 +1473,31 @@ class _AttendanceMarkingScreenState
         ],
       ),
       body: studentsAsync.when(
-        loading: () => _whiteBody(
-          child: const Center(child: CircularProgressIndicator()),
-        ),
-        error: (e, _) => _whiteBody(
-          child: Center(
-            child: Text(
-              'Error loading students: $e',
-              style: const TextStyle(fontFamily: 'Inter'),
+        loading:
+            () => _whiteBody(
+              child: const Center(child: CircularProgressIndicator()),
             ),
-          ),
-        ),
+        error:
+            (e, _) => _whiteBody(
+              child: Center(
+                child: Text(
+                  'Error loading students: $e',
+                  style: const TextStyle(fontFamily: 'Inter'),
+                ),
+              ),
+            ),
         data: (allStudents) {
           // filter students for this classroom only
-          final students = allStudents
-              .where((s) => s.classroomName == widget.classroom.name)
-              .toList();
+          final students =
+              allStudents
+                  .where((s) => s.classroomName == widget.classroom.name)
+                  .toList();
 
           for (final s in students) {
             _attendanceMap.putIfAbsent(s.id, () => false);
           }
 
-          final presentCount =
-              _attendanceMap.values.where((v) => v).length;
+          final presentCount = _attendanceMap.values.where((v) => v).length;
           final absentCount = students.length - presentCount;
 
           return _whiteBody(
@@ -1479,7 +1507,9 @@ class _AttendanceMarkingScreenState
                 Container(
                   margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 14),
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(18),
@@ -1494,68 +1524,75 @@ class _AttendanceMarkingScreenState
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
+                      _statItem('Total', '${students.length}', Colors.black87),
                       _statItem(
-                          'Total', '${students.length}', Colors.black87),
-                      _statItem('Present', '$presentCount',
-                          Colors.green.shade600),
-                      _statItem('Absent', '$absentCount',
-                          Colors.red.shade400),
+                        'Present',
+                        '$presentCount',
+                        Colors.green.shade600,
+                      ),
+                      _statItem('Absent', '$absentCount', Colors.red.shade400),
                     ],
                   ),
                 ),
 
                 // ── Student list ──
                 Expanded(
-                  child: students.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.people_outline_rounded,
-                                  size: 48, color: Colors.grey.shade300),
-                              const SizedBox(height: 12),
-                              Text(
-                                'No students yet',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  color: Colors.grey.shade400,
-                                  fontSize: 14,
+                  child:
+                      students.isEmpty
+                          ? Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.people_outline_rounded,
+                                  size: 48,
+                                  color: Colors.grey.shade300,
                                 ),
-                              ),
-                              const SizedBox(height: 8),
-                              TextButton.icon(
-                                onPressed: () =>
-                                    _showAddStudentSheet(context),
-                                icon: Icon(Icons.person_add_rounded,
-                                    color: AppStyle.primaryColor,
-                                    size: 16),
-                                label: Text(
-                                  'Add First Student',
+                                const SizedBox(height: 12),
+                                Text(
+                                  'No students yet',
                                   style: TextStyle(
-                                    color: AppStyle.primaryColor,
                                     fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey.shade400,
+                                    fontSize: 14,
                                   ),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 8),
+                                TextButton.icon(
+                                  onPressed:
+                                      () => _showAddStudentSheet(context),
+                                  icon: Icon(
+                                    Icons.person_add_rounded,
+                                    color: AppStyle.primaryColor,
+                                    size: 16,
+                                  ),
+                                  label: Text(
+                                    'Add First Student',
+                                    style: TextStyle(
+                                      color: AppStyle.primaryColor,
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                          : ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                            itemCount: students.length,
+                            itemBuilder: (context, i) {
+                              final student = students[i];
+                              return _StudentAttendanceTile(
+                                student: student,
+                                isPresent: _attendanceMap[student.id] ?? false,
+                                onToggle:
+                                    (val) => setState(
+                                      () => _attendanceMap[student.id] = val,
+                                    ),
+                              );
+                            },
                           ),
-                        )
-                      : ListView.builder(
-                          padding:
-                              const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                          itemCount: students.length,
-                          itemBuilder: (context, i) {
-                            final student = students[i];
-                            return _StudentAttendanceTile(
-                              student: student,
-                              isPresent:
-                                  _attendanceMap[student.id] ?? false,
-                              onToggle: (val) => setState(
-                                  () => _attendanceMap[student.id] = val),
-                            );
-                          },
-                        ),
                 ),
 
                 // ── Comment + Submit ──
@@ -1579,7 +1616,9 @@ class _AttendanceMarkingScreenState
                         controller: _commentController,
                         maxLines: 3,
                         style: const TextStyle(
-                            fontFamily: 'Inter', fontSize: 14),
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                        ),
                         decoration: InputDecoration(
                           hintText:
                               'e.g., Chapter 3: Photosynthesis, Practice problems 1–10...',
@@ -1605,31 +1644,35 @@ class _AttendanceMarkingScreenState
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppStyle.primaryColor,
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14)),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                             elevation: 0,
                           ),
-                          onPressed: _isSubmitting || _submitted
-                              ? null
-                              : () => _submitAttendance(students),
-                          child: _isSubmitting
-                              ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
+                          onPressed:
+                              _isSubmitting || _submitted
+                                  ? null
+                                  : () => _submitAttendance(students),
+                          child:
+                              _isSubmitting
+                                  ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
                                       color: Colors.white,
-                                      strokeWidth: 2),
-                                )
-                              : Text(
-                                  _submitted
-                                      ? 'Submitted ✓'
-                                      : 'Submit Attendance',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                    fontFamily: 'Inter',
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                  : Text(
+                                    _submitted
+                                        ? 'Submitted ✓'
+                                        : 'Submit Attendance',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      fontFamily: 'Inter',
+                                    ),
                                   ),
-                                ),
                         ),
                       ),
                     ],
@@ -1644,30 +1687,38 @@ class _AttendanceMarkingScreenState
   }
 
   Widget _whiteBody({required Widget child}) => Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFFF5F7FA),
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(28),
-            topRight: Radius.circular(28),
-          ),
-        ),
-        child: child,
-      );
+    decoration: const BoxDecoration(
+      color: Color(0xFFF5F7FA),
+      borderRadius: BorderRadius.only(
+        topLeft: Radius.circular(28),
+        topRight: Radius.circular(28),
+      ),
+    ),
+    child: child,
+  );
 
   Widget _statItem(String label, String value, Color color) {
-    return Column(children: [
-      Text(value,
+    return Column(
+      children: [
+        Text(
+          value,
           style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: color,
-              fontFamily: 'Inter')),
-      Text(label,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: color,
+            fontFamily: 'Inter',
+          ),
+        ),
+        Text(
+          label,
           style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade500,
-              fontFamily: 'Inter')),
-    ]);
+            fontSize: 12,
+            color: Colors.grey.shade500,
+            fontFamily: 'Inter',
+          ),
+        ),
+      ],
+    );
   }
 
   void _showAddStudentSheet(BuildContext context) {
@@ -1675,12 +1726,13 @@ class _AttendanceMarkingScreenState
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _AddStudentSheet(
-        schoolId: widget.schoolId,
-        classroomId: widget.classroom.id,
-        classroomName: widget.classroom.name,
-        onAdded: () => ref.refresh(studentsProvider),
-      ),
+      builder:
+          (_) => _AddStudentSheet(
+            schoolId: widget.schoolId,
+            classroomId: widget.classroom.id,
+            classroomName: widget.classroom.name,
+            onAdded: () => ref.refresh(studentsProvider),
+          ),
     );
   }
 }
@@ -1722,8 +1774,9 @@ class _AddStudentSheetState extends ConsumerState<_AddStudentSheet> {
           content: const Text('Please enter a student name.'),
           backgroundColor: Colors.orange.shade600,
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       return;
@@ -1746,15 +1799,18 @@ class _AddStudentSheetState extends ConsumerState<_AddStudentSheet> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(children: [
-              const Icon(Icons.check_circle, color: Colors.white, size: 18),
-              const SizedBox(width: 8),
-              Text('$name added successfully!'),
-            ]),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Text('$name added successfully!'),
+              ],
+            ),
             backgroundColor: AppStyle.primaryColor,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -1767,7 +1823,8 @@ class _AddStudentSheetState extends ConsumerState<_AddStudentSheet> {
             backgroundColor: Colors.red.shade400,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -1832,12 +1889,15 @@ class _AddStudentSheetState extends ConsumerState<_AddStudentSheet> {
               decoration: InputDecoration(
                 labelText: 'Student Name',
                 labelStyle: TextStyle(
-                    fontFamily: 'Inter', color: Colors.grey.shade500),
+                  fontFamily: 'Inter',
+                  color: Colors.grey.shade500,
+                ),
                 hintText: 'e.g., Aarav Sharma',
                 hintStyle: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey.shade400,
-                    fontFamily: 'Inter'),
+                  fontSize: 13,
+                  color: Colors.grey.shade400,
+                  fontFamily: 'Inter',
+                ),
                 filled: true,
                 fillColor: const Color(0xFFF5F7FA),
                 border: OutlineInputBorder(
@@ -1847,11 +1907,15 @@ class _AddStudentSheetState extends ConsumerState<_AddStudentSheet> {
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
                   borderSide: BorderSide(
-                      color: AppStyle.primaryColor, width: 1.5),
+                    color: AppStyle.primaryColor,
+                    width: 1.5,
+                  ),
                 ),
                 contentPadding: const EdgeInsets.all(16),
-                prefixIcon: Icon(Icons.person_outline_rounded,
-                    color: Colors.grey.shade400),
+                prefixIcon: Icon(
+                  Icons.person_outline_rounded,
+                  color: Colors.grey.shade400,
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -1862,26 +1926,30 @@ class _AddStudentSheetState extends ConsumerState<_AddStudentSheet> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppStyle.primaryColor,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                   elevation: 0,
                 ),
                 onPressed: _isLoading ? null : _submit,
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2),
-                      )
-                    : const Text(
-                        'Add Student',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                          fontFamily: 'Inter',
+                child:
+                    _isLoading
+                        ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                        : const Text(
+                          'Add Student',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            fontFamily: 'Inter',
+                          ),
                         ),
-                      ),
               ),
             ),
           ],
@@ -1912,9 +1980,10 @@ class _StudentAttendanceTile extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isPresent
-              ? Colors.green.withValues(alpha: 0.3)
-              : Colors.red.withValues(alpha: 0.15),
+          color:
+              isPresent
+                  ? Colors.green.withValues(alpha: 0.3)
+                  : Colors.red.withValues(alpha: 0.15),
           width: 1.5,
         ),
       ),
@@ -1924,15 +1993,15 @@ class _StudentAttendanceTile extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 20,
-              backgroundColor: isPresent
-                  ? Colors.green.withValues(alpha: 0.12)
-                  : Colors.grey.shade100,
+              backgroundColor:
+                  isPresent
+                      ? Colors.green.withValues(alpha: 0.12)
+                      : Colors.grey.shade100,
               child: Text(
                 student.name[0],
                 style: TextStyle(
-                  color: isPresent
-                      ? Colors.green.shade700
-                      : Colors.grey.shade500,
+                  color:
+                      isPresent ? Colors.green.shade700 : Colors.grey.shade500,
                   fontWeight: FontWeight.bold,
                   fontFamily: 'Inter',
                 ),
@@ -2009,9 +2078,8 @@ class _AttendanceChip extends StatelessWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: isSelected
-              ? color.withValues(alpha: 0.15)
-              : Colors.grey.shade100,
+          color:
+              isSelected ? color.withValues(alpha: 0.15) : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isSelected ? color : Colors.grey.shade300,

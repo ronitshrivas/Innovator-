@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:developer' as developer;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import '../../models/Report_Model.dart';
 
 class ReportsScreen extends StatefulWidget {
@@ -91,7 +92,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           iconSize: 25,
           icon: Icon(
             Icons.arrow_back_ios_new,
-            color: isDarkMode ? Colors.white : Colors.black,
+            color: isDarkMode ? AppColors.whitecolor : Colors.black,
           ),
           onPressed: () => Navigator.of(context).pop(),
         ),
@@ -133,7 +134,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               child: Text('Retry'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Color.fromRGBO(244, 135, 6, 1),
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.whitecolor,
               ),
             ),
           ],

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:video_player/video_player.dart';
 import 'dart:developer' as developer;
 
@@ -323,7 +324,7 @@ class _GalleryVideoPlayerState extends State<GalleryVideoPlayer>
                 Text(
                   'Loading video...',
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: AppColors.whitecolor,
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
@@ -345,11 +346,15 @@ class _GalleryVideoPlayerState extends State<GalleryVideoPlayer>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: Colors.white54, size: 52),
+            const Icon(
+              Icons.error_outline,
+              color: AppColors.whitecolor,
+              size: 52,
+            ),
             const SizedBox(height: 14),
             Text(
               _errorMessage ?? 'Unable to load video',
-              style: const TextStyle(color: Colors.white54, fontSize: 14),
+              style: const TextStyle(color: AppColors.whitecolor, fontSize: 14),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -359,7 +364,7 @@ class _GalleryVideoPlayerState extends State<GalleryVideoPlayer>
               label: const Text('Retry'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFF48706),
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.whitecolor,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
                   vertical: 12,
@@ -435,11 +440,14 @@ class _GalleryVideoPlayerState extends State<GalleryVideoPlayer>
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.55),
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white30, width: 1.5),
+                        border: Border.all(
+                          color: AppColors.whitecolor,
+                          width: 1.5,
+                        ),
                       ),
                       child: Icon(
                         _isPlaying ? Icons.pause : Icons.play_arrow,
-                        color: Colors.white,
+                        color: AppColors.whitecolor,
                         size: 36,
                       ),
                     ),
@@ -486,9 +494,9 @@ class _GalleryVideoPlayerState extends State<GalleryVideoPlayer>
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: LinearProgressIndicator(
                             value: buffered.clamp(0.0, 1.0),
-                            backgroundColor: Colors.white12,
+                            backgroundColor: AppColors.whitecolor,
                             valueColor: const AlwaysStoppedAnimation<Color>(
-                              Colors.white38,
+                              AppColors.whitecolor,
                             ),
                             minHeight: 2,
                           ),
@@ -499,7 +507,7 @@ class _GalleryVideoPlayerState extends State<GalleryVideoPlayer>
                         SliderTheme(
                           data: SliderTheme.of(context).copyWith(
                             activeTrackColor: const Color(0xFFF48706),
-                            inactiveTrackColor: Colors.white24,
+                            inactiveTrackColor: AppColors.whitecolor,
                             thumbColor: const Color(0xFFF48706),
                             thumbShape: const RoundSliderThumbShape(
                               enabledThumbRadius: 7,
@@ -546,7 +554,7 @@ class _GalleryVideoPlayerState extends State<GalleryVideoPlayer>
                               Text(
                                 _format(Duration(milliseconds: posMs.toInt())),
                                 style: const TextStyle(
-                                  color: Colors.white,
+                                  color: AppColors.whitecolor,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -554,7 +562,7 @@ class _GalleryVideoPlayerState extends State<GalleryVideoPlayer>
                               Text(
                                 _format(value.duration),
                                 style: const TextStyle(
-                                  color: Colors.white70,
+                                  color: AppColors.whitecolor,
                                   fontSize: 12,
                                 ),
                               ),
@@ -586,7 +594,7 @@ class _GalleryVideoPlayerState extends State<GalleryVideoPlayer>
           height: 3,
           child: LinearProgressIndicator(
             value: progress.clamp(0.0, 1.0),
-            backgroundColor: Colors.white24,
+            backgroundColor: AppColors.whitecolor,
             valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF48706)),
             minHeight: 3,
           ),
@@ -835,7 +843,7 @@ class _GalleryFullscreenPageState extends State<_GalleryFullscreenPage>
                       height: 3,
                       child: LinearProgressIndicator(
                         value: total > 0 ? (pos / total).clamp(0.0, 1.0) : 0.0,
-                        backgroundColor: Colors.white24,
+                        backgroundColor: AppColors.whitecolor,
                         valueColor: const AlwaysStoppedAnimation<Color>(
                           Color(0xFFF48706),
                         ),
@@ -898,14 +906,17 @@ class _GalleryFullscreenPageState extends State<_GalleryFullscreenPage>
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: AppColors.whitecolor,
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
                   const Spacer(),
                   IconButton(
                     icon: Icon(
                       _isMuted ? Icons.volume_off : Icons.volume_up,
-                      color: Colors.white,
+                      color: AppColors.whitecolor,
                     ),
                     onPressed: _toggleMute,
                   ),
@@ -932,11 +943,14 @@ class _GalleryFullscreenPageState extends State<_GalleryFullscreenPage>
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.55),
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white30, width: 1.5),
+                        border: Border.all(
+                          color: AppColors.whitecolor,
+                          width: 1.5,
+                        ),
                       ),
                       child: Icon(
                         _isPlaying ? Icons.pause : Icons.play_arrow,
-                        color: Colors.white,
+                        color: AppColors.whitecolor,
                         size: 36,
                       ),
                     ),
@@ -980,9 +994,9 @@ class _GalleryFullscreenPageState extends State<_GalleryFullscreenPage>
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: LinearProgressIndicator(
                             value: buffered.clamp(0.0, 1.0),
-                            backgroundColor: Colors.white12,
+                            backgroundColor: AppColors.whitecolor,
                             valueColor: const AlwaysStoppedAnimation<Color>(
-                              Colors.white38,
+                              AppColors.whitecolor,
                             ),
                             minHeight: 2,
                           ),
@@ -993,7 +1007,7 @@ class _GalleryFullscreenPageState extends State<_GalleryFullscreenPage>
                         SliderTheme(
                           data: SliderTheme.of(context).copyWith(
                             activeTrackColor: const Color(0xFFF48706),
-                            inactiveTrackColor: Colors.white24,
+                            inactiveTrackColor: AppColors.whitecolor,
                             thumbColor: const Color(0xFFF48706),
                             thumbShape: const RoundSliderThumbShape(
                               enabledThumbRadius: 7,
@@ -1040,7 +1054,7 @@ class _GalleryFullscreenPageState extends State<_GalleryFullscreenPage>
                               Text(
                                 _format(Duration(milliseconds: posMs.toInt())),
                                 style: const TextStyle(
-                                  color: Colors.white,
+                                  color: AppColors.whitecolor,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -1048,7 +1062,7 @@ class _GalleryFullscreenPageState extends State<_GalleryFullscreenPage>
                               Text(
                                 _format(value.duration),
                                 style: const TextStyle(
-                                  color: Colors.white70,
+                                  color: AppColors.whitecolor,
                                   fontSize: 12,
                                 ),
                               ),
@@ -1090,7 +1104,7 @@ class _CtrlBtn extends StatelessWidget {
           color: Colors.black.withOpacity(0.5),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(icon, color: Colors.white, size: 20),
+        child: Icon(icon, color: AppColors.whitecolor, size: 20),
       ),
     );
   }
@@ -1115,7 +1129,7 @@ class _BigBtn extends StatelessWidget {
           color: Colors.black.withOpacity(0.45),
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, color: Colors.white, size: size),
+        child: Icon(icon, color: AppColors.whitecolor, size: size),
       ),
     );
   }

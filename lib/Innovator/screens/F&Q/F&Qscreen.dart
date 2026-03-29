@@ -220,7 +220,9 @@ class _FAQScreenState extends State<FAQScreen>
                         onPressed: _isSubmitting ? null : _submitSupportTicket,
                         child:
                             _isSubmitting
-                                ? CircularProgressIndicator(color: Colors.white)
+                                ? CircularProgressIndicator(
+                                  color: AppColors.whitecolor,
+                                )
                                 : Text(
                                   'Submit',
                                   style: TextStyle(color: Colors.black),
@@ -280,7 +282,7 @@ class _FAQScreenState extends State<FAQScreen>
           maxLines: maxLines,
           validator: validator,
           decoration: InputDecoration(
-            fillColor: Colors.white,
+            fillColor: AppColors.whitecolor,
             filled: true,
             focusedBorder: OutlineInputBorder(
               borderSide: BorderSide(color: AppColors.background),

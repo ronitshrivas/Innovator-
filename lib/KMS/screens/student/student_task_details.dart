@@ -1,8 +1,8 @@
-import 'package:dotted_border/dotted_border.dart'; 
+import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/KMS/core/constants/app_style.dart';
-import 'package:innovator/KMS/core/constants/mediaquery.dart'; 
+import 'package:innovator/KMS/core/constants/mediaquery.dart';
 
 class StudentTaskDetailsScreen extends ConsumerWidget {
   const StudentTaskDetailsScreen({super.key});
@@ -160,25 +160,25 @@ class StudentTaskDetailsScreen extends ConsumerWidget {
               ),
               SizedBox(height: 20),
               InkWell(
-                onTap: (){},
+                onTap: () {},
                 child: DottedBorder(
                   options: RoundedRectDottedBorderOptions(
                     dashPattern: [10, 5],
                     strokeWidth: 2,
-                
+
                     radius: Radius.circular(10),
                   ),
                   child: Container(
                     height: 130,
                     width: double.infinity,
                     padding: EdgeInsets.only(bottom: 10),
-                
+
                     decoration: BoxDecoration(color: Colors.white),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Image.asset('assets/kms/upload.png'),
-                
+
                         Text(
                           'Click to upload or drag and drop',
                           style: TextStyle(
@@ -186,38 +186,43 @@ class StudentTaskDetailsScreen extends ConsumerWidget {
                             fontSize: 14,
                           ),
                         ),
-                        Text('PDF or DOCX (Max 10MB)', style: TextStyle(
+                        Text(
+                          'PDF or DOCX (Max 10MB)',
+                          style: TextStyle(
                             fontWeight: FontWeight.w500,
                             fontSize: 12,
-                          ),),
+                          ),
+                        ),
                       ],
                     ),
                   ),
                 ),
               ),
-               SizedBox(height: 40),
-               Row(
+              SizedBox(height: 40),
+              Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Text('Cancel', style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),),
-                        SizedBox(width:50,),
-                       ElevatedButton(
-                        
-                        style: ElevatedButton.styleFrom(
-                          elevation: 3,
-                          backgroundColor: AppStyle.primaryColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(13)
-                          )
-                        ),
-                        onPressed: (){}, child: Text('Submit',style: TextStyle(
-                      color: AppStyle.bodyTextColor
-                       ),))
+                  Text(
+                    'Cancel',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  ),
+                  SizedBox(width: 50),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      elevation: 3,
+                      backgroundColor: AppStyle.primaryColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(13),
+                      ),
+                    ),
+                    onPressed: () {},
+                    child: Text(
+                      'Submit',
+                      style: TextStyle(color: AppStyle.bodyTextColor),
+                    ),
+                  ),
                 ],
-               )
+              ),
             ],
           ),
         ),

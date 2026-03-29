@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/constant/api_constants.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/helper/dialogs.dart';
 
 // OTP Verification Screen
@@ -158,10 +159,13 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Reset Password', style: TextStyle(color: Colors.white)),
+        title: Text(
+          'Reset Password',
+          style: TextStyle(color: AppColors.whitecolor),
+        ),
         backgroundColor: Color.fromRGBO(244, 135, 6, 1),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: AppColors.whitecolor),
           onPressed: () => Navigator.pop(context),
         ),
         elevation: 0,
@@ -176,7 +180,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
               child: Center(
                 child: Icon(
                   Icons.lock_open_rounded,
-                  color: Colors.white,
+                  color: AppColors.whitecolor,
                   size: 80,
                 ),
               ),
@@ -325,7 +329,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
-                                color: Colors.white,
+                                color: AppColors.whitecolor,
                                 strokeWidth: 2,
                               ),
                             )
@@ -333,7 +337,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                               'Reset Password',
                               style: TextStyle(
                                 fontSize: 16,
-                                color: Colors.white,
+                                color: AppColors.whitecolor,
                               ),
                             ),
                   ),

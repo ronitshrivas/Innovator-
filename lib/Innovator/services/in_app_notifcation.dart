@@ -5,6 +5,8 @@ import 'package:get/get.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'dart:developer' as developer;
 
+import 'package:innovator/Innovator/constant/app_colors.dart';
+
 class InAppNotificationService {
   static final InAppNotificationService _instance =
       InAppNotificationService._internal();
@@ -278,7 +280,7 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                     maxHeight: 120, // Limit maximum height
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppColors.whitecolor,
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
@@ -295,7 +297,10 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [bgColor.withOpacity(0.05), Colors.white],
+                          colors: [
+                            bgColor.withOpacity(0.05),
+                            AppColors.whitecolor,
+                          ],
                         ),
                       ),
                       child: Column(
@@ -447,7 +452,7 @@ class _NotificationWidgetState extends State<_NotificationWidget>
       ),
       child: Icon(
         widget.icon ?? Icons.notifications_active,
-        color: Colors.white,
+        color: AppColors.whitecolor,
         size: 26,
       ),
     );

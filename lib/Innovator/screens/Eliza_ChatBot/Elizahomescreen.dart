@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -360,7 +361,7 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
         SnackBar(
           content: Row(
             children: [
-              Icon(Icons.check_circle, color: Colors.white, size: 18),
+              Icon(Icons.check_circle, color: AppColors.whitecolor, size: 18),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -578,7 +579,7 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
         primaryColor: primaryOrange,
         scaffoldBackgroundColor:
             isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-        cardColor: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
+        cardColor: isDarkMode ? const Color(0xFF1E293B) : AppColors.whitecolor,
         textTheme: const TextTheme(
           bodyLarge: TextStyle(fontFamily: 'Inter', fontSize: 16),
           bodyMedium: TextStyle(fontFamily: 'Inter', fontSize: 14),
@@ -629,7 +630,9 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
                                           ? const Color(
                                             0xFF1E293B,
                                           ).withOpacity(0.7)
-                                          : Colors.white.withOpacity(0.7),
+                                          : AppColors.whitecolor.withOpacity(
+                                            0.7,
+                                          ),
                                   borderRadius: const BorderRadius.vertical(
                                     top: Radius.circular(24),
                                   ),
@@ -707,10 +710,10 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: AppColors.whitecolor.withOpacity(0.2),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: Colors.white.withOpacity(0.3),
+                color: AppColors.whitecolor.withOpacity(0.3),
                 width: 2,
               ),
             ),
@@ -718,7 +721,7 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
               onPressed: () {
                 Navigator.pop(context);
               },
-              icon: Icon(Icons.psychology_rounded, color: Colors.white),
+              icon: Icon(Icons.psychology_rounded, color: AppColors.whitecolor),
             ),
           ),
           const SizedBox(width: 16),
@@ -732,7 +735,7 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
                     fontFamily: 'Inter',
                     fontSize: 18,
                     //fontWeight: FontWeight.w500,
-                    color: Colors.white,
+                    color: AppColors.whitecolor,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -742,7 +745,7 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
                     fontFamily: 'Inter',
                     fontSize: 14,
                     //fontWeight: FontWeight.w500,
-                    color: Colors.white.withOpacity(0.9),
+                    color: AppColors.whitecolor.withOpacity(0.9),
                   ),
                 ),
               ],
@@ -750,13 +753,13 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
           ),
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: AppColors.whitecolor.withOpacity(0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: IconButton(
               icon: const Icon(
                 Icons.cleaning_services_rounded,
-                color: Colors.white,
+                color: AppColors.whitecolor,
               ),
               onPressed: _clearMessages,
               tooltip: 'Clear Chat History',
@@ -773,7 +776,7 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
       SnackBar(
         content: Row(
           children: [
-            Icon(Icons.check_circle, color: Colors.white, size: 18),
+            Icon(Icons.check_circle, color: AppColors.whitecolor, size: 18),
             const SizedBox(width: 8),
             Text('Reply copied to clipboard'),
           ],
@@ -816,7 +819,7 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
               ),
               child: const Icon(
                 Icons.psychology_rounded,
-                color: Colors.white,
+                color: AppColors.whitecolor,
                 size: 20,
               ),
             ),
@@ -932,9 +935,9 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
                         style: TextStyle(
                           color:
                               message.isUser
-                                  ? Colors.white
+                                  ? AppColors.whitecolor
                                   : isDarkMode
-                                  ? Colors.white
+                                  ? AppColors.whitecolor
                                   : const Color(0xFF1E293B),
                           fontSize: 16,
                           fontFamily: 'Inter Thin',
@@ -991,7 +994,7 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
                               border: Border.all(
                                 color:
                                     isDarkMode
-                                        ? Colors.white.withOpacity(0.1)
+                                        ? AppColors.whitecolor.withOpacity(0.1)
                                         : Colors.black.withOpacity(0.1),
                               ),
                             ),
@@ -1003,7 +1006,7 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
                                   size: 14,
                                   color:
                                       isDarkMode
-                                          ? Colors.white70
+                                          ? AppColors.whitecolor
                                           : const Color(0xFF64748B),
                                 ),
                                 const SizedBox(width: 4),
@@ -1012,7 +1015,7 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
                                   style: TextStyle(
                                     color:
                                         isDarkMode
-                                            ? Colors.white70
+                                            ? AppColors.whitecolor
                                             : const Color(0xFF64748B),
                                     fontSize: 12,
                                     fontFamily: 'Inter Thin',
@@ -1055,7 +1058,9 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
                                     message.isReported
                                         ? Colors.red.withOpacity(0.3)
                                         : (isDarkMode
-                                            ? Colors.white.withOpacity(0.1)
+                                            ? AppColors.whitecolor.withOpacity(
+                                              0.1,
+                                            )
                                             : Colors.black.withOpacity(0.1)),
                               ),
                             ),
@@ -1071,7 +1076,7 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
                                       message.isReported
                                           ? Colors.red
                                           : (isDarkMode
-                                              ? Colors.white70
+                                              ? AppColors.whitecolor
                                               : const Color(0xFF64748B)),
                                 ),
                                 const SizedBox(width: 4),
@@ -1082,7 +1087,7 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
                                         message.isReported
                                             ? Colors.red
                                             : (isDarkMode
-                                                ? Colors.white70
+                                                ? AppColors.whitecolor
                                                 : const Color(0xFF64748B)),
                                     fontSize: 12,
                                     fontFamily: 'Inter Thin',
@@ -1118,7 +1123,7 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
               ),
               child: const Icon(
                 Icons.person_rounded,
-                color: Colors.white,
+                color: AppColors.whitecolor,
                 size: 20,
               ),
             ),
@@ -1133,7 +1138,7 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
+        color: isDarkMode ? const Color(0xFF1E293B) : AppColors.whitecolor,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -1158,7 +1163,8 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
               minLines: 1,
               enabled: !_isLoading,
               style: TextStyle(
-                color: isDarkMode ? Colors.white : const Color(0xFF1E293B),
+                color:
+                    isDarkMode ? AppColors.whitecolor : const Color(0xFF1E293B),
                 fontFamily: 'Inter Thin',
                 fontSize: 14,
               ),
@@ -1202,7 +1208,7 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
               borderRadius: BorderRadius.circular(24),
             ),
             child: IconButton(
-              icon: const Icon(Icons.send_rounded, color: Colors.white),
+              icon: const Icon(Icons.send_rounded, color: AppColors.whitecolor),
               onPressed: _isLoading ? null : _sendTextMessage,
             ),
           ),
@@ -1242,12 +1248,13 @@ class _ReportDialogState extends State<ReportDialog> {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return AlertDialog(
-      backgroundColor: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
+      backgroundColor:
+          isDarkMode ? const Color(0xFF1E293B) : AppColors.whitecolor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Text(
         'Report Content',
         style: TextStyle(
-          color: isDarkMode ? Colors.white : const Color(0xFF1E293B),
+          color: isDarkMode ? AppColors.whitecolor : const Color(0xFF1E293B),
           fontFamily: 'Inter Thin',
           //fontWeight: FontWeight.w400,
         ),
@@ -1260,7 +1267,8 @@ class _ReportDialogState extends State<ReportDialog> {
             Text(
               'Please select a reason for reporting this content:',
               style: TextStyle(
-                color: isDarkMode ? Colors.white70 : const Color(0xFF64748B),
+                color:
+                    isDarkMode ? AppColors.whitecolor : const Color(0xFF64748B),
                 fontFamily: 'Inter Thin',
                 fontSize: 14,
               ),
@@ -1275,7 +1283,7 @@ class _ReportDialogState extends State<ReportDialog> {
                       size: 20,
                       color:
                           isDarkMode
-                              ? Colors.white70
+                              ? AppColors.whitecolor
                               : _ElizaChatScreenState.primaryOrange,
                     ),
                     const SizedBox(width: 8),
@@ -1285,7 +1293,7 @@ class _ReportDialogState extends State<ReportDialog> {
                         style: TextStyle(
                           color:
                               isDarkMode
-                                  ? Colors.white
+                                  ? AppColors.whitecolor
                                   : const Color(0xFF1E293B),
                           fontFamily: 'Inter Thin',
                           //fontWeight: FontWeight.w600,
@@ -1298,7 +1306,9 @@ class _ReportDialogState extends State<ReportDialog> {
                   category.description,
                   style: TextStyle(
                     color:
-                        isDarkMode ? Colors.white70 : const Color(0xFF64748B),
+                        isDarkMode
+                            ? AppColors.whitecolor
+                            : const Color(0xFF64748B),
                     fontFamily: 'Inter Thin',
                     fontSize: 12,
                   ),
@@ -1318,7 +1328,8 @@ class _ReportDialogState extends State<ReportDialog> {
               controller: _additionalInfoController,
               maxLines: 3,
               style: TextStyle(
-                color: isDarkMode ? Colors.white : const Color(0xFF1E293B),
+                color:
+                    isDarkMode ? AppColors.whitecolor : const Color(0xFF1E293B),
                 fontFamily: 'Inter Thin',
               ),
               decoration: InputDecoration(
@@ -1348,7 +1359,8 @@ class _ReportDialogState extends State<ReportDialog> {
           child: Text(
             'Cancel',
             style: TextStyle(
-              color: isDarkMode ? Colors.white70 : const Color(0xFF64748B),
+              color:
+                  isDarkMode ? AppColors.whitecolor : const Color(0xFF64748B),
               fontFamily: 'Inter Thin',
             ),
           ),
@@ -1375,7 +1387,7 @@ class _ReportDialogState extends State<ReportDialog> {
           child: const Text(
             'Submit Report',
             style: TextStyle(
-              color: Colors.white,
+              color: AppColors.whitecolor,
               fontFamily: 'Inter Thin',
               //fontWeight: FontWeight.w600,
             ),
@@ -1420,7 +1432,7 @@ class BackgroundPainter extends CustomPainter {
         Paint()
           ..color =
               isDarkMode
-                  ? Colors.white.withOpacity(0.05)
+                  ? AppColors.whitecolor.withOpacity(0.05)
                   : _ElizaChatScreenState.primaryOrange.withOpacity(0.05)
           ..style = PaintingStyle.fill;
 

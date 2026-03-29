@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 
 class CustomFAB extends StatefulWidget {
   final String gifAsset; // Changed from lottieAsset to gifAsset
@@ -25,7 +26,7 @@ class CustomFAB extends StatefulWidget {
     required this.gifAsset, // Changed parameter name
     required this.onPressed,
     this.backgroundColor = Colors.blue,
-    this.splashColor = Colors.white24,
+    this.splashColor = AppColors.whitecolor,
     this.size = 56.0,
     this.shape = BoxShape.circle,
     this.margin = const EdgeInsets.all(16.0),
@@ -34,7 +35,7 @@ class CustomFAB extends StatefulWidget {
     this.showBadge = false,
     this.badgeText = "",
     this.badgeColor = Colors.red,
-    this.badgeTextColor = Colors.white,
+    this.badgeTextColor = AppColors.whitecolor,
     this.gifSize = 300.0, // Changed parameter name
     this.badgeSize = 20.0,
     this.badgeTextSize = 10.0,
@@ -46,7 +47,8 @@ class CustomFAB extends StatefulWidget {
   _CustomFABState createState() => _CustomFABState();
 }
 
-class _CustomFABState extends State<CustomFAB> with SingleTickerProviderStateMixin {
+class _CustomFABState extends State<CustomFAB>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
 
@@ -57,12 +59,9 @@ class _CustomFABState extends State<CustomFAB> with SingleTickerProviderStateMix
       vsync: this,
       duration: widget.animationDuration,
     );
-    
+
     _scaleAnimation = Tween<double>(begin: 1.0, end: 0.9).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeInOut,
-      ),
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
   }
 
@@ -101,11 +100,12 @@ class _CustomFABState extends State<CustomFAB> with SingleTickerProviderStateMix
               // Main FAB
               Material(
                 elevation: widget.elevation,
-                shape: widget.shape == BoxShape.circle
-                    ? const CircleBorder()
-                    : RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16.0),
-                      ),
+                shape:
+                    widget.shape == BoxShape.circle
+                        ? const CircleBorder()
+                        : RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16.0),
+                        ),
                 color: widget.backgroundColor,
                 child: Container(
                   width: widget.size,
@@ -125,7 +125,7 @@ class _CustomFABState extends State<CustomFAB> with SingleTickerProviderStateMix
                   ),
                 ),
               ),
-              
+
               // Badge
               if (widget.showBadge)
                 Positioned(
@@ -138,21 +138,22 @@ class _CustomFABState extends State<CustomFAB> with SingleTickerProviderStateMix
                       color: widget.badgeColor,
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: Colors.white,
+                        color: AppColors.whitecolor,
                         width: 1.5,
                       ),
                     ),
                     child: Center(
-                      child: widget.badgeText.isNotEmpty
-                          ? Text(
-                              widget.badgeText,
-                              style: TextStyle(
-                                color: widget.badgeTextColor,
-                                fontSize: widget.badgeTextSize,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            )
-                          : Container(),
+                      child:
+                          widget.badgeText.isNotEmpty
+                              ? Text(
+                                widget.badgeText,
+                                style: TextStyle(
+                                  color: widget.badgeTextColor,
+                                  fontSize: widget.badgeTextSize,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              )
+                              : Container(),
                     ),
                   ),
                 ),
@@ -198,7 +199,7 @@ class NotificationFAB extends StatelessWidget {
   final Color backgroundColor;
 
   const NotificationFAB({
-    Key? key, 
+    Key? key,
     required this.hasNotification,
     required this.gifAsset, // Changed parameter name
     required this.onPressed,

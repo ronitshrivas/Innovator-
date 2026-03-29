@@ -104,7 +104,6 @@
 //           ),
 
 //           const SizedBox(height: 32),
- 
 
 // Row(
 //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1146,9 +1145,6 @@
 //   }
 // }
 
-
-
-
 // class SessionPreviewTile extends StatelessWidget {
 //   final TeacherSessionModel session;
 //   const SessionPreviewTile({required this.session});
@@ -1218,8 +1214,6 @@
 //   }
 // }
 
-
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/KMS/core/constants/app_style.dart';
@@ -1229,7 +1223,7 @@ import 'package:innovator/KMS/provider/coordinator_provider.dart';
 import 'package:innovator/KMS/screens/constant_screen/custom_scroll.dart';
 import 'package:innovator/KMS/screens/coordinator/coordinator_attendance_approval_screen.dart';
 import 'package:innovator/KMS/screens/coordinator/coordinator_shared_widget.dart';
-import 'package:innovator/KMS/screens/coordinator/coordinator_teacher_notes_screen.dart'; 
+import 'package:innovator/KMS/screens/coordinator/coordinator_teacher_notes_screen.dart';
 
 final attendanceFilterProvider = StateProvider<String>((ref) => 'ALL');
 
@@ -1261,28 +1255,27 @@ class CoordinatorDashboardScreen extends ConsumerWidget {
           // ══════════════════════════════
           _SectionHeader(
             title: 'Teacher Attendance',
-            onViewAll: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) =>
-                    const CoordinatorAttendanceApprovalScreen(),
-              ),
-            ),
-            onRefresh: () =>
-                ref.refresh(coordinatorAttendanceProvider),
+            onViewAll:
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const CoordinatorAttendanceApprovalScreen(),
+                  ),
+                ),
+            onRefresh: () => ref.refresh(coordinatorAttendanceProvider),
             color: AppStyle.primaryColor,
           ),
           const SizedBox(height: 14),
 
           attendanceAsync.when(
-            loading: () => const Center(
-              child: Padding(
-                padding: EdgeInsets.all(20),
-                child: CircularProgressIndicator(),
-              ),
-            ),
-            error: (e, _) =>
-                CoordinatorErrorBox(message: 'Failed to load: $e'),
+            loading:
+                () => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+            error: (e, _) => CoordinatorErrorBox(message: 'Failed to load: $e'),
             data: (data) {
               if (data.attendances.isEmpty) {
                 return const CoordinatorEmptyState(
@@ -1293,28 +1286,34 @@ class CoordinatorDashboardScreen extends ConsumerWidget {
               final preview = data.attendances.take(3).toList();
               return Column(
                 children: [
-                  ...preview.map((item) => _AttendancePreviewTile(
-                        item: item,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                CoordinatorAttendanceDetailScreen(
-                                    item: item),
+                  ...preview.map(
+                    (item) => _AttendancePreviewTile(
+                      item: item,
+                      onTap:
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => CoordinatorAttendanceDetailScreen(
+                                    item: item,
+                                  ),
+                            ),
                           ),
-                        ),
-                      )),
+                    ),
+                  ),
                   if (data.total > 3)
                     _ViewMoreButton(
                       label: 'View all ${data.total} records',
                       color: AppStyle.primaryColor,
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              const CoordinatorAttendanceApprovalScreen(),
-                        ),
-                      ),
+                      onTap:
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (_) =>
+                                      const CoordinatorAttendanceApprovalScreen(),
+                            ),
+                          ),
                     ),
                 ],
               );
@@ -1328,26 +1327,27 @@ class CoordinatorDashboardScreen extends ConsumerWidget {
           // ══════════════════════════════
           _SectionHeader(
             title: 'Teaching Logs',
-            onViewAll: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const CoordinatorSessionsScreen(),
-              ),
-            ),
+            onViewAll:
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const CoordinatorSessionsScreen(),
+                  ),
+                ),
             onRefresh: () => ref.refresh(teacherSessionsProvider),
             color: AppStyle.primaryColor,
           ),
           const SizedBox(height: 14),
 
           sessionsAsync.when(
-            loading: () => const Center(
-              child: Padding(
-                padding: EdgeInsets.all(20),
-                child: CircularProgressIndicator(),
-              ),
-            ),
-            error: (e, _) =>
-                CoordinatorErrorBox(message: 'Failed to load: $e'),
+            loading:
+                () => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+            error: (e, _) => CoordinatorErrorBox(message: 'Failed to load: $e'),
             data: (data) {
               if (data.sessions.isEmpty) {
                 return const CoordinatorEmptyState(
@@ -1358,29 +1358,32 @@ class CoordinatorDashboardScreen extends ConsumerWidget {
               final preview = data.sessions.take(3).toList();
               return Column(
                 children: [
-                  ...preview.map((s) => _SessionPreviewTile(
-                        session: s,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                CoordinatorSessionDetailScreen(
-                                    session: s),
+                  ...preview.map(
+                    (s) => _SessionPreviewTile(
+                      session: s,
+                      onTap:
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => CoordinatorSessionDetailScreen(
+                                    session: s,
+                                  ),
+                            ),
                           ),
-                        ),
-                      )),
+                    ),
+                  ),
                   if (data.totalSessions > 3)
                     _ViewMoreButton(
-                      label:
-                          'View all ${data.totalSessions} logs',
+                      label: 'View all ${data.totalSessions} logs',
                       color: const Color(0xFF7C3AED),
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              const CoordinatorSessionsScreen(),
-                        ),
-                      ),
+                      onTap:
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const CoordinatorSessionsScreen(),
+                            ),
+                          ),
                     ),
                 ],
               );
@@ -1396,12 +1399,10 @@ class CoordinatorDashboardScreen extends ConsumerWidget {
   Widget _buildStatsGrid(CoordinatorAttendanceResponse? data) {
     final total = data?.total ?? 0;
     final pending = data?.pending ?? 0;
-    final approved = data != null
-        ? data.attendances.where((a) => a.isApproved).length
-        : 0;
-    final rejected = data != null
-        ? data.attendances.where((a) => a.isRejected).length
-        : 0;
+    final approved =
+        data != null ? data.attendances.where((a) => a.isApproved).length : 0;
+    final rejected =
+        data != null ? data.attendances.where((a) => a.isRejected).length : 0;
 
     return GridView(
       shrinkWrap: true,
@@ -1415,26 +1416,30 @@ class CoordinatorDashboardScreen extends ConsumerWidget {
       ),
       children: [
         _StatCard(
-            label: 'Total',
-            value: '$total',
-            icon: Icons.calendar_today_rounded,
-            color: AppStyle.primaryColor),
+          label: 'Total',
+          value: '$total',
+          icon: Icons.calendar_today_rounded,
+          color: AppStyle.primaryColor,
+        ),
         _StatCard(
-            label: 'Pending',
-            value: '$pending',
-            icon: Icons.pending_actions_rounded,
-            color: const Color(0xFFE85D04),
-            hasBadge: pending > 0),
+          label: 'Pending',
+          value: '$pending',
+          icon: Icons.pending_actions_rounded,
+          color: const Color(0xFFE85D04),
+          hasBadge: pending > 0,
+        ),
         _StatCard(
-            label: 'Approved',
-            value: '$approved',
-            icon: Icons.check_circle_rounded,
-            color: const Color(0xFF059669)),
+          label: 'Approved',
+          value: '$approved',
+          icon: Icons.check_circle_rounded,
+          color: const Color(0xFF059669),
+        ),
         _StatCard(
-            label: 'Rejected',
-            value: '$rejected',
-            icon: Icons.cancel_rounded,
-            color: Colors.red),
+          label: 'Rejected',
+          value: '$rejected',
+          icon: Icons.cancel_rounded,
+          color: Colors.red,
+        ),
       ],
     );
   }
@@ -1475,7 +1480,9 @@ class _SectionHeader extends StatelessWidget {
               onTap: onViewAll,
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 6),
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
@@ -1516,17 +1523,17 @@ class _AttendancePreviewTile extends StatelessWidget {
   final CoordinatorAttendanceModel item;
   final VoidCallback onTap;
 
-  const _AttendancePreviewTile(
-      {required this.item, required this.onTap});
+  const _AttendancePreviewTile({required this.item, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final isPending = item.status == 'PENDING';
     final isApproved = item.status == 'APPROVED';
 
-    final statusColor = isPending
-        ? const Color(0xFFE85D04)
-        : isApproved
+    final statusColor =
+        isPending
+            ? const Color(0xFFE85D04)
+            : isApproved
             ? const Color(0xFF059669)
             : Colors.red;
 
@@ -1550,14 +1557,14 @@ class _AttendancePreviewTile extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 20,
-              backgroundColor:
-                  AppStyle.primaryColor.withValues(alpha: 0.1),
+              backgroundColor: AppStyle.primaryColor.withValues(alpha: 0.1),
               child: Text(
                 item.teacherName[0],
                 style: TextStyle(
-                    color: AppStyle.primaryColor,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Inter'),
+                  color: AppStyle.primaryColor,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Inter',
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -1565,17 +1572,23 @@ class _AttendancePreviewTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(item.teacherName,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                          fontFamily: 'Inter',
-                          color: Colors.black87)),
-                  Text(item.schoolName,
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade500,
-                          fontFamily: 'Inter')),
+                  Text(
+                    item.teacherName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      fontFamily: 'Inter',
+                      color: Colors.black87,
+                    ),
+                  ),
+                  Text(
+                    item.schoolName,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade500,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1585,14 +1598,17 @@ class _AttendancePreviewTile extends StatelessWidget {
                 Text(
                   '${item.date.day}/${item.date.month}',
                   style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey.shade400,
-                      fontFamily: 'Inter'),
+                    fontSize: 11,
+                    color: Colors.grey.shade400,
+                    fontFamily: 'Inter',
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -1600,17 +1616,21 @@ class _AttendancePreviewTile extends StatelessWidget {
                   child: Text(
                     item.status,
                     style: TextStyle(
-                        fontSize: 10,
-                        color: statusColor,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w700),
+                      fontSize: 10,
+                      color: statusColor,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
             ),
             const SizedBox(width: 8),
-            Icon(Icons.chevron_right_rounded,
-                size: 18, color: Colors.grey.shade300),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
+              color: Colors.grey.shade300,
+            ),
           ],
         ),
       ),
@@ -1624,8 +1644,7 @@ class _SessionPreviewTile extends StatelessWidget {
   final TeacherSessionModel session;
   final VoidCallback onTap;
 
-  const _SessionPreviewTile(
-      {required this.session, required this.onTap});
+  const _SessionPreviewTile({required this.session, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -1651,29 +1670,34 @@ class _SessionPreviewTile extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-              
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.menu_book_rounded,
-                color: AppStyle.primaryColor),
+              child: const Icon(
+                Icons.menu_book_rounded,
+                color: AppStyle.primaryColor,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(session.teacherName,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                          fontFamily: 'Inter',
-                          color: Colors.black87)),
+                  Text(
+                    session.teacherName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      fontFamily: 'Inter',
+                      color: Colors.black87,
+                    ),
+                  ),
                   Text(
                     session.notes,
                     style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade500,
-                        fontFamily: 'Inter'),
+                      fontSize: 12,
+                      color: Colors.grey.shade500,
+                      fontFamily: 'Inter',
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -1684,14 +1708,20 @@ class _SessionPreviewTile extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(session.date,
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade400,
-                        fontFamily: 'Inter')),
+                Text(
+                  session.date,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade400,
+                    fontFamily: 'Inter',
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Icon(Icons.chevron_right_rounded,
-                    size: 18, color: Colors.grey.shade300),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: Colors.grey.shade300,
+                ),
               ],
             ),
           ],
@@ -1708,8 +1738,11 @@ class _ViewMoreButton extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
 
-  const _ViewMoreButton(
-      {required this.label, required this.color, required this.onTap});
+  const _ViewMoreButton({
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1765,9 +1798,10 @@ class _StatCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 12,
-              offset: const Offset(0, 4)),
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Padding(
@@ -1792,24 +1826,32 @@ class _StatCard extends StatelessWidget {
                     width: 10,
                     height: 10,
                     decoration: const BoxDecoration(
-                        color: Colors.red, shape: BoxShape.circle),
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
                   ),
               ],
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(value,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                        fontFamily: 'Inter',
-                        color: Colors.black87)),
-                Text(label,
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade500,
-                        fontFamily: 'Inter')),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    fontFamily: 'Inter',
+                    color: Colors.black87,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade500,
+                    fontFamily: 'Inter',
+                  ),
+                ),
               ],
             ),
           ],
@@ -1836,8 +1878,9 @@ class _StatsGridSkeleton extends StatelessWidget {
         4,
         (_) => Container(
           decoration: BoxDecoration(
-              color: Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(20)),
+            color: Colors.grey.shade200,
+            borderRadius: BorderRadius.circular(20),
+          ),
         ),
       ),
     );

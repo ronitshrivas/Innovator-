@@ -36,10 +36,10 @@ class _ForgotPasswordScreen extends ConsumerState<ForgotPasswordScreen> {
           child: Center(
             child: Padding(
               padding: EdgeInsets.only(
-                      top: context.screenHeight*0.02,
-                bottom: context.screenHeight*.05,
-                right: context.screenWidth*0.05,
-               left:   context.screenWidth*0.05,
+                top: context.screenHeight * 0.02,
+                bottom: context.screenHeight * .05,
+                right: context.screenWidth * 0.05,
+                left: context.screenWidth * 0.05,
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(24),
@@ -90,10 +90,7 @@ class _ForgotPasswordScreen extends ConsumerState<ForgotPasswordScreen> {
 
                               icon: Icons.mail_outline,
                             ),
-                              SizedBox(height: context.screenHeight*0.03),
-
-               
-                           
+                            SizedBox(height: context.screenHeight * 0.03),
 
                             //Password Reset Button
                             SizedBox(
@@ -132,7 +129,7 @@ class _ForgotPasswordScreen extends ConsumerState<ForgotPasswordScreen> {
                                         ),
                               ),
                             ),
-                            SizedBox(height: context.screenHeight*0.03,),
+                            SizedBox(height: context.screenHeight * 0.03),
 
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -153,7 +150,7 @@ class _ForgotPasswordScreen extends ConsumerState<ForgotPasswordScreen> {
                                       ),
                                     );
                                   },
-                                  child:  Text(
+                                  child: Text(
                                     'Login',
                                     style: TextStyle(
                                       color: Colors.black,
@@ -165,7 +162,7 @@ class _ForgotPasswordScreen extends ConsumerState<ForgotPasswordScreen> {
                                 ),
                               ],
                             ),
-                            SizedBox(height: context.screenHeight*0.07,)
+                            SizedBox(height: context.screenHeight * 0.07),
                           ],
                         ),
                       ),
@@ -198,7 +195,7 @@ class _ForgotPasswordScreen extends ConsumerState<ForgotPasswordScreen> {
             color: Colors.black,
           ),
         ),
-        SizedBox(height: 5,),
+        SizedBox(height: 5),
         Consumer(
           builder: (context, ref, child) {
             final obscureText =

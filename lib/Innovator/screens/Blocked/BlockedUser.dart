@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:developer' as developer;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/models/Blocked_Model.dart';
 
 class BlockedUsersScreen extends StatefulWidget {
@@ -138,7 +139,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                 onPressed: () => Navigator.pop(context, true),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _orange,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.whitecolor,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20,
                     vertical: 10,
@@ -185,7 +186,11 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.check_circle, color: Colors.white, size: 18),
+                const Icon(
+                  Icons.check_circle,
+                  color: AppColors.whitecolor,
+                  size: 18,
+                ),
                 const SizedBox(width: 10),
                 Text(
                   '@${user.username} has been unblocked',
@@ -249,12 +254,12 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
         //       : 'Blocked Users',
         //   style: const TextStyle(
         //     fontWeight: FontWeight.bold,
-        //     color: Colors.white,
+        //     color: AppColors.whitecolor,
         //   ),
         // ),
         // actions: [
         //   IconButton(
-        //     icon: const Icon(Icons.refresh, color: Colors.white),
+        //     icon: const Icon(Icons.refresh, color: AppColors.whitecolor),
         //     onPressed: _fetchBlockedUsers,
         //   ),
         // ],
@@ -304,7 +309,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
           label: const Text('Retry'),
           style: ElevatedButton.styleFrom(
             backgroundColor: _orange,
-            foregroundColor: Colors.white,
+            foregroundColor: AppColors.whitecolor,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
@@ -385,7 +390,7 @@ class _BlockedUserCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.whitecolor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -574,7 +579,7 @@ class _BlockedUserCard extends StatelessWidget {
           initial,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: AppColors.whitecolor,
             fontSize: 20,
           ),
         ),
@@ -591,7 +596,7 @@ class _BlockedUserCard extends StatelessWidget {
               initial,
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: AppColors.whitecolor,
                 fontSize: 20,
               ),
             ),

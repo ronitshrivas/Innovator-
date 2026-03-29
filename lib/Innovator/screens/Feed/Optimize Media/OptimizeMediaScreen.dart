@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/screens/Feed/Inner_Homepage.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
@@ -118,13 +119,13 @@ class _OptimizedMediaGalleryScreenState
                   children: [
                     const Icon(
                       Icons.error_outline,
-                      color: Colors.white,
+                      color: AppColors.whitecolor,
                       size: 48,
                     ),
                     const SizedBox(height: 16),
                     Text(
                       errorMessage,
-                      style: const TextStyle(color: Colors.white),
+                      style: const TextStyle(color: AppColors.whitecolor),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -180,17 +181,23 @@ class _OptimizedMediaGalleryScreenState
                 backgroundColor: Colors.transparent,
                 elevation: 0,
                 leading: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  icon: const Icon(
+                    Icons.arrow_back,
+                    color: AppColors.whitecolor,
+                  ),
                   onPressed: () => Navigator.pop(context),
                 ),
                 title: Text(
                   '${_currentIndex + 1}/${widget.mediaUrls.length}',
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: AppColors.whitecolor),
                 ),
                 centerTitle: true,
                 actions: [
                   IconButton(
-                    icon: const Icon(Icons.fullscreen, color: Colors.white),
+                    icon: const Icon(
+                      Icons.fullscreen,
+                      color: AppColors.whitecolor,
+                    ),
                     onPressed: _toggleFullScreen,
                   ),
                 ],
@@ -234,7 +241,9 @@ class _OptimizedMediaGalleryScreenState
               child: Center(
                 child: Text(
                   '${index + 1}',
-                  style: TextStyle(color: Colors.white.withOpacity(0.3)),
+                  style: TextStyle(
+                    color: AppColors.whitecolor.withOpacity(0.3),
+                  ),
                 ),
               ),
             );
@@ -277,11 +286,11 @@ class _OptimizedMediaGalleryScreenState
           fit: BoxFit.contain,
           placeholder:
               (context, url) => const Center(
-                child: CircularProgressIndicator(color: Colors.white),
+                child: CircularProgressIndicator(color: AppColors.whitecolor),
               ),
           errorWidget:
               (context, url, error) => const Center(
-                child: Icon(Icons.error, color: Colors.white, size: 48),
+                child: Icon(Icons.error, color: AppColors.whitecolor, size: 48),
               ),
         ),
       ),
@@ -294,11 +303,11 @@ class _OptimizedMediaGalleryScreenState
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const CircularProgressIndicator(color: Colors.white),
+            const CircularProgressIndicator(color: AppColors.whitecolor),
             const SizedBox(height: 16),
             const Text(
               'Loading video...',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: AppColors.whitecolor),
             ),
           ],
         ),
@@ -310,16 +319,20 @@ class _OptimizedMediaGalleryScreenState
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, color: Colors.white, size: 48),
+            const Icon(
+              Icons.error_outline,
+              color: AppColors.whitecolor,
+              size: 48,
+            ),
             const SizedBox(height: 16),
             const Text(
               'Error loading video',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: AppColors.whitecolor),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
+                backgroundColor: AppColors.whitecolor,
                 foregroundColor: Colors.black,
               ),
               onPressed: () {
@@ -331,8 +344,8 @@ class _OptimizedMediaGalleryScreenState
             const SizedBox(height: 8),
             TextButton(
               style: TextButton.styleFrom(
-                backgroundColor: Colors.white.withOpacity(0.2),
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.whitecolor.withOpacity(0.2),
+                foregroundColor: AppColors.whitecolor,
               ),
               onPressed: () {
                 final url = widget.mediaUrls[_currentIndex];
@@ -350,17 +363,21 @@ class _OptimizedMediaGalleryScreenState
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, color: Colors.white, size: 48),
+            const Icon(
+              Icons.error_outline,
+              color: AppColors.whitecolor,
+              size: 48,
+            ),
             const SizedBox(height: 16),
             Text(
               'Video error: ${_videoController!.value.errorDescription ?? "Unknown error"}',
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: AppColors.whitecolor),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
+                backgroundColor: AppColors.whitecolor,
                 foregroundColor: Colors.black,
               ),
               onPressed: () {
@@ -372,8 +389,8 @@ class _OptimizedMediaGalleryScreenState
             const SizedBox(height: 8),
             TextButton(
               style: TextButton.styleFrom(
-                backgroundColor: Colors.white.withOpacity(0.2),
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.whitecolor.withOpacity(0.2),
+                foregroundColor: AppColors.whitecolor,
               ),
               onPressed: () {
                 final url = widget.mediaUrls[_currentIndex];
@@ -400,16 +417,20 @@ class _OptimizedMediaGalleryScreenState
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, color: Colors.white, size: 48),
+            const Icon(
+              Icons.error_outline,
+              color: AppColors.whitecolor,
+              size: 48,
+            ),
             const SizedBox(height: 16),
             const Text(
               'Failed to load PDF',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: AppColors.whitecolor),
             ),
             const SizedBox(height: 16),
             TextButton(
               style: TextButton.styleFrom(
-                backgroundColor: Colors.white,
+                backgroundColor: AppColors.whitecolor,
                 foregroundColor: Colors.black,
               ),
               onPressed: () => _downloadAndOpenFile(url, 'document.pdf'),
@@ -435,7 +456,7 @@ class _OptimizedMediaGalleryScreenState
           right: 16,
           bottom: 16,
           child: FloatingActionButton(
-            backgroundColor: Colors.white,
+            backgroundColor: AppColors.whitecolor,
             foregroundColor: Colors.black,
             child: const Icon(Icons.download),
             onPressed: () => _downloadAndOpenFile(url, 'document.pdf'),
@@ -465,16 +486,16 @@ class _OptimizedMediaGalleryScreenState
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: Colors.white, size: 64),
+          Icon(icon, color: AppColors.whitecolor, size: 64),
           const SizedBox(height: 16),
           Text(
             fileType,
-            style: const TextStyle(color: Colors.white, fontSize: 18),
+            style: const TextStyle(color: AppColors.whitecolor, fontSize: 18),
           ),
           const SizedBox(height: 8),
           Text(
             fileName,
-            style: const TextStyle(color: Colors.white70, fontSize: 14),
+            style: const TextStyle(color: AppColors.whitecolor, fontSize: 14),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),

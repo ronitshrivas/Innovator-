@@ -86,7 +86,7 @@ class _SchoolComplaintBoxStudentScreenState
                   onChanged: (value) => setState(() => _selectedStatus = value),
                 ),
               ),
-              IconButton(  
+              IconButton(
                 onPressed: () {
                   Get.to(
                     () => SchoolComplainHistoryScreen(),

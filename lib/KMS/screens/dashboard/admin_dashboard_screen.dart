@@ -10,16 +10,17 @@ class AdminDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return   CustomScrolling(child: Column(
+    return CustomScrolling(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Overview',
-            
+
             style: AppStyle.bodyText.copyWith(
               fontFamily: AppStyle.fontFamilySecondary,
               color: Colors.black,
-            
+
               letterSpacing: 1,
             ),
           ),
@@ -28,15 +29,15 @@ class AdminDashboardScreen extends ConsumerWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             padding: EdgeInsets.all(0),
-            
+
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
               childAspectRatio: 1.4,
               crossAxisSpacing: 10,
-            
+
               mainAxisSpacing: 10,
             ),
-            
+
             children: [
               overViewCard(
                 'Total Students',
@@ -61,8 +62,8 @@ class AdminDashboardScreen extends ConsumerWidget {
               ),
             ],
           ),
-        
-        SizedBox(height: 30,),
+
+          SizedBox(height: 30),
           Text(
             'Distribution (Pie Chart)',
             style: TextStyle(
@@ -106,7 +107,7 @@ class AdminDashboardScreen extends ConsumerWidget {
             ),
           ),
           SizedBox(height: 25),
-          
+
           Container(
             width: double.infinity,
             height: 250,
@@ -115,12 +116,7 @@ class AdminDashboardScreen extends ConsumerWidget {
               border: Border.all(color: Colors.black),
             ),
             child: Padding(
-              padding: EdgeInsets.only(
-                right: 8,
-                left: 8,
-                top: 10,
-                bottom: 8,
-              ),
+              padding: EdgeInsets.only(right: 8, left: 8, top: 10, bottom: 8),
               child: Column(
                 children: [
                   onGoingClass(
@@ -140,7 +136,7 @@ class AdminDashboardScreen extends ConsumerWidget {
             ),
           ),
         ],
-      )
+      ),
     );
   }
 

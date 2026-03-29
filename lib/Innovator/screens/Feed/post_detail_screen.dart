@@ -8,6 +8,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Login.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/controllers/user_controller.dart';
 import 'package:innovator/Innovator/screens/Feed/Inner_Homepage.dart';
 import 'package:innovator/Innovator/screens/Feed/Optimize%20Media/OptimizeMediaScreen.dart';
@@ -264,18 +265,21 @@ class _SpecificPostScreenState extends State<SpecificPostScreen>
       appBar: AppBar(
         title: const Text(
           'Post',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppColors.whitecolor,
+          ),
         ),
         backgroundColor: const Color.fromRGBO(244, 135, 6, 1),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: AppColors.whitecolor),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           if (content != null)
             IconButton(
-              icon: const Icon(Icons.share, color: Colors.white),
+              icon: const Icon(Icons.share, color: AppColors.whitecolor),
               onPressed: () => _showShareOptions(context),
             ),
         ],
@@ -341,7 +345,7 @@ class _SpecificPostScreenState extends State<SpecificPostScreen>
     return Container(
       margin: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.whitecolor,
         borderRadius: BorderRadius.circular(20.0),
         boxShadow: [
           BoxShadow(
@@ -501,7 +505,7 @@ class _SpecificPostScreenState extends State<SpecificPostScreen>
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: AppColors.whitecolor,
                     ),
                   )
                   : null,
@@ -539,7 +543,7 @@ class _SpecificPostScreenState extends State<SpecificPostScreen>
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: AppColors.whitecolor,
           ),
         ),
       );
@@ -581,7 +585,7 @@ class _SpecificPostScreenState extends State<SpecificPostScreen>
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: AppColors.whitecolor,
             ),
           ),
         );
@@ -810,7 +814,7 @@ class _SpecificPostScreenState extends State<SpecificPostScreen>
                       child: Text(
                         '+${imageUrls.length - 4}',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.whitecolor,
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
                         ),
@@ -846,7 +850,7 @@ class _SpecificPostScreenState extends State<SpecificPostScreen>
                 errorWidget:
                     (context, url, error) => Container(
                       color: Colors.grey[300],
-                      child: Icon(Icons.error, color: Colors.white),
+                      child: Icon(Icons.error, color: AppColors.whitecolor),
                     ),
               ),
             ),
@@ -876,7 +880,7 @@ class _SpecificPostScreenState extends State<SpecificPostScreen>
   //         ),
   //         errorWidget: (context, url, error) => Container(
   //           color: Colors.grey[300],
-  //           child: Icon(Icons.error, color: Colors.white),
+  //           child: Icon(Icons.error, color: AppColors.whitecolor),
   //         ),
   //       ),
   //     ),
@@ -905,7 +909,7 @@ class _SpecificPostScreenState extends State<SpecificPostScreen>
   //             child: Text(
   //               '+${urls.length - 4}',
   //               style: TextStyle(
-  //                 color: Colors.white,
+  //                 color: AppColors.whitecolor,
   //                 fontSize: 28,
   //                 fontWeight: FontWeight.bold,
   //               ),
@@ -1084,7 +1088,7 @@ class _SpecificPostScreenState extends State<SpecificPostScreen>
       builder: (context) {
         return Container(
           decoration: const BoxDecoration(
-            color: Colors.white,
+            color: AppColors.whitecolor,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: Column(
@@ -1139,7 +1143,7 @@ class _SpecificPostScreenState extends State<SpecificPostScreen>
       builder:
           (context) => Container(
             decoration: const BoxDecoration(
-              color: Colors.white,
+              color: AppColors.whitecolor,
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
             child: Padding(

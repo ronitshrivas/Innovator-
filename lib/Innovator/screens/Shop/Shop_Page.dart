@@ -334,7 +334,7 @@
 //       builder:
 //           (context) => Container(
 //             decoration: const BoxDecoration(
-//               color: Colors.white,
+//               color: AppColors.whitecolor,
 //               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
 //             ),
 //             child: Column(
@@ -522,7 +522,7 @@
 //               SnackBar(
 //                 content: Row(
 //                   children: [
-//                     const Icon(Icons.check_circle, color: Colors.white),
+//                     const Icon(Icons.check_circle, color: AppColors.whitecolor),
 //                     const SizedBox(width: 12),
 //                     Expanded(
 //                       child: Row(
@@ -545,7 +545,7 @@
 //                             child: Text(
 //                               'View Cart',
 //                               style: TextStyle(
-//                                 color: Colors.white,
+//                                 color: AppColors.whitecolor,
 //                                 fontWeight: FontWeight.bold,
 //                               ),
 //                             ),
@@ -616,7 +616,7 @@
 //       SnackBar(
 //         content: Row(
 //           children: [
-//             const Icon(Icons.error, color: Colors.white),
+//             const Icon(Icons.error, color: AppColors.whitecolor),
 //             const SizedBox(width: 12),
 //             Expanded(child: Text(message)),
 //           ],
@@ -627,7 +627,7 @@
 //         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
 //         action: SnackBarAction(
 //           label: 'Dismiss',
-//           textColor: Colors.white,
+//           textColor: AppColors.whitecolor,
 //           onPressed: () {},
 //         ),
 //       ),
@@ -694,7 +694,7 @@
 //             });
 //           },
 //           badgeColor: Colors.red,
-//           iconColor: Colors.white,
+//           iconColor: AppColors.whitecolor,
 //         ),
 //       ),
 //       key: _scaffoldKey,
@@ -778,7 +778,7 @@
 //                           child: const Icon(
 //                             Icons.check,
 //                             size: 8,
-//                             color: Colors.white,
+//                             color: AppColors.whitecolor,
 //                           ),
 //                         ),
 //                       ),
@@ -834,7 +834,7 @@
 //               onPressed: _loadProducts,
 //               style: ElevatedButton.styleFrom(
 //                 backgroundColor: Colors.blue,
-//                 foregroundColor: Colors.white,
+//                 foregroundColor: AppColors.whitecolor,
 //                 padding: const EdgeInsets.symmetric(
 //                   horizontal: 32,
 //                   vertical: 12,
@@ -958,7 +958,7 @@
 //         );
 //       },
 //       child: Card(
-//         color: Colors.white,
+//         color: AppColors.whitecolor,
 //         elevation: 3,
 //         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
 //         child: ClipRRect(
@@ -1072,14 +1072,14 @@
 //                                         width: 16,
 //                                         height: 16,
 //                                         child: CircularProgressIndicator(
-//                                           color: Colors.white,
+//                                           color: AppColors.whitecolor,
 //                                           strokeWidth: 2,
 //                                         ),
 //                                       )
 //                                       : const Icon(
 //                                         Icons.add,
 //                                         size: 18,
-//                                         color: Colors.white,
+//                                         color: AppColors.whitecolor,
 //                                       ),
 //                             ),
 //                           ),
@@ -1098,6 +1098,7 @@
 // }
 
 import 'package:flutter/material.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 
 class ShopPage extends StatefulWidget {
   const ShopPage({Key? key}) : super(key: key);
@@ -1235,7 +1236,7 @@ class _ShopPageState extends State<ShopPage> {
       builder:
           (context) => Container(
             decoration: const BoxDecoration(
-              color: Colors.white,
+              color: AppColors.whitecolor,
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
             child: Column(
@@ -1337,7 +1338,7 @@ class _ShopPageState extends State<ShopPage> {
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle, color: Colors.white),
+            const Icon(Icons.check_circle, color: AppColors.whitecolor),
             const SizedBox(width: 12),
             Expanded(child: Text('$productName added to cart')),
           ],
@@ -1386,7 +1387,11 @@ class _ShopPageState extends State<ShopPage> {
           },
           child: Stack(
             children: [
-              const Icon(Icons.shopping_cart, color: Colors.white, size: 28),
+              const Icon(
+                Icons.shopping_cart,
+                color: AppColors.whitecolor,
+                size: 28,
+              ),
               if (cartCount > 0)
                 Positioned(
                   right: 0,
@@ -1400,7 +1405,7 @@ class _ShopPageState extends State<ShopPage> {
                     child: Text(
                       cartCount.toString(),
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.whitecolor,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
@@ -1540,7 +1545,7 @@ class _ShopPageState extends State<ShopPage> {
                                 child: const Icon(
                                   Icons.check,
                                   size: 8,
-                                  color: Colors.white,
+                                  color: AppColors.whitecolor,
                                 ),
                               ),
                             ),
@@ -1598,7 +1603,7 @@ class _ShopPageState extends State<ShopPage> {
         );
       },
       child: Card(
-        color: Colors.white,
+        color: AppColors.whitecolor,
         elevation: 3,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: ClipRRect(
@@ -1691,7 +1696,7 @@ class _ShopPageState extends State<ShopPage> {
                               child: const Icon(
                                 Icons.add,
                                 size: 18,
-                                color: Colors.white,
+                                color: AppColors.whitecolor,
                               ),
                             ),
                           ),

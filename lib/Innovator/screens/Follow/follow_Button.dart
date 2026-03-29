@@ -7,6 +7,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/screens/Follow/follow-Service.dart';
 
 class FollowButton extends StatefulWidget {
@@ -190,7 +191,7 @@ class _FollowButtonState extends State<FollowButton>
                     height: 16,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: _isFollowing ? Colors.green : Colors.white,
+                      color: _isFollowing ? Colors.green : AppColors.whitecolor,
                     ),
                   )
                   : Row(
@@ -199,7 +200,8 @@ class _FollowButtonState extends State<FollowButton>
                       Icon(
                         _isFollowing ? Icons.check : Icons.person_add,
                         size: 14,
-                        color: _isFollowing ? Colors.green : Colors.white,
+                        color:
+                            _isFollowing ? Colors.green : AppColors.whitecolor,
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -207,7 +209,10 @@ class _FollowButtonState extends State<FollowButton>
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: _isFollowing ? Colors.green : Colors.white,
+                          color:
+                              _isFollowing
+                                  ? Colors.green
+                                  : AppColors.whitecolor,
                         ),
                       ),
                     ],

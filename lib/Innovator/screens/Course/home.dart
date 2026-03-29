@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:innovator/Innovator/App_data/App_data.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/screens/Course/course_details_screen.dart';
 import 'package:innovator/Innovator/screens/Course/services/api_services.dart';
 import 'package:innovator/Innovator/widget/FloatingMenuwidget.dart';
@@ -245,7 +246,7 @@ class _HomeScreenState extends State<HomeScreen>
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.whitecolor,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -308,7 +309,7 @@ class _HomeScreenState extends State<HomeScreen>
                 setState(() => _selectedFilter = v ? type : 'All');
                 _filterCourses();
               },
-              backgroundColor: Colors.white,
+              backgroundColor: AppColors.whitecolor,
               selectedColor: const Color.fromRGBO(244, 135, 6, 0.2),
               labelStyle: TextStyle(
                 color:
@@ -386,7 +387,7 @@ class _HomeScreenState extends State<HomeScreen>
         width: 260,
         margin: const EdgeInsets.only(right: 16, bottom: 8),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.whitecolor,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -415,7 +416,7 @@ class _HomeScreenState extends State<HomeScreen>
               child: const Center(
                 child: Icon(
                   Icons.play_circle_filled,
-                  color: Colors.white,
+                  color: AppColors.whitecolor,
                   size: 44,
                 ),
               ),
@@ -526,7 +527,7 @@ class _HomeScreenState extends State<HomeScreen>
           ),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.whitecolor,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -578,7 +579,7 @@ class _HomeScreenState extends State<HomeScreen>
                       child: Text(
                         isFree ? 'FREE' : 'Rs. ${price.toStringAsFixed(0)}',
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.whitecolor,
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
@@ -600,7 +601,10 @@ class _HomeScreenState extends State<HomeScreen>
                         ),
                         child: const Text(
                           'Draft',
-                          style: TextStyle(color: Colors.white, fontSize: 10),
+                          style: TextStyle(
+                            color: AppColors.whitecolor,
+                            fontSize: 10,
+                          ),
                         ),
                       ),
                     ),
@@ -683,7 +687,7 @@ class _HomeScreenState extends State<HomeScreen>
         ),
       ),
       child: const Center(
-        child: Icon(Icons.play_lesson, size: 36, color: Colors.white54),
+        child: Icon(Icons.play_lesson, size: 36, color: AppColors.whitecolor),
       ),
     );
   }
@@ -731,7 +735,7 @@ class _HomeScreenState extends State<HomeScreen>
             onPressed: _fetchCourses,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color.fromRGBO(244, 135, 6, 1),
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.whitecolor,
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(25),

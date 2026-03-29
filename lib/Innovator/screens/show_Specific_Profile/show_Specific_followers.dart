@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/screens/show_Specific_Profile/Show_Specific_Profile.dart';
 
 class FollowersFollowingScreen extends StatefulWidget {
@@ -188,7 +189,7 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
-                          color: Colors.white,
+                          color: AppColors.whitecolor,
                         ),
                       ),
                 ),
@@ -198,7 +199,7 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
-                  color: Colors.white,
+                  color: AppColors.whitecolor,
                 ),
               ),
     );
@@ -216,7 +217,7 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
         color:
             Theme.of(context).brightness == Brightness.dark
                 ? Colors.grey[800]?.withAlpha(30)
-                : Colors.white,
+                : AppColors.whitecolor,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -401,7 +402,7 @@ void showFollowersFollowingDialog(BuildContext context, String userId) {
               color:
                   Theme.of(context).brightness == Brightness.dark
                       ? const Color(0xFF1A1A1A)
-                      : Colors.white,
+                      : AppColors.whitecolor,
               borderRadius: BorderRadius.circular(20),
             ),
             padding: const EdgeInsets.all(16),

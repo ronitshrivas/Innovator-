@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/screens/Shop/Cart_List/Orders_detail_page.dart';
 import 'package:innovator/Innovator/models/Shop_cart_model.dart';
 import 'package:intl/intl.dart';
@@ -37,7 +38,7 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage>
   final Color _primaryColor = Color.fromRGBO(244, 135, 6, 1);
   final Color _accentColor = Colors.green;
   final Color _backgroundColor = Colors.grey.shade50;
-  final Color _cardColor = Colors.white;
+  final Color _cardColor = AppColors.whitecolor;
   final Color _textColor = Colors.blueGrey.shade800;
 
   @override
@@ -193,16 +194,16 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage>
       backgroundColor: _backgroundColor,
       appBar: AppBar(
         backgroundColor: _primaryColor,
-        foregroundColor: Colors.white,
+        foregroundColor: AppColors.whitecolor,
         title: Text('My Orders', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
-          indicatorColor: Colors.white,
+          indicatorColor: AppColors.whitecolor,
           indicatorWeight: 3,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
+          labelColor: AppColors.whitecolor,
+          unselectedLabelColor: AppColors.whitecolor,
           tabs: [
             Tab(text: 'All'),
             Tab(text: 'Pending'),
@@ -238,7 +239,7 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage>
               onPressed: _refreshOrders,
               style: ElevatedButton.styleFrom(
                 backgroundColor: _primaryColor,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.whitecolor,
               ),
               label: Text('Retry'),
               icon: Icon(Icons.refresh),
@@ -277,7 +278,7 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage>
               label: Text('Start Shopping'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _accentColor,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.whitecolor,
                 padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -478,7 +479,7 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage>
                                 child: Text(
                                   '${item.quantity}',
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: AppColors.whitecolor,
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
                                   ),

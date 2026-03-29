@@ -100,8 +100,6 @@ class _AdminComplaintScreenState extends State<AdminComplaintScreen> {
     }
   }
 
- 
-
   @override
   Widget build(BuildContext context) {
     return CustomScrolling(
@@ -115,7 +113,7 @@ class _AdminComplaintScreenState extends State<AdminComplaintScreen> {
               fontSize: 14,
             ),
           ),
-          SizedBox(height: 10,),
+          SizedBox(height: 10),
           Text('View, file and track all complaints'),
           SizedBox(height: 20),
           Align(

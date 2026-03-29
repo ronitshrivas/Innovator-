@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/models/Shop_cart_model.dart';
 import 'package:intl/intl.dart';
 
@@ -28,12 +29,12 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   Order? _order;
   bool _isLoading = true;
   String? _errorMessage;
-  
+
   // Colors
   final Color _primaryColor = Color.fromRGBO(244, 135, 6, 1);
   final Color _accentColor = Colors.green;
   final Color _backgroundColor = Colors.grey.shade50;
-  final Color _cardColor = Colors.white;
+  final Color _cardColor = AppColors.whitecolor;
   final Color _textColor = Colors.blueGrey.shade800;
 
   @override
@@ -116,7 +117,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
       backgroundColor: _backgroundColor,
       appBar: AppBar(
         backgroundColor: _primaryColor,
-        foregroundColor: Colors.white,
+        foregroundColor: AppColors.whitecolor,
         title: Text(
           _order?.orderNumber ?? 'Order Details',
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -149,7 +150,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
               onPressed: _loadOrderDetail,
               style: ElevatedButton.styleFrom(
                 backgroundColor: _primaryColor,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.whitecolor,
               ),
               child: Text('Retry'),
             ),
@@ -192,7 +193,10 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                         ),
                       ),
                       Container(
-                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: _getStatusColor(_order!.status).withAlpha(10),
                           borderRadius: BorderRadius.circular(20),
@@ -222,10 +226,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                   SizedBox(height: 16),
                   Text(
                     'Placed on ${dateFormat.format(_order!.createdAt)}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                   ),
                   if (_order!.statusHistory.isNotEmpty) ...[
                     SizedBox(height: 16),
@@ -238,28 +239,32 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                       ),
                     ),
                     SizedBox(height: 8),
-                    ..._order!.statusHistory.map((history) => Padding(
-                      padding: EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        children: [
-                          Icon(
-                            _getStatusIcon(history.status),
-                            size: 16,
-                            color: _getStatusColor(history.status),
-                          ),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              '${history.status.toUpperCase()} - ${dateFormat.format(history.changedAt)}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                              ),
+                    ..._order!.statusHistory
+                        .map(
+                          (history) => Padding(
+                            padding: EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  _getStatusIcon(history.status),
+                                  size: 16,
+                                  color: _getStatusColor(history.status),
+                                ),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    '${history.status.toUpperCase()} - ${dateFormat.format(history.changedAt)}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
-                    )).toList(),
+                        )
+                        .toList(),
                   ],
                 ],
               ),
@@ -287,14 +292,31 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     ),
                   ),
                   SizedBox(height: 16),
-                  _buildInfoRow(Icons.person, 'Name', _order!.customerInfo.name),
+                  _buildInfoRow(
+                    Icons.person,
+                    'Name',
+                    _order!.customerInfo.name,
+                  ),
                   SizedBox(height: 12),
-                  _buildInfoRow(Icons.phone, 'Phone', _order!.customerInfo.phone),
+                  _buildInfoRow(
+                    Icons.phone,
+                    'Phone',
+                    _order!.customerInfo.phone,
+                  ),
                   SizedBox(height: 12),
-                  _buildInfoRow(Icons.location_on, 'Address', _order!.customerInfo.address),
-                  if (_order!.customerInfo.notes != null && _order!.customerInfo.notes!.isNotEmpty) ...[
+                  _buildInfoRow(
+                    Icons.location_on,
+                    'Address',
+                    _order!.customerInfo.address,
+                  ),
+                  if (_order!.customerInfo.notes != null &&
+                      _order!.customerInfo.notes!.isNotEmpty) ...[
                     SizedBox(height: 12),
-                    _buildInfoRow(Icons.note, 'Notes', _order!.customerInfo.notes!),
+                    _buildInfoRow(
+                      Icons.note,
+                      'Notes',
+                      _order!.customerInfo.notes!,
+                    ),
                   ],
                 ],
               ),
@@ -322,7 +344,11 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     ),
                   ),
                   SizedBox(height: 16),
-                  _buildInfoRow(Icons.store, 'Business', _order!.vendor.businessName),
+                  _buildInfoRow(
+                    Icons.store,
+                    'Business',
+                    _order!.vendor.businessName,
+                  ),
                   SizedBox(height: 12),
                   _buildInfoRow(Icons.email, 'Email', _order!.vendor.email),
                 ],
@@ -351,7 +377,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     ),
                   ),
                   SizedBox(height: 16),
-                  ..._order!.items.map((item) => _buildOrderItem(item)).toList(),
+                  ..._order!.items
+                      .map((item) => _buildOrderItem(item))
+                      .toList(),
                 ],
               ),
             ),
@@ -378,9 +406,19 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     ),
                   ),
                   SizedBox(height: 16),
-                  _buildInfoRow(Icons.payment, 'Method', _order!.paymentInfo.method.replaceAll('_', ' ').toUpperCase()),
+                  _buildInfoRow(
+                    Icons.payment,
+                    'Method',
+                    _order!.paymentInfo.method
+                        .replaceAll('_', ' ')
+                        .toUpperCase(),
+                  ),
                   SizedBox(height: 12),
-                  _buildInfoRow(Icons.attach_money, 'Paid Amount', 'NPR ${_order!.paymentInfo.paidAmount.toStringAsFixed(2)}'),
+                  _buildInfoRow(
+                    Icons.attach_money,
+                    'Paid Amount',
+                    'NPR ${_order!.paymentInfo.paidAmount.toStringAsFixed(2)}',
+                  ),
                 ],
               ),
             ),
@@ -407,11 +445,20 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     ),
                   ),
                   SizedBox(height: 16),
-                  _buildSummaryRow('Subtotal', 'NPR ${_order!.orderSummary.subtotal.toStringAsFixed(2)}'),
+                  _buildSummaryRow(
+                    'Subtotal',
+                    'NPR ${_order!.orderSummary.subtotal.toStringAsFixed(2)}',
+                  ),
                   if (_order!.orderSummary.tax > 0)
-                    _buildSummaryRow('Tax', 'NPR ${_order!.orderSummary.tax.toStringAsFixed(2)}'),
+                    _buildSummaryRow(
+                      'Tax',
+                      'NPR ${_order!.orderSummary.tax.toStringAsFixed(2)}',
+                    ),
                   if (_order!.orderSummary.shipping > 0)
-                    _buildSummaryRow('Shipping', 'NPR ${_order!.orderSummary.shipping.toStringAsFixed(2)}'),
+                    _buildSummaryRow(
+                      'Shipping',
+                      'NPR ${_order!.orderSummary.shipping.toStringAsFixed(2)}',
+                    ),
                   Divider(height: 24),
                   _buildSummaryRow(
                     'Total',
@@ -439,19 +486,10 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
             children: [
               Text(
                 label,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
               ),
               SizedBox(height: 2),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: _textColor,
-                ),
-              ),
+              Text(value, style: TextStyle(fontSize: 14, color: _textColor)),
             ],
           ),
         ),
@@ -460,9 +498,10 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   }
 
   Widget _buildOrderItem(OrderItem item) {
-    final imageUrl = item.product.images.isNotEmpty
-        ? '${widget.imageBaseUrl}${item.product.images[0]}'
-        : '';
+    final imageUrl =
+        item.product.images.isNotEmpty
+            ? '${widget.imageBaseUrl}${item.product.images[0]}'
+            : '';
 
     return Container(
       margin: EdgeInsets.only(bottom: 16),
@@ -475,27 +514,38 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
             height: 60,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: Colors.grey.shade300,
-                width: 1,
-              ),
+              border: Border.all(color: Colors.grey.shade300, width: 1),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(7),
-              child: imageUrl.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: imageUrl,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
-                        color: Colors.grey.shade200,
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(_primaryColor),
-                          ),
-                        ),
-                      ),
-                      errorWidget: (context, url, error) => Container(
+              child:
+                  imageUrl.isNotEmpty
+                      ? CachedNetworkImage(
+                        imageUrl: imageUrl,
+                        fit: BoxFit.cover,
+                        placeholder:
+                            (context, url) => Container(
+                              color: Colors.grey.shade200,
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    _primaryColor,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        errorWidget:
+                            (context, url, error) => Container(
+                              color: Colors.grey.shade200,
+                              child: Icon(
+                                Icons.image_not_supported,
+                                color: Colors.grey,
+                                size: 24,
+                              ),
+                            ),
+                      )
+                      : Container(
                         color: Colors.grey.shade200,
                         child: Icon(
                           Icons.image_not_supported,
@@ -503,15 +553,6 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                           size: 24,
                         ),
                       ),
-                    )
-                  : Container(
-                      color: Colors.grey.shade200,
-                      child: Icon(
-                        Icons.image_not_supported,
-                        color: Colors.grey,
-                        size: 24,
-                      ),
-                    ),
             ),
           ),
           SizedBox(width: 12),
@@ -533,10 +574,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                 SizedBox(height: 4),
                 Text(
                   'Qty: ${item.quantity} × NPR ${item.price.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                 ),
               ],
             ),

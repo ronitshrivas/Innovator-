@@ -146,19 +146,19 @@ class StudentAttendanceScreen extends ConsumerWidget {
               overViewCard('assets/kms/graph_bar.png', '75%', 'Attendance %'),
             ],
           ),
-          SizedBox(height: 10,),
-         Container(
-                clipBehavior: Clip.antiAlias,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
-                  ),
-                  color: Colors.white,
-                ),
-                child: studentAttendance(),
+          SizedBox(height: 10),
+          Container(
+            clipBehavior: Clip.antiAlias,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
               ),
+              color: Colors.white,
+            ),
+            child: studentAttendance(),
+          ),
         ],
       ),
     );
@@ -270,35 +270,35 @@ class StudentAttendanceScreen extends ConsumerWidget {
             '2 hrs',
             'First Module Introduction',
           ),
-                    studentAttendanceRow(
+          studentAttendanceRow(
             '05/11/2025',
             'Present',
             '13:00-14:00',
             '1 hrs',
             'Components of IoT',
           ),
-                       studentAttendanceRow(
+          studentAttendanceRow(
             '19/01/2026',
             'Absent',
             '10:00-1:00',
             '3 hrs',
             'Web Development',
           ),
-                       studentAttendanceRow(
+          studentAttendanceRow(
             '05/11/2025',
             'Present',
             '1:00-7:00',
             '6 hrs',
             'Flutter Training',
           ),
-                       studentAttendanceRow(
+          studentAttendanceRow(
             '05/1/2026',
             'Present',
             '13:00-14:00',
             '1 hrs',
             'Presentation on Team Leader',
           ),
-                       studentAttendanceRow(
+          studentAttendanceRow(
             '19/11/2025',
             'Absent',
             '12:00-4:00',

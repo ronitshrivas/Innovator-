@@ -366,7 +366,7 @@
 //     'Daily Motivation',
 //     'Keep innovating!',
 //     backgroundColor: const Color.fromRGBO(244, 135, 6, 1),
-//     colorText: Colors.white,
+//     colorText: AppColors.whitecolor,
 //   );
 //   return;
 // }

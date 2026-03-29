@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:video_player/video_player.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 import 'dart:developer' as developer;
@@ -359,12 +360,12 @@ class _FacebookVideoWidgetState extends State<FacebookVideoWidget>
                         color: Colors.black.withOpacity(0.55),
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.2),
+                          color: AppColors.whitecolor.withOpacity(0.2),
                         ),
                       ),
                       child: Icon(
                         _isMuted ? Icons.volume_off : Icons.volume_up,
-                        color: Colors.white,
+                        color: AppColors.whitecolor,
                         size: 17,
                       ),
                     ),
@@ -393,7 +394,7 @@ class _FacebookVideoWidgetState extends State<FacebookVideoWidget>
             const Center(
               child: Icon(
                 Icons.play_circle_fill_rounded,
-                color: Colors.white70,
+                color: AppColors.whitecolor,
                 size: 54,
               ),
             ),
@@ -433,7 +434,7 @@ class _FacebookVideoWidgetState extends State<FacebookVideoWidget>
                 ),
                 child: Icon(
                   _isPlaying ? Icons.pause : Icons.play_arrow,
-                  color: Colors.white,
+                  color: AppColors.whitecolor,
                   size: 30,
                 ),
               ),
@@ -453,7 +454,7 @@ class _FacebookVideoWidgetState extends State<FacebookVideoWidget>
                 ),
                 child: const Icon(
                   Icons.fullscreen,
-                  color: Colors.white,
+                  color: AppColors.whitecolor,
                   size: 20,
                 ),
               ),
@@ -475,7 +476,7 @@ class _FacebookVideoWidgetState extends State<FacebookVideoWidget>
           height: 3,
           child: LinearProgressIndicator(
             value: progress.clamp(0.0, 1.0),
-            backgroundColor: Colors.white24,
+            backgroundColor: AppColors.whitecolor,
             valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF48706)),
             minHeight: 3,
           ),
@@ -757,14 +758,17 @@ class _FacebookFullscreenPageState extends State<FacebookFullscreenPage>
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: AppColors.whitecolor,
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
                   const Spacer(),
                   IconButton(
                     icon: Icon(
                       _isMuted ? Icons.volume_off : Icons.volume_up,
-                      color: Colors.white,
+                      color: AppColors.whitecolor,
                     ),
                     onPressed: _toggleMute,
                   ),
@@ -794,11 +798,14 @@ class _FacebookFullscreenPageState extends State<FacebookFullscreenPage>
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.55),
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white30, width: 1.5),
+                        border: Border.all(
+                          color: AppColors.whitecolor,
+                          width: 1.5,
+                        ),
                       ),
                       child: Icon(
                         _isPlaying ? Icons.pause : Icons.play_arrow,
-                        color: Colors.white,
+                        color: AppColors.whitecolor,
                         size: 36,
                       ),
                     ),
@@ -845,9 +852,9 @@ class _FacebookFullscreenPageState extends State<FacebookFullscreenPage>
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: LinearProgressIndicator(
                             value: buffered.clamp(0.0, 1.0),
-                            backgroundColor: Colors.white12,
+                            backgroundColor: AppColors.whitecolor,
                             valueColor: const AlwaysStoppedAnimation<Color>(
-                              Colors.white38,
+                              AppColors.whitecolor,
                             ),
                             minHeight: 2,
                           ),
@@ -858,7 +865,7 @@ class _FacebookFullscreenPageState extends State<FacebookFullscreenPage>
                         SliderTheme(
                           data: SliderTheme.of(context).copyWith(
                             activeTrackColor: const Color(0xFFF48706),
-                            inactiveTrackColor: Colors.white24,
+                            inactiveTrackColor: AppColors.whitecolor,
                             thumbColor: const Color(0xFFF48706),
                             thumbShape: const RoundSliderThumbShape(
                               enabledThumbRadius: 7,
@@ -905,7 +912,7 @@ class _FacebookFullscreenPageState extends State<FacebookFullscreenPage>
                               Text(
                                 _format(Duration(milliseconds: posMs.toInt())),
                                 style: const TextStyle(
-                                  color: Colors.white,
+                                  color: AppColors.whitecolor,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -913,7 +920,7 @@ class _FacebookFullscreenPageState extends State<FacebookFullscreenPage>
                               Text(
                                 _format(value.duration),
                                 style: const TextStyle(
-                                  color: Colors.white70,
+                                  color: AppColors.whitecolor,
                                   fontSize: 12,
                                 ),
                               ),
@@ -954,7 +961,7 @@ class _IconBtn extends StatelessWidget {
           color: Colors.black.withOpacity(0.45),
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, color: Colors.white, size: size),
+        child: Icon(icon, color: AppColors.whitecolor, size: size),
       ),
     );
   }

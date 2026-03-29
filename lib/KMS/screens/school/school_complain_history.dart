@@ -12,15 +12,19 @@ class SchoolComplainHistoryScreen extends ConsumerWidget {
       backgroundColor: AppStyle.backgroundColor,
       appBar: AppBar(
         centerTitle: true,
-        leading: Navigator.canPop(context)
-            ? IconButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                icon: Icon(Icons.arrow_back_ios, color: AppStyle.bodyTextColor),
-              )
-            : null,
-      
+        leading:
+            Navigator.canPop(context)
+                ? IconButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  icon: Icon(
+                    Icons.arrow_back_ios,
+                    color: AppStyle.bodyTextColor,
+                  ),
+                )
+                : null,
+
         // backgroundColor: AppStyle.backgroundColor,
         backgroundColor: AppStyle.primaryColor,
         title: Text(

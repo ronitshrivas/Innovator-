@@ -1,5 +1,3 @@
- 
-
 import 'package:flutter/material.dart';
 import 'package:innovator/KMS/core/constants/app_style.dart';
 import 'package:innovator/KMS/core/constants/mediaquery.dart';
@@ -14,18 +12,77 @@ class TutorAttendanceScreen extends StatefulWidget {
 class _TutorAttendanceScreenState extends State<TutorAttendanceScreen> {
   String status = 'All Status';
 
- 
   final List<Map<String, String>> teachersData = [
-    {'sn': '1', 'name': 'Karthik Sharma', 'attendance': 'Absent', 'present': '5', 'absent': '5'},
-    {'sn': '2', 'name': 'Kishore Pandey', 'attendance': 'Present', 'present': '10', 'absent': '10'},
-    {'sn': '3', 'name': 'Anubhav Khanal', 'attendance': 'Present', 'present': '5', 'absent': '5'},
-    {'sn': '4', 'name': 'Kristina Shrestha', 'attendance': 'Absent', 'present': '1', 'absent': '1'},
-    {'sn': '5', 'name': 'Pratistha Shrestha', 'attendance': 'Present', 'present': '13', 'absent': '13'},
-    {'sn': '6', 'name': 'Raju Shrestha', 'attendance': 'Present', 'present': '11', 'absent': '5'},
-    {'sn': '7', 'name': 'Ronit Shresta', 'attendance': 'Present', 'present': '16', 'absent': '3'},
-    {'sn': '8', 'name': 'Sabin Nyaju', 'attendance': 'Present', 'present': '20', 'absent': '5'},
-    {'sn': '9', 'name': 'John Bahun', 'attendance': 'Absent', 'present': '10', 'absent': '3'},
-    {'sn': '10', 'name': 'Pooja Gupta', 'attendance': 'Present', 'present': '160', 'absent': '5'},
+    {
+      'sn': '1',
+      'name': 'Karthik Sharma',
+      'attendance': 'Absent',
+      'present': '5',
+      'absent': '5',
+    },
+    {
+      'sn': '2',
+      'name': 'Kishore Pandey',
+      'attendance': 'Present',
+      'present': '10',
+      'absent': '10',
+    },
+    {
+      'sn': '3',
+      'name': 'Anubhav Khanal',
+      'attendance': 'Present',
+      'present': '5',
+      'absent': '5',
+    },
+    {
+      'sn': '4',
+      'name': 'Kristina Shrestha',
+      'attendance': 'Absent',
+      'present': '1',
+      'absent': '1',
+    },
+    {
+      'sn': '5',
+      'name': 'Pratistha Shrestha',
+      'attendance': 'Present',
+      'present': '13',
+      'absent': '13',
+    },
+    {
+      'sn': '6',
+      'name': 'Raju Shrestha',
+      'attendance': 'Present',
+      'present': '11',
+      'absent': '5',
+    },
+    {
+      'sn': '7',
+      'name': 'Ronit Shresta',
+      'attendance': 'Present',
+      'present': '16',
+      'absent': '3',
+    },
+    {
+      'sn': '8',
+      'name': 'Sabin Nyaju',
+      'attendance': 'Present',
+      'present': '20',
+      'absent': '5',
+    },
+    {
+      'sn': '9',
+      'name': 'John Bahun',
+      'attendance': 'Absent',
+      'present': '10',
+      'absent': '3',
+    },
+    {
+      'sn': '10',
+      'name': 'Pooja Gupta',
+      'attendance': 'Present',
+      'present': '160',
+      'absent': '5',
+    },
   ];
 
   // Filter the data based on selected status
@@ -33,7 +90,9 @@ class _TutorAttendanceScreenState extends State<TutorAttendanceScreen> {
     if (status == 'All Status') {
       return teachersData;
     } else {
-      return teachersData.where((teacher) => teacher['attendance'] == status).toList();
+      return teachersData
+          .where((teacher) => teacher['attendance'] == status)
+          .toList();
     }
   }
 
@@ -43,17 +102,18 @@ class _TutorAttendanceScreenState extends State<TutorAttendanceScreen> {
       backgroundColor: AppStyle.backgroundColor,
       appBar: AppBar(
         centerTitle: true,
-        leading: Navigator.canPop(context)
-            ? IconButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                icon: Icon(
-                  Icons.arrow_back_ios,
-                  color: AppStyle.bodyTextColor,
-                ),
-              )
-            : null,
+        leading:
+            Navigator.canPop(context)
+                ? IconButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  icon: Icon(
+                    Icons.arrow_back_ios,
+                    color: AppStyle.bodyTextColor,
+                  ),
+                )
+                : null,
         backgroundColor: AppStyle.primaryColor,
         title: Text(
           'Teacher Attendance',
@@ -115,21 +175,24 @@ class _TutorAttendanceScreenState extends State<TutorAttendanceScreen> {
                         ),
                       ),
                       value: status,
-                      items: ["All Status", "Present", "Absent"]
-                          .map(
-                            (statusItem) => DropdownMenuItem(
-                              value: statusItem,
-                              child: Text(
-                                statusItem,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
+                      items:
+                          ["All Status", "Present", "Absent"]
+                              .map(
+                                (statusItem) => DropdownMenuItem(
+                                  value: statusItem,
+                                  child: Text(
+                                    statusItem,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) => setState(() => status = value ?? "All Status"),
+                              )
+                              .toList(),
+                      onChanged:
+                          (value) =>
+                              setState(() => status = value ?? "All Status"),
                     ),
                   ),
                 ],
@@ -221,17 +284,18 @@ class _TutorAttendanceScreenState extends State<TutorAttendanceScreen> {
             ),
           ),
         ],
-        rows: filteredTeachers
-            .map(
-              (teacher) => _teacherAttendanceRow(
-                teacher['sn']!,
-                teacher['name']!,
-                teacher['attendance']!,
-                teacher['present']!,
-                teacher['absent']!,
-              ),
-            )
-            .toList(),
+        rows:
+            filteredTeachers
+                .map(
+                  (teacher) => _teacherAttendanceRow(
+                    teacher['sn']!,
+                    teacher['name']!,
+                    teacher['attendance']!,
+                    teacher['present']!,
+                    teacher['absent']!,
+                  ),
+                )
+                .toList(),
       ),
     );
   }
@@ -258,7 +322,10 @@ class _TutorAttendanceScreenState extends State<TutorAttendanceScreen> {
           Container(
             padding: EdgeInsets.only(top: 5, right: 10, left: 10, bottom: 5),
             decoration: BoxDecoration(
-              color: todayAttendance == 'Absent' ? Color(0xffF93333) : Color(0xff0CC740),
+              color:
+                  todayAttendance == 'Absent'
+                      ? Color(0xffF93333)
+                      : Color(0xff0CC740),
               borderRadius: BorderRadius.circular(5),
             ),
             child: Text(

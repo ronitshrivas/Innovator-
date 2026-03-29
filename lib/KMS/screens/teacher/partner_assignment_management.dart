@@ -127,7 +127,7 @@ class PartnerAssignmentManagementScreen extends ConsumerWidget {
             '65',
             textColor: Color(0xff0CC740),
           ),
-               courseContent(
+          courseContent(
             'Basic of Electronics',
             'Active',
             'Sunrise Academy',
@@ -271,15 +271,15 @@ class PartnerAssignmentManagementScreen extends ConsumerWidget {
 
   Widget courseContent(
     String topic,
-    String status, 
+    String status,
     String schoolName,
     String grade,
-    String dueDate, 
+    String dueDate,
     String submittedNumber,
     String pendingNumber,
     String completionPercentage,
     int completedPercentage,
-    int pendingPercentage, 
+    int pendingPercentage,
     String numbers, {
     Color? cardColor,
     Color? textColor,
@@ -287,7 +287,7 @@ class PartnerAssignmentManagementScreen extends ConsumerWidget {
     return Column(
       children: [
         Container(
-          padding: EdgeInsets.only(top: 15, right: 15, left: 15,  ),
+          padding: EdgeInsets.only(top: 15, right: 15, left: 15),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -297,7 +297,10 @@ class PartnerAssignmentManagementScreen extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  Text(topic, style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                  Text(
+                    topic,
+                    style: TextStyle(fontFamily: 'Inter', fontSize: 16),
+                  ),
                   SizedBox(width: 10),
                   Container(
                     padding: EdgeInsets.all(6),
@@ -404,7 +407,7 @@ class PartnerAssignmentManagementScreen extends ConsumerWidget {
                 ],
               ),
               SizedBox(height: 6),
-        
+
               Builder(
                 builder: (context) {
                   final completed = completedPercentage;
@@ -429,7 +432,7 @@ class PartnerAssignmentManagementScreen extends ConsumerWidget {
                             flex: completedFlex,
                             child: Container(color: AppStyle.primaryColor),
                           ),
-        
+
                           Expanded(
                             flex: pendingFlex,
                             child: Container(color: Colors.grey),
@@ -448,7 +451,7 @@ class PartnerAssignmentManagementScreen extends ConsumerWidget {
                     submittedNumber,
                     style: TextStyle(
                       color: Color(0xff999999),
-                       fontFamily: 'InterThin',
+                      fontFamily: 'InterThin',
                       fontWeight: FontWeight.w400,
                     ),
                   ),
@@ -456,13 +459,13 @@ class PartnerAssignmentManagementScreen extends ConsumerWidget {
                     pendingNumber,
                     style: TextStyle(
                       color: Color(0xff999999),
-                    fontFamily: 'InterThin',
+                      fontFamily: 'InterThin',
                       fontWeight: FontWeight.w400,
                     ),
                   ),
                 ],
               ),
-              SizedBox(height: 10,),
+              SizedBox(height: 10),
               GridView(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -502,9 +505,8 @@ class PartnerAssignmentManagementScreen extends ConsumerWidget {
             ],
           ),
         ),
-        SizedBox(height: 20,)
+        SizedBox(height: 20),
       ],
-
     );
   }
 

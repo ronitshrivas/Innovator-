@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:innovator/Innovator/App_data/App_data.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/models/comment_Model.dart';
 import 'package:innovator/Innovator/screens/comment/comment_services.dart';
 
@@ -288,7 +289,7 @@ class _CommentSectionState extends State<CommentSection> {
     'Success',
     msg,
     backgroundColor: Colors.green,
-    colorText: Colors.white,
+    colorText: AppColors.whitecolor,
     duration: const Duration(seconds: 2),
   );
 
@@ -296,7 +297,7 @@ class _CommentSectionState extends State<CommentSection> {
     'Error',
     msg,
     backgroundColor: Colors.red,
-    colorText: Colors.white,
+    colorText: AppColors.whitecolor,
     duration: const Duration(seconds: 3),
   );
 

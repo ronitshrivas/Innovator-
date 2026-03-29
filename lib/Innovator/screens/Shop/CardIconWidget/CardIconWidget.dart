@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'cart_state_manager.dart';
 import 'dart:developer' as developer;
 
@@ -28,7 +29,10 @@ class ShoppingCartBadge extends StatelessWidget {
           alignment: Alignment.center,
           children: [
             IconButton(
-              icon: Icon(Icons.shopping_cart, color: iconColor ?? Colors.white),
+              icon: Icon(
+                Icons.shopping_cart,
+                color: iconColor ?? AppColors.whitecolor,
+              ),
               onPressed: () {
                 developer.log('🛒 Cart button pressed');
                 onPressed();
@@ -69,7 +73,7 @@ class ShoppingCartBadge extends StatelessWidget {
                         child: Text(
                           count > 99 ? '99+' : count.toString(),
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: AppColors.whitecolor,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),

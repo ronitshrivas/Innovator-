@@ -6,6 +6,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/screens/Feed/Update%20Feed/API_Service.dart';
 
 // ── Theme constant (matches the rest of the app) ─────────────────────────────
@@ -101,10 +102,10 @@ class _EditPostScreenState extends State<EditPostScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.whitecolor,
       appBar: AppBar(
         backgroundColor: _orange,
-        foregroundColor: Colors.white,
+        foregroundColor: AppColors.whitecolor,
         title: const Text(
           'Edit Post',
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -124,7 +125,7 @@ class _EditPostScreenState extends State<EditPostScreen> {
                         width: 22,
                         height: 22,
                         child: CircularProgressIndicator(
-                          color: Colors.white,
+                          color: AppColors.whitecolor,
                           strokeWidth: 2,
                         ),
                       ),
@@ -134,7 +135,7 @@ class _EditPostScreenState extends State<EditPostScreen> {
                       child: const Text(
                         'Save',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.whitecolor,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
@@ -250,7 +251,7 @@ class _EditPostScreenState extends State<EditPostScreen> {
                         ),
                         child: const Icon(
                           Icons.close,
-                          color: Colors.white,
+                          color: AppColors.whitecolor,
                           size: 18,
                         ),
                       ),
@@ -306,7 +307,7 @@ class _EditPostScreenState extends State<EditPostScreen> {
                 onPressed: _isSaving ? null : _save,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _orange,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.whitecolor,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
@@ -318,7 +319,7 @@ class _EditPostScreenState extends State<EditPostScreen> {
                           width: 22,
                           height: 22,
                           child: CircularProgressIndicator(
-                            color: Colors.white,
+                            color: AppColors.whitecolor,
                             strokeWidth: 2,
                           ),
                         )
@@ -353,7 +354,7 @@ Future<bool> showDeletePostSheet(
 
   await showModalBottomSheet(
     context: context,
-    backgroundColor: Colors.white,
+    backgroundColor: AppColors.whitecolor,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
     ),
@@ -475,7 +476,7 @@ class _DeleteConfirmSheetState extends State<_DeleteConfirmSheet> {
                 onPressed: _isDeleting ? null : _confirm,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red.shade600,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.whitecolor,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
@@ -487,7 +488,7 @@ class _DeleteConfirmSheetState extends State<_DeleteConfirmSheet> {
                           width: 22,
                           height: 22,
                           child: CircularProgressIndicator(
-                            color: Colors.white,
+                            color: AppColors.whitecolor,
                             strokeWidth: 2,
                           ),
                         )

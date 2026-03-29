@@ -32,7 +32,10 @@ class _PrivacyPolicyState extends State<PrivacyPolicy>
         centerTitle: true,
         title: Text(
           'Privacy Policy',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppColors.whitecolor,
+          ),
         ),
       ),
       body: Stack(
@@ -85,7 +88,7 @@ class _PrivacyPolicyState extends State<PrivacyPolicy>
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.grey),
                       borderRadius: BorderRadius.circular(10),
-                      // color: Colors.white
+                      // color: AppColors.whitecolor
                       color: AppColors.background,
                     ),
                     child: InkWell(
@@ -168,7 +171,7 @@ class _PrivacyPolicyState extends State<PrivacyPolicy>
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.grey),
                       borderRadius: BorderRadius.circular(10),
-                      // color: Colors.white
+                      // color: AppColors.whitecolor
                       color: AppColors.background,
                     ),
                     child: InkWell(

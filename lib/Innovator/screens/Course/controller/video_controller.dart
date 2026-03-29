@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:video_player/video_player.dart';
 import 'dart:async';
 
@@ -21,18 +22,20 @@ class FixedCustomVideoProgressBar extends StatefulWidget {
     this.onSeekEnd,
     this.playedColor = const Color.fromRGBO(244, 135, 6, 1),
     this.bufferedColor = Colors.grey,
-    this.backgroundColor = Colors.white24,
-    this.handleColor = Colors.white,
+    this.backgroundColor = AppColors.whitecolor,
+    this.handleColor = AppColors.whitecolor,
     this.barHeight = 4.0,
     this.handleRadius = 8.0,
     this.allowScrubbing = true,
   }) : super(key: key);
 
   @override
-  State<FixedCustomVideoProgressBar> createState() => _FixedCustomVideoProgressBarState();
+  State<FixedCustomVideoProgressBar> createState() =>
+      _FixedCustomVideoProgressBarState();
 }
 
-class _FixedCustomVideoProgressBarState extends State<FixedCustomVideoProgressBar>
+class _FixedCustomVideoProgressBarState
+    extends State<FixedCustomVideoProgressBar>
     with SingleTickerProviderStateMixin {
   bool _isDragging = false;
   bool _isHovering = false;
@@ -40,7 +43,7 @@ class _FixedCustomVideoProgressBarState extends State<FixedCustomVideoProgressBa
   late AnimationController _animationController;
   late Animation<double> _handleAnimation;
   late Animation<double> _barAnimation;
-  
+
   // Add these for proper progress tracking
   Duration _currentPosition = Duration.zero;
   Duration _totalDuration = Duration.zero;
@@ -63,23 +66,21 @@ class _FixedCustomVideoProgressBarState extends State<FixedCustomVideoProgressBa
     _handleAnimation = Tween<double>(
       begin: widget.handleRadius,
       end: widget.handleRadius * 1.5,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
+    );
 
     _barAnimation = Tween<double>(
       begin: widget.barHeight,
       end: widget.barHeight * 1.5,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
+    );
   }
 
   void _setupVideoListener() {
     widget.controller.addListener(_updateVideoState);
-    
+
     // Get initial duration if video is already initialized
     if (widget.controller.value.isInitialized) {
       _totalDuration = widget.controller.value.duration;
@@ -100,7 +101,7 @@ class _FixedCustomVideoProgressBarState extends State<FixedCustomVideoProgressBa
     if (mounted && widget.controller.value.isInitialized) {
       final newPosition = widget.controller.value.position;
       final newDuration = widget.controller.value.duration;
-      
+
       if (newPosition != _currentPosition || newDuration != _totalDuration) {
         setState(() {
           _currentPosition = newPosition;
@@ -120,33 +121,33 @@ class _FixedCustomVideoProgressBarState extends State<FixedCustomVideoProgressBa
 
   void _onPanStart(DragStartDetails details, double width) {
     if (!widget.allowScrubbing) return;
-    
+
     setState(() {
       _isDragging = true;
     });
-    
+
     _animationController.forward();
     widget.onSeekStart?.call();
-    
+
     final position = details.localPosition.dx / width;
     _seekToPosition(position.clamp(0.0, 1.0));
   }
 
   void _onPanUpdate(DragUpdateDetails details, double width) {
     if (!widget.allowScrubbing || !_isDragging) return;
-    
+
     final position = details.localPosition.dx / width;
     _seekToPosition(position.clamp(0.0, 1.0));
   }
 
   void _onPanEnd(DragEndDetails details) {
     if (!widget.allowScrubbing) return;
-    
+
     setState(() {
       _isDragging = false;
       _dragValue = null;
     });
-    
+
     _animationController.reverse();
     widget.onSeekEnd?.call();
   }
@@ -159,7 +160,7 @@ class _FixedCustomVideoProgressBarState extends State<FixedCustomVideoProgressBa
       _dragValue = position;
       _currentPosition = newPosition; // Update immediately for responsive UI
     });
-    
+
     widget.controller.seekTo(newPosition);
   }
 
@@ -167,18 +168,22 @@ class _FixedCustomVideoProgressBarState extends State<FixedCustomVideoProgressBa
     if (_isDragging && _dragValue != null) {
       return _dragValue!;
     }
-    
+
     if (_totalDuration == Duration.zero) return 0.0;
-    return (_currentPosition.inMilliseconds / _totalDuration.inMilliseconds).clamp(0.0, 1.0);
+    return (_currentPosition.inMilliseconds / _totalDuration.inMilliseconds)
+        .clamp(0.0, 1.0);
   }
 
   double _getBufferedValue() {
     final buffered = widget.controller.value.buffered;
-    
+
     if (_totalDuration == Duration.zero || buffered.isEmpty) return 0.0;
-    
+
     final bufferedEnd = buffered.last.end;
-    return (bufferedEnd.inMilliseconds / _totalDuration.inMilliseconds).clamp(0.0, 1.0);
+    return (bufferedEnd.inMilliseconds / _totalDuration.inMilliseconds).clamp(
+      0.0,
+      1.0,
+    );
   }
 
   String _formatDuration(Duration duration) {
@@ -186,7 +191,7 @@ class _FixedCustomVideoProgressBarState extends State<FixedCustomVideoProgressBa
     final hours = duration.inHours;
     final minutes = duration.inMinutes.remainder(60);
     final seconds = duration.inSeconds.remainder(60);
-    
+
     if (hours > 0) {
       return '${twoDigits(hours)}:${twoDigits(minutes)}:${twoDigits(seconds)}';
     } else {
@@ -229,12 +234,13 @@ class _FixedCustomVideoProgressBarState extends State<FixedCustomVideoProgressBa
                     onPanStart: (details) => _onPanStart(details, width),
                     onPanUpdate: (details) => _onPanUpdate(details, width),
                     onPanEnd: _onPanEnd,
-                    onTapDown: widget.allowScrubbing
-                        ? (details) {
-                            final position = details.localPosition.dx / width;
-                            _seekToPosition(position.clamp(0.0, 1.0));
-                          }
-                        : null,
+                    onTapDown:
+                        widget.allowScrubbing
+                            ? (details) {
+                              final position = details.localPosition.dx / width;
+                              _seekToPosition(position.clamp(0.0, 1.0));
+                            }
+                            : null,
                     child: Container(
                       width: width,
                       height: 30,
@@ -250,7 +256,9 @@ class _FixedCustomVideoProgressBarState extends State<FixedCustomVideoProgressBa
                                   height: _barAnimation.value,
                                   decoration: BoxDecoration(
                                     color: widget.backgroundColor,
-                                    borderRadius: BorderRadius.circular(_barAnimation.value / 2),
+                                    borderRadius: BorderRadius.circular(
+                                      _barAnimation.value / 2,
+                                    ),
                                   ),
                                 ),
                                 // Buffered bar
@@ -260,15 +268,18 @@ class _FixedCustomVideoProgressBarState extends State<FixedCustomVideoProgressBa
                                     height: _barAnimation.value,
                                     decoration: BoxDecoration(
                                       color: widget.bufferedColor.withAlpha(50),
-                                      borderRadius: BorderRadius.circular(_barAnimation.value / 2),
+                                      borderRadius: BorderRadius.circular(
+                                        _barAnimation.value / 2,
+                                      ),
                                     ),
                                   ),
                                 ),
                                 // Played bar
                                 AnimatedContainer(
-                                  duration: _isDragging 
-                                      ? Duration.zero 
-                                      : const Duration(milliseconds: 100),
+                                  duration:
+                                      _isDragging
+                                          ? Duration.zero
+                                          : const Duration(milliseconds: 100),
                                   curve: Curves.easeOut,
                                   width: width * progressValue,
                                   height: _barAnimation.value,
@@ -279,23 +290,34 @@ class _FixedCustomVideoProgressBarState extends State<FixedCustomVideoProgressBa
                                         widget.playedColor.withAlpha(80),
                                       ],
                                     ),
-                                    borderRadius: BorderRadius.circular(_barAnimation.value / 2),
-                                    boxShadow: _isDragging || _isHovering
-                                        ? [
-                                            BoxShadow(
-                                              color: widget.playedColor.withAlpha(30),
-                                              blurRadius: 8,
-                                              spreadRadius: 2,
-                                            ),
-                                          ]
-                                        : null,
+                                    borderRadius: BorderRadius.circular(
+                                      _barAnimation.value / 2,
+                                    ),
+                                    boxShadow:
+                                        _isDragging || _isHovering
+                                            ? [
+                                              BoxShadow(
+                                                color: widget.playedColor
+                                                    .withAlpha(30),
+                                                blurRadius: 8,
+                                                spreadRadius: 2,
+                                              ),
+                                            ]
+                                            : null,
                                   ),
                                 ),
                                 // Handle
-                                if (_isDragging || _isHovering || widget.allowScrubbing)
+                                if (_isDragging ||
+                                    _isHovering ||
+                                    widget.allowScrubbing)
                                   Positioned(
-                                    left: (width * progressValue) - widget.handleRadius,
-                                    top: (_barAnimation.value - (widget.handleRadius * 2)) / 2,
+                                    left:
+                                        (width * progressValue) -
+                                        widget.handleRadius,
+                                    top:
+                                        (_barAnimation.value -
+                                            (widget.handleRadius * 2)) /
+                                        2,
                                     child: AnimatedBuilder(
                                       animation: _handleAnimation,
                                       builder: (context, child) {
@@ -311,7 +333,9 @@ class _FixedCustomVideoProgressBarState extends State<FixedCustomVideoProgressBa
                                             ),
                                             boxShadow: [
                                               BoxShadow(
-                                                color: Colors.black.withAlpha(30),
+                                                color: Colors.black.withAlpha(
+                                                  30,
+                                                ),
                                                 blurRadius: 4,
                                                 offset: const Offset(0, 2),
                                               ),
@@ -339,7 +363,7 @@ class _FixedCustomVideoProgressBarState extends State<FixedCustomVideoProgressBa
                 Text(
                   _formatDuration(_currentPosition),
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.whitecolor,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
@@ -347,7 +371,7 @@ class _FixedCustomVideoProgressBarState extends State<FixedCustomVideoProgressBa
                 Text(
                   _formatDuration(_totalDuration),
                   style: TextStyle(
-                    color: Colors.white.withAlpha(70),
+                    color: AppColors.whitecolor.withAlpha(70),
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),

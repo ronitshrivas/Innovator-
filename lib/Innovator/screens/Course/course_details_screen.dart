@@ -2,6 +2,7 @@
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/screens/Course/services/api_services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
@@ -216,7 +217,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
           playedColor: const Color.fromRGBO(244, 135, 6, 1),
           handleColor: const Color.fromRGBO(244, 135, 6, 1),
           bufferedColor: const Color.fromRGBO(244, 135, 6, 0.3),
-          backgroundColor: Colors.white24,
+          backgroundColor: AppColors.whitecolor,
         ),
         placeholder: Container(color: Colors.black),
         autoInitialize: true,
@@ -248,7 +249,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
           pinned: true,
           backgroundColor: const Color.fromRGBO(244, 135, 6, 1),
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            icon: const Icon(Icons.arrow_back, color: AppColors.whitecolor),
             onPressed: () => Navigator.of(context).pop(),
           ),
           title:
@@ -256,7 +257,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                   ? Text(
                     widget.course['title']?.toString() ?? '',
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.whitecolor,
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
@@ -342,7 +343,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                 ),
                 child: const Icon(
                   Icons.play_arrow,
-                  color: Colors.white,
+                  color: AppColors.whitecolor,
                   size: 36,
                 ),
               ),
@@ -353,11 +354,11 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.lock, size: 40, color: Colors.white60),
+                Icon(Icons.lock, size: 40, color: AppColors.whitecolor),
                 SizedBox(height: 6),
                 Text(
                   'Enroll to watch',
-                  style: TextStyle(color: Colors.white60, fontSize: 14),
+                  style: TextStyle(color: AppColors.whitecolor, fontSize: 14),
                 ),
               ],
             ),
@@ -388,7 +389,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
 
     return Container(
       padding: const EdgeInsets.all(16),
-      color: Colors.white,
+      color: AppColors.whitecolor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -541,7 +542,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
               onPressed: _isEnrolling ? null : _handleEnroll,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color.fromRGBO(244, 135, 6, 1),
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.whitecolor,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -555,7 +556,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: AppColors.whitecolor,
                         ),
                       )
                       : const Icon(Icons.school, size: 20),
@@ -584,7 +585,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
           dividerColor: Colors.transparent,
           indicatorSize: TabBarIndicatorSize.tab,
           unselectedLabelColor: const Color.fromRGBO(244, 135, 6, 1),
-          labelColor: Colors.white,
+          labelColor: AppColors.whitecolor,
           padding: const EdgeInsets.only(top: 9, bottom: 9, left: 9),
           labelStyle: const TextStyle(fontWeight: FontWeight.bold),
           labelPadding: EdgeInsets.zero,
@@ -813,7 +814,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
         style: TextStyle(
           fontWeight: FontWeight.bold,
           fontSize: 18,
-          color: sel ? Colors.white : Colors.grey[700],
+          color: sel ? AppColors.whitecolor : Colors.grey[700],
         ),
       ),
     ),
@@ -846,7 +847,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.whitecolor,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.grey.shade200),
           ),
@@ -1045,7 +1046,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
             onPressed: _isEnrolling ? null : _handleEnroll,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color.fromRGBO(244, 135, 6, 1),
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.whitecolor,
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -1058,7 +1059,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                       height: 18,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        color: AppColors.whitecolor,
                       ),
                     )
                     : const Icon(Icons.school),

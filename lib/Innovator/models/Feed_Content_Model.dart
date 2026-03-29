@@ -1,7 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// Feed_Content_Model.dart  — updated to support shared_post_details (reposts)
-// ─────────────────────────────────────────────────────────────────────────────
-
 const String _kBaseUrl = 'http://182.93.94.220:8005';
 
 String _resolveUrl(String? path) {
@@ -10,14 +6,10 @@ String _resolveUrl(String? path) {
   return '$_kBaseUrl${path.startsWith('/') ? '' : '/'}$path';
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SharedPostMedia  — one media item inside shared_post_details
-// ─────────────────────────────────────────────────────────────────────────────
-
 class SharedPostMedia {
   final String id;
-  final String file; // absolute URL (resolved)
-  final String mediaType; // "image" | "video"
+  final String file;
+  final String mediaType;
 
   const SharedPostMedia({
     required this.id,

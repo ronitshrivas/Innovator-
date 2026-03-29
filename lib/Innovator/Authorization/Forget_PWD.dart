@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/Authorization/OTP_Verification.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/helper/dialogs.dart';
 
 class Forgot_PWD extends StatefulWidget {
@@ -101,7 +102,7 @@ class _Forgot_PWDState extends State<Forgot_PWD> {
               width: MediaQuery.of(context).size.width,
               height: MediaQuery.of(context).size.height / 2.0,
               decoration: const BoxDecoration(
-                color: Colors.white,
+                color: AppColors.whitecolor,
                 borderRadius: BorderRadius.only(topLeft: Radius.circular(70)),
               ),
               child: Padding(
@@ -161,7 +162,7 @@ class _Forgot_PWDState extends State<Forgot_PWD> {
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
-                                  color: Colors.white,
+                                  color: AppColors.whitecolor,
                                   strokeWidth: 2,
                                 ),
                               )
@@ -169,7 +170,7 @@ class _Forgot_PWDState extends State<Forgot_PWD> {
                                 'Send Verification Code',
                                 style: TextStyle(
                                   fontSize: 16,
-                                  color: Colors.white,
+                                  color: AppColors.whitecolor,
                                 ),
                               ),
                       style: ElevatedButton.styleFrom(
@@ -183,7 +184,7 @@ class _Forgot_PWDState extends State<Forgot_PWD> {
                         ),
                         minimumSize: Size(double.infinity, 50),
                       ),
-                      icon: Icon(Icons.send, color: Colors.white),
+                      icon: Icon(Icons.send, color: AppColors.whitecolor),
                     ),
                     SizedBox(height: 15),
                     TextButton.icon(

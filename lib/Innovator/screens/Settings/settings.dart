@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/screens/Blocked/BlockedUser.dart';
 import 'package:innovator/Innovator/screens/Profile/Edit_Profile.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -62,7 +63,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         'Failed',
         'Failed to Load Settings',
         backgroundColor: Colors.red,
-        colorText: Colors.white,
+        colorText: AppColors.whitecolor,
       );
     }
   }
@@ -87,7 +88,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         'Saved',
         'All Settings Saved Successfully',
         backgroundColor: Colors.green,
-        colorText: Colors.white,
+        colorText: AppColors.whitecolor,
       );
     } catch (e) {
       // Handle save error
@@ -95,7 +96,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         'Failed',
         'Failed to Save Settings',
         backgroundColor: Colors.red,
-        colorText: Colors.white,
+        colorText: AppColors.whitecolor,
       );
     }
   }
@@ -135,14 +136,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         'Reset',
         'Settings Reset to Default',
         backgroundColor: Colors.green,
-        colorText: Colors.white,
+        colorText: AppColors.whitecolor,
       );
     } catch (e) {
       Get.snackbar(
         'Failed',
         'Failed to Reset',
         backgroundColor: Colors.red,
-        colorText: Colors.white,
+        colorText: AppColors.whitecolor,
       );
     }
   }
@@ -155,11 +156,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         appBar: AppBar(
           title: const Text(
             'Settings',
-            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: AppColors.whitecolor,
+            ),
           ),
           backgroundColor: primaryColor,
           elevation: 0,
-          iconTheme: const IconThemeData(color: Colors.white),
+          iconTheme: const IconThemeData(color: AppColors.whitecolor),
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -170,11 +174,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(
         title: const Text(
           'Settings',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppColors.whitecolor,
+          ),
         ),
         backgroundColor: primaryColor,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: AppColors.whitecolor),
         // actions: [
         //   // Save all settings button
         //   IconButton(
@@ -448,7 +455,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             //     ),
             //     style: ElevatedButton.styleFrom(
             //       backgroundColor: primaryColor,
-            //       foregroundColor: Colors.white,
+            //       foregroundColor: AppColors.whitecolor,
             //       padding: const EdgeInsets.symmetric(vertical: 16),
             //       shape: RoundedRectangleBorder(
             //         borderRadius: BorderRadius.circular(12),
@@ -465,7 +472,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             //       onPressed: () => _showLogoutDialog(),
             //       style: ElevatedButton.styleFrom(
             //         backgroundColor: Colors.red[600],
-            //         foregroundColor: Colors.white,
+            //         foregroundColor: AppColors.whitecolor,
             //         padding: const EdgeInsets.symmetric(vertical: 16),
             //         shape: RoundedRectangleBorder(
             //           borderRadius: BorderRadius.circular(12),
@@ -669,7 +676,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.orange[600],
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.whitecolor,
                 ),
                 child: const Text('Reset'),
               ),
@@ -703,7 +710,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red[600],
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.whitecolor,
                 ),
                 child: const Text('Logout'),
               ),

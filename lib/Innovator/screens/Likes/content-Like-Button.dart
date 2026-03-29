@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/screens/Likes/Content-Like-Service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -377,7 +378,7 @@ class _ReactionPickerOverlayState extends State<_ReactionPickerOverlay>
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppColors.whitecolor,
                     borderRadius: BorderRadius.circular(50),
                     boxShadow: [
                       BoxShadow(
@@ -460,7 +461,7 @@ class _ReactionPickerOverlayState extends State<_ReactionPickerOverlay>
                       child: Text(
                         r.label,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.whitecolor,
                           fontSize: 9,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.3,

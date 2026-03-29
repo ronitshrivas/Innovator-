@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/screens/show_Specific_Profile/Show_Specific_Profile.dart';
 
 class reeactionsheet extends StatefulWidget {
@@ -83,7 +84,7 @@ class _reeactionsheetState extends State<reeactionsheet> {
     return Container(
       height: MediaQuery.of(context).size.height * 0.65,
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: AppColors.whitecolor,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
@@ -259,9 +260,9 @@ class _reeactionsheetState extends State<reeactionsheet> {
                                   height: 18,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: Colors.white,
+                                    color: AppColors.whitecolor,
                                     border: Border.all(
-                                      color: Colors.white,
+                                      color: AppColors.whitecolor,
                                       width: 1.5,
                                     ),
                                   ),

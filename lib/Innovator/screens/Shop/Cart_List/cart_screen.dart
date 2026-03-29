@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/Innovator/App_data/App_data.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/screens/Shop/Cart_List/Update%20Cart/update_provider.dart';
 import 'package:innovator/Innovator/screens/Shop/Cart_List/api_services.dart';
 import 'package:innovator/Innovator/screens/Shop/checkout.dart';
@@ -34,7 +35,7 @@ class _CartScreenState extends ConsumerState<CartScreen>
   // Define color scheme for the cart
   final Color _primaryColor = Colors.indigo;
   final Color _accentColor = Colors.green;
-  final Color _cardColor = Colors.white;
+  final Color _cardColor = AppColors.whitecolor;
   final Color _textColor = Colors.blueGrey.shade800;
   final Color _priceColor = Colors.green.shade700;
 
@@ -197,7 +198,7 @@ class _CartScreenState extends ConsumerState<CartScreen>
           ],
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.whitecolor,
         elevation: 0,
         leading: Container(
           margin: const EdgeInsets.all(8),
@@ -214,7 +215,7 @@ class _CartScreenState extends ConsumerState<CartScreen>
           ),
         ),
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.whitecolor,
       key: _scaffoldKey,
       body: Stack(
         children: [
@@ -260,7 +261,7 @@ class _CartScreenState extends ConsumerState<CartScreen>
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: _accentColor,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.whitecolor,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
                   vertical: 12,
@@ -380,7 +381,7 @@ class _CartScreenState extends ConsumerState<CartScreen>
                           context: context,
                           builder: (context) {
                             return AlertDialog(
-                              backgroundColor: Colors.white,
+                              backgroundColor: AppColors.whitecolor,
                               title: Center(
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -455,7 +456,7 @@ class _CartScreenState extends ConsumerState<CartScreen>
                         Container(
                           margin: const EdgeInsets.all(8),
                           decoration: const BoxDecoration(
-                            color: Colors.white,
+                            color: AppColors.whitecolor,
                             shape: BoxShape.circle,
                           ),
                           child: IconButton(
@@ -504,7 +505,7 @@ class _CartScreenState extends ConsumerState<CartScreen>
                         Container(
                           margin: const EdgeInsets.all(8),
                           decoration: const BoxDecoration(
-                            color: Colors.white,
+                            color: AppColors.whitecolor,
                             shape: BoxShape.circle,
                           ),
                           child: IconButton(

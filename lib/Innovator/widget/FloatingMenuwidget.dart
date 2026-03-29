@@ -4,12 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/screens/Course/home.dart';
 import 'package:innovator/Innovator/screens/CreatePost/createpost.dart';
 import 'package:innovator/Innovator/screens/Events/Events.dart';
 import 'package:innovator/Innovator/screens/Shop/CardIconWidget/cart_state_manager.dart';
 import 'package:innovator/Innovator/utils/Drawer/custom_drawer.dart';
-import 'package:innovator/Innovator/Notification/FCM_Services.dart';
+import 'package:innovator/Innovator/Notification/Notification_Listscreen.dart';
 import 'package:innovator/innovator_home.dart';
 import 'package:innovator/Innovator/screens/Search/Searchpage.dart';
 import 'package:innovator/Innovator/screens/Shop/Shop_Page.dart';
@@ -315,7 +316,7 @@ class _FloatingMenuWidgetState extends State<FloatingMenuWidget>
                         alignment: Alignment.center,
                         child: const Icon(
                           Icons.menu,
-                          color: Colors.white,
+                          color: AppColors.whitecolor,
                           size: 24,
                         ),
                       ),
@@ -342,7 +343,7 @@ class _FloatingMenuWidgetState extends State<FloatingMenuWidget>
                           child: AnimatedIcon(
                             icon: AnimatedIcons.menu_close,
                             progress: _animation,
-                            color: Colors.white,
+                            color: AppColors.whitecolor,
                             size: 24,
                           ),
                         ),
@@ -422,7 +423,7 @@ class _FloatingMenuWidgetState extends State<FloatingMenuWidget>
     return Container(
       width: 50,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.whitecolor,
         borderRadius: br,
         boxShadow: [
           BoxShadow(
@@ -482,13 +483,13 @@ class _FloatingMenuWidgetState extends State<FloatingMenuWidget>
       decoration: BoxDecoration(
         color: Colors.red,
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 1.5),
+        border: Border.all(color: AppColors.whitecolor, width: 1.5),
       ),
       constraints: BoxConstraints(minWidth: minSize, minHeight: minSize),
       child: Text(
         count > 99 ? '99+' : count.toString(),
         style: TextStyle(
-          color: Colors.white,
+          color: AppColors.whitecolor,
           fontSize: fontSize,
           fontWeight: FontWeight.bold,
         ),
@@ -618,7 +619,7 @@ class _NavBarState extends State<_NavBar> with SingleTickerProviderStateMixin {
                               color: Colors.red,
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: Colors.white,
+                                color: AppColors.whitecolor,
                                 width: 1.5,
                               ),
                             ),
@@ -631,7 +632,7 @@ class _NavBarState extends State<_NavBar> with SingleTickerProviderStateMixin {
                                   ? '99+'
                                   : widget.unreadCount.toString(),
                               style: const TextStyle(
-                                color: Colors.white,
+                                color: AppColors.whitecolor,
                                 fontSize: 8,
                                 fontWeight: FontWeight.bold,
                               ),

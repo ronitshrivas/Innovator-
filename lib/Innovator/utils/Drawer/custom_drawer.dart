@@ -12,6 +12,7 @@ import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Login.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/controllers/user_controller.dart';
 import 'package:innovator/Innovator/screens/Course/home.dart';
 import 'package:innovator/Innovator/screens/Shop/Shop_Page.dart';
@@ -171,7 +172,7 @@ class _InstantDrawerOverlay extends StatelessWidget {
                         width: drawerWidth,
                         height: double.infinity,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AppColors.whitecolor,
                           borderRadius: const BorderRadius.only(
                             topRight: Radius.circular(28),
                             bottomRight: Radius.circular(28),
@@ -456,7 +457,7 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.white.withAlpha(30),
+                          color: AppColors.whitecolor.withAlpha(30),
                           blurRadius: 15,
                           spreadRadius: 1,
                         ),
@@ -471,7 +472,7 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: const BoxDecoration(
-                          color: Colors.white,
+                          color: AppColors.whitecolor,
                           shape: BoxShape.circle,
                         ),
                         child: const SizedBox(
@@ -492,7 +493,7 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
                 'Welcome Back',
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.white70,
+                  color: AppColors.whitecolor,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -501,15 +502,15 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
                     width: 100,
                     height: 20,
                     child: LinearProgressIndicator(
-                      color: Colors.white70,
-                      backgroundColor: Colors.white24,
+                      color: AppColors.whitecolor,
+                      backgroundColor: AppColors.whitecolor,
                     ),
                   )
                   : Text(
                     _userName.toUpperCase(),
                     style: const TextStyle(
                       fontSize: 24,
-                      color: Colors.white,
+                      color: AppColors.whitecolor,
                       fontWeight: FontWeight.bold,
                       fontFamily: 'Inter Thin',
                     ),
@@ -525,13 +526,13 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
                     vertical: 0,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(20),
+                    color: AppColors.whitecolor.withAlpha(20),
                     borderRadius: BorderRadius.circular(15),
                   ),
                   child: Text(
                     _userEmail,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.whitecolor,
                       fontSize: 12,
                       fontWeight: FontWeight.w400,
                     ),
@@ -554,14 +555,14 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
                       _KMSEnabled
                           ? Icons.notifications_active
                           : Icons.notifications_off,
-                      color: Colors.white,
+                      color: AppColors.whitecolor,
                       size: 20,
                     ),
                     const SizedBox(width: 8),
                     const Text(
                       'KMS',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AppColors.whitecolor,
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
@@ -578,7 +579,7 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
                           );
                         }
                       },
-                      inactiveTrackColor: Colors.white.withAlpha(20),
+                      inactiveTrackColor: AppColors.whitecolor.withAlpha(20),
                     ),
                   ],
                 ),
@@ -610,12 +611,12 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
       height: 70,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Colors.white.withAlpha(20),
+        color: AppColors.whitecolor.withAlpha(20),
       ),
       child:
           _isRefreshing && versionedUrl == null
               ? const CircularProgressIndicator(
-                color: Colors.white,
+                color: AppColors.whitecolor,
                 strokeWidth: 2,
               )
               : versionedUrl != null
@@ -627,18 +628,18 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
                   height: 70,
                   placeholder:
                       (_, __) => const CircularProgressIndicator(
-                        color: Colors.white,
+                        color: AppColors.whitecolor,
                         strokeWidth: 2,
                       ),
                   errorWidget:
                       (_, __, ___) => const Icon(
                         Icons.person,
                         size: 35,
-                        color: Colors.white,
+                        color: AppColors.whitecolor,
                       ),
                 ),
               )
-              : const Icon(Icons.person, size: 35, color: Colors.white),
+              : const Icon(Icons.person, size: 35, color: AppColors.whitecolor),
     );
   }
 
@@ -825,7 +826,7 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                 child: const Text(
                   'Logout',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(color: AppColors.whitecolor),
                 ),
               ),
             ],
@@ -887,7 +888,7 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
                   SizedBox(height: 16),
                   Text(
                     'Logging out...',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
+                    style: TextStyle(color: AppColors.whitecolor, fontSize: 16),
                   ),
                 ],
               ),

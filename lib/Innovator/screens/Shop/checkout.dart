@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/models/payment_model.dart';
 import 'package:innovator/Innovator/Payment/payment_provider.dart';
 import 'package:innovator/Innovator/screens/Shop/Cart_List/api_services.dart';
@@ -119,7 +120,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
   final Color _primaryColor = const Color.fromRGBO(244, 135, 6, 1);
   final Color _accentColor = Colors.green;
   final Color _backgroundColor = Colors.grey.shade50;
-  final Color _cardColor = Colors.white;
+  final Color _cardColor = AppColors.whitecolor;
   final Color _textColor = Colors.blueGrey.shade800;
 
   List<PaymentModel> _onlinePayments = [];
@@ -428,7 +429,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
                       ).popUntil((route) => route.isFirst),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _primaryColor,
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppColors.whitecolor,
                   ),
                   child: const Text('Continue Shopping'),
                 ),
@@ -444,7 +445,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
       backgroundColor: _backgroundColor,
       appBar: AppBar(
         backgroundColor: _primaryColor,
-        foregroundColor: Colors.white,
+        foregroundColor: AppColors.whitecolor,
         title: const Text(
           'Checkout',
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -505,7 +506,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
                                   : (done
                                       ? _accentColor
                                       : Colors.grey.shade300),
-                          border: Border.all(color: Colors.white, width: 3),
+                          border: Border.all(
+                            color: AppColors.whitecolor,
+                            width: 3,
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withAlpha(20),
@@ -524,7 +528,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
                                           ? Icons.local_shipping
                                           : Icons.qr_code)
                                       : Icons.upload_file)),
-                          color: Colors.white,
+                          color: AppColors.whitecolor,
                           size: 20,
                         ),
                       ),
@@ -662,7 +666,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
                 onPressed: _isProcessing ? null : _nextStep,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _primaryColor,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.whitecolor,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -674,7 +678,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
-                            color: Colors.white,
+                            color: AppColors.whitecolor,
                             strokeWidth: 2,
                           ),
                         )
@@ -842,7 +846,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
                         dividerColor: Colors.transparent,
                         indicatorSize: TabBarIndicatorSize.tab,
                         unselectedLabelColor: Colors.grey,
-                        labelColor: Colors.white,
+                        labelColor: AppColors.whitecolor,
                         labelStyle: const TextStyle(
                           fontWeight: FontWeight.bold,
                         ),
@@ -1103,7 +1107,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
                     context: context,
                     builder:
                         (context) => AlertDialog(
-                          backgroundColor: Colors.white,
+                          backgroundColor: AppColors.whitecolor,
                           title: const Text('Choose Image Source'),
                           content: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -1164,7 +1168,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
             ),
           const SizedBox(height: 24),
           Card(
-            color: Colors.white,
+            color: AppColors.whitecolor,
             elevation: 2,
             child: Padding(
               padding: const EdgeInsets.all(16),

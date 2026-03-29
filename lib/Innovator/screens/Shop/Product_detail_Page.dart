@@ -7,6 +7,8 @@ import 'package:http/http.dart' as http;
 import 'package:carousel_slider/carousel_slider.dart';
 import 'dart:convert';
 
+import 'package:innovator/Innovator/constant/app_colors.dart';
+
 class ProductDetailPage extends StatefulWidget {
   final String productId;
   final String baseUrl;
@@ -52,33 +54,37 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
       final headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        if (widget.authToken != null) 'authorization': 'Bearer ${widget.authToken}',
+        if (widget.authToken != null)
+          'authorization': 'Bearer ${widget.authToken}',
       };
 
       developer.log('Loading product details for ID: ${widget.productId}');
-      final requestUrl = '${widget.baseUrl}/api/v1/products/${widget.productId}';
+      final requestUrl =
+          '${widget.baseUrl}/api/v1/products/${widget.productId}';
       developer.log('Request URL: $requestUrl');
-      
-      final response = await http.get(
-        Uri.parse(requestUrl),
-        headers: headers,
-      ).timeout(
-        const Duration(seconds: 15),
-        onTimeout: () {
-          throw Exception('Connection timeout. Please check your internet connection.');
-        },
-      );
+
+      final response = await http
+          .get(Uri.parse(requestUrl), headers: headers)
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw Exception(
+                'Connection timeout. Please check your internet connection.',
+              );
+            },
+          );
 
       if (!_isMounted) return;
 
       developer.log('Response status code: ${response.statusCode}');
-      
-      if (response.body.trim().startsWith('<!DOCTYPE') || 
+
+      if (response.body.trim().startsWith('<!DOCTYPE') ||
           response.body.trim().startsWith('<html')) {
         developer.log('Received HTML response instead of JSON');
         setState(() {
           _isError = true;
-          _errorMessage = 'Server returned HTML instead of JSON. Please check API configuration.';
+          _errorMessage =
+              'Server returned HTML instead of JSON. Please check API configuration.';
         });
         return;
       }
@@ -86,8 +92,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
       if (response.statusCode == 200) {
         try {
           final data = json.decode(response.body);
-          developer.log('Response data: ${data.toString().substring(0, min(100, data.toString().length))}...');
-          
+          developer.log(
+            'Response data: ${data.toString().substring(0, min(100, data.toString().length))}...',
+          );
+
           if (data['data'] != null) {
             setState(() {
               _product = data['data'];
@@ -100,7 +108,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           }
         } catch (e) {
           developer.log('JSON parse error: $e');
-          developer.log('Response body: ${response.body.substring(0, min(200, response.body.length))}...');
+          developer.log(
+            'Response body: ${response.body.substring(0, min(200, response.body.length))}...',
+          );
           setState(() {
             _isError = true;
             _errorMessage = 'Failed to parse server response: $e';
@@ -165,35 +175,45 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
       };
 
       developer.log('Adding product $productId to cart, quantity: $_quantity');
-      
-      final response = await http.post(
-        Uri.parse('${widget.baseUrl}/api/v1/add-to-cart'),
-        headers: headers,
-        body: json.encode({
-          'product': productId,
-          'productName': productName,
-          'quantity': _quantity,
-          'price': price,
-        }),
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          throw Exception('Connection timeout. Please check your internet connection.');
-        },
-      );
+
+      final response = await http
+          .post(
+            Uri.parse('${widget.baseUrl}/api/v1/add-to-cart'),
+            headers: headers,
+            body: json.encode({
+              'product': productId,
+              'productName': productName,
+              'quantity': _quantity,
+              'price': price,
+            }),
+          )
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              throw Exception(
+                'Connection timeout. Please check your internet connection.',
+              );
+            },
+          );
 
       if (!_isMounted) return;
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = json.decode(response.body);
-        
+
         if (data['success'] == true) {
           _showMessage('$productName added to cart successfully');
         } else {
-          _showMessage(data['message'] ?? 'Failed to add item to cart', isError: true);
+          _showMessage(
+            data['message'] ?? 'Failed to add item to cart',
+            isError: true,
+          );
         }
       } else {
-        _showMessage('Failed to add item to cart: ${response.statusCode}', isError: true);
+        _showMessage(
+          'Failed to add item to cart: ${response.statusCode}',
+          isError: true,
+        );
       }
     } catch (e) {
       developer.log('Error adding to cart: $e');
@@ -235,7 +255,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         _quantity++;
       });
     } else {
-      _showMessage('Cannot add more items than available in stock', isError: true);
+      _showMessage(
+        'Cannot add more items than available in stock',
+        isError: true,
+      );
     }
   }
 
@@ -248,10 +271,15 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.whitecolor,
       appBar: AppBar(
         backgroundColor: Color.fromRGBO(244, 135, 6, 1),
-        title: Text(_product != null ? _product!['name'] ?? 'Product Detail' : 'Product Detail', style: TextStyle(color: Colors.white),),
+        title: Text(
+          _product != null
+              ? _product!['name'] ?? 'Product Detail'
+              : 'Product Detail',
+          style: TextStyle(color: AppColors.whitecolor),
+        ),
         centerTitle: true,
         actions: [
           IconButton(
@@ -294,14 +322,14 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
 
     // Extract product details
     final String name = _product!['name'] ?? 'Unknown Product';
-    final String description = _product!['description'] ?? 'No description available';
+    final String description =
+        _product!['description'] ?? 'No description available';
     final double price = (_product!['price'] ?? 0.0).toDouble();
     final int stock = _product!['stock'] ?? 0;
     final List<dynamic> images = _product!['images'] ?? [];
     final String category = _product!['category']?['name'] ?? 'Uncategorized';
 
     return SingleChildScrollView(
-      
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,27 +337,21 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           // Product images carousel
           _buildImageCarousel(images),
           const SizedBox(height: 24),
-          
+
           // Product name
           Text(
             name,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          
+
           // Category
           Text(
             'Category: $category',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[700],
-            ),
+            style: TextStyle(fontSize: 16, color: Colors.grey[700]),
           ),
           const SizedBox(height: 8),
-          
+
           // Price and stock
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -343,29 +365,31 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
-                  color: stock > 0 ? Colors.green.shade100 : Colors.red.shade100,
+                  color:
+                      stock > 0 ? Colors.green.shade100 : Colors.red.shade100,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
                   stock > 0 ? 'In Stock: $stock' : 'Out of stock',
                   style: TextStyle(
-                    color: stock > 0 ? Colors.green.shade800 : Colors.red.shade800,
+                    color:
+                        stock > 0 ? Colors.green.shade800 : Colors.red.shade800,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
             ],
           ),
-          
+
           const SizedBox(height: 24),
           const Text(
             'Description',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text(
@@ -376,7 +400,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               height: 1.5,
             ),
           ),
-          
+
           // Additional product details
           const SizedBox(height: 24),
           _buildProductSpecs(),
@@ -388,14 +412,18 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   Widget _buildImageCarousel(List<dynamic> images) {
     if (images.isEmpty) {
       return AspectRatio(
-        aspectRatio: 16/9,
+        aspectRatio: 16 / 9,
         child: Container(
           decoration: BoxDecoration(
             color: Colors.grey[200],
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Center(
-            child: Icon(Icons.image_not_supported, size: 64, color: Colors.grey),
+            child: Icon(
+              Icons.image_not_supported,
+              size: 64,
+              color: Colors.grey,
+            ),
           ),
         ),
       );
@@ -419,46 +447,53 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               }
             },
           ),
-          items: images.map((image) {
-            final String imageUrl = '${widget.baseUrl}$image';
-            return Hero(
-              tag: 'product-${widget.productId}-${images.indexOf(image)}',
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: CachedNetworkImage(
-                  imageUrl: imageUrl,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  placeholder: (context, url) => Container(
-                    color: Colors.grey[200],
-                    child: const Center(child: CircularProgressIndicator()),
+          items:
+              images.map((image) {
+                final String imageUrl = '${widget.baseUrl}$image';
+                return Hero(
+                  tag: 'product-${widget.productId}-${images.indexOf(image)}',
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: CachedNetworkImage(
+                      imageUrl: imageUrl,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      placeholder:
+                          (context, url) => Container(
+                            color: Colors.grey[200],
+                            child: const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          ),
+                      errorWidget:
+                          (context, url, error) => Container(
+                            color: Colors.grey[200],
+                            child: const Icon(Icons.error),
+                          ),
+                    ),
                   ),
-                  errorWidget: (context, url, error) => Container(
-                    color: Colors.grey[200],
-                    child: const Icon(Icons.error),
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
+                );
+              }).toList(),
         ),
         if (images.length > 1) ...[
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: images.asMap().entries.map((entry) {
-              return Container(
-                width: 8.0,
-                height: 8.0,
-                margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _currentImageIndex == entry.key
-                      ? Colors.blue
-                      : Colors.grey.withAlpha(50),
-                ),
-              );
-            }).toList(),
+            children:
+                images.asMap().entries.map((entry) {
+                  return Container(
+                    width: 8.0,
+                    height: 8.0,
+                    margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color:
+                          _currentImageIndex == entry.key
+                              ? Colors.blue
+                              : Colors.grey.withAlpha(50),
+                    ),
+                  );
+                }).toList(),
           ),
         ],
       ],
@@ -468,61 +503,59 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   Widget _buildProductSpecs() {
     // Extract additional product details if available
     final Map<String, dynamic> specs = {};
-    
+
     // Add any details from the product data
-    if (_product!.containsKey('content')) specs['Content'] = _product!['content'];
+    if (_product!.containsKey('content'))
+      specs['Content'] = _product!['content'];
     if (_product!.containsKey('vendor') && _product!['vendor'] != null) {
-      specs['Business'] = _product!['vendor']['businessName'] ?? 'Unknown Vendor';
+      specs['Business'] =
+          _product!['vendor']['businessName'] ?? 'Unknown Vendor';
     }
-    
+
     if (specs.isEmpty) {
       return const SizedBox.shrink();
     }
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
           'Specifications',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
-        ...specs.entries.map((entry) => Padding(
-          padding: const EdgeInsets.only(bottom: 8.0),
-          child: Row(
-            children: [
-              Text(
-                '${entry.key}:',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              const SizedBox(width: 8), 
-              Expanded(
-                child: Text(
-                  '${entry.value}',
-                  style: TextStyle(
+        ...specs.entries.map(
+          (entry) => Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Row(
+              children: [
+                Text(
+                  '${entry.key}:',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
                     fontSize: 16,
-                    color: Colors.grey[700],
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '${entry.value}',
+                    style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                  ),
+                ),
+              ],
+            ),
           ),
-        )),
+        ),
       ],
     );
   }
 
   Widget _buildBottomBar() {
     final int stock = _product!['stock'] ?? 0;
-    
+
     return Padding(
-      padding:  EdgeInsets.only(right: 15,left: 15,bottom: 40,top: 5),
+      padding: EdgeInsets.only(right: 15, left: 15, bottom: 40, top: 5),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -538,7 +571,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   icon: const Icon(Icons.remove),
                   onPressed: stock > 0 ? _decrementQuantity : null,
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  constraints: const BoxConstraints(
+                    minWidth: 36,
+                    minHeight: 36,
+                  ),
                 ),
                 Text(
                   '$_quantity',
@@ -551,38 +587,40 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   icon: const Icon(Icons.add),
                   onPressed: stock > 0 ? _incrementQuantity : null,
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  constraints: const BoxConstraints(
+                    minWidth: 36,
+                    minHeight: 36,
+                  ),
                 ),
               ],
             ),
           ),
-    
+
           // Add to cart button
           ElevatedButton(
-            
             onPressed: (stock > 0 && !_addingToCart) ? _addToCart : null,
             style: ElevatedButton.styleFrom(
-                 
-                     backgroundColor: Color.fromRGBO(244, 135, 6, 1),
+              backgroundColor: Color.fromRGBO(244, 135, 6, 1),
               disabledBackgroundColor: Colors.grey.shade400,
-              minimumSize: Size(15, 50)
+              minimumSize: Size(15, 50),
             ),
-            child: _addingToCart
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
+            child:
+                _addingToCart
+                    ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: AppColors.whitecolor,
+                        strokeWidth: 2,
+                      ),
+                    )
+                    : const Text(
+                      'Add to Cart',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  )
-                : const Text(
-                    'Add to Cart',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
           ),
         ],
       ),

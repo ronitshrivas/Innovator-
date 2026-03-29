@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Login.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/models/repost_model.dart';
 import 'package:innovator/Innovator/screens/Feed/Repost/sharedrepostcard.dart';
 import 'package:innovator/Innovator/screens/Likes/Content-Like-Service.dart';
@@ -304,7 +305,7 @@ class _RepostsListScreenState extends State<RepostsListScreen>
             label: const Text('Retry'),
             style: ElevatedButton.styleFrom(
               backgroundColor: _kOrange,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.whitecolor,
               padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 13),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -458,7 +459,7 @@ class _RepostEntryCardState extends State<_RepostEntryCard>
           initial,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: AppColors.whitecolor,
             fontSize: 15,
           ),
         ),
@@ -485,7 +486,10 @@ class _RepostEntryCardState extends State<_RepostEntryCard>
               backgroundColor: Colors.grey.shade300,
               child: Text(
                 initial,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
+                style: const TextStyle(
+                  color: AppColors.whitecolor,
+                  fontSize: 14,
+                ),
               ),
             ),
       ),
@@ -503,7 +507,7 @@ class _RepostEntryCardState extends State<_RepostEntryCard>
         child: Container(
           margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.whitecolor,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
@@ -827,7 +831,7 @@ class _ShimCardState extends State<_ShimCard>
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.whitecolor,
             borderRadius: BorderRadius.circular(20),
           ),
           padding: const EdgeInsets.all(16),

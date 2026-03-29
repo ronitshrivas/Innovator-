@@ -8,7 +8,7 @@ import 'package:innovator/KMS/screens/auth/forgot_password_screen.dart';
 import 'package:innovator/KMS/screens/auth/signup_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/admin_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/coordinator_dashboard_screen.dart';
-import 'package:innovator/KMS/screens/dashboard/teacher_dashboard_screen.dart'; 
+import 'package:innovator/KMS/screens/dashboard/teacher_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/student_dashboard_screen.dart';
 
 class KmsLoginScreen extends ConsumerStatefulWidget {
@@ -49,28 +49,28 @@ class _KmsLoginScreenState extends ConsumerState<KmsLoginScreen> {
 
       switch (role) {
         case 'admin':
-        ref.refresh(userDetailsProvider);
+          ref.refresh(userDetailsProvider);
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => AdminDashboardScreen()),
           );
           break;
         case 'coordinator':
-        ref.refresh(userDetailsProvider);
+          ref.refresh(userDetailsProvider);
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => CoordinatorDashboardScreen()),
           );
           break;
         case 'teacher':
-        ref.refresh(userDetailsProvider);
+          ref.refresh(userDetailsProvider);
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => TeacherDashboardScreen()),
           );
           break;
         case 'student':
-        ref.refresh(userDetailsProvider);
+          ref.refresh(userDetailsProvider);
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => StudentDashboardScreen()),

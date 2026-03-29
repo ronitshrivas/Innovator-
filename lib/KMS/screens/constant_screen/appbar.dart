@@ -176,7 +176,7 @@ class AppbarScreen extends ConsumerWidget {
                                       onPressed: () async {
                                         Navigator.pop(context);
                                         await ref.read(authProvider).logout();
-                                         ref.invalidate(authProvider);
+                                        ref.invalidate(authProvider);
                                         if (context.mounted) {
                                           Navigator.pushAndRemoveUntil(
                                             context,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Login.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/innovator_home.dart';
 import 'dart:developer' as developer;
 
@@ -79,7 +80,7 @@ class _SplashScreenState extends State<SplashScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.white, Colors.white],
+            colors: [AppColors.whitecolor, AppColors.whitecolor],
           ),
         ),
         child: Center(

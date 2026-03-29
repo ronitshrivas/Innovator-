@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
+import 'dart:io';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -8,6 +10,7 @@ import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Forget_PWD.dart';
 import 'package:innovator/Innovator/Authorization/signup.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/helper/dialogs.dart';
 import 'package:innovator/innovator_home.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -140,6 +143,33 @@ class _LoginPageState extends State<LoginPage> {
 
         await _saveCredentials();
         _navigateAfterLogin(user);
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          try {
+            String? fcmToken = await FirebaseMessaging.instance.getToken();
+            if (fcmToken != null) {
+              final accessToken = AppData().accessToken;
+              if (accessToken == null || accessToken.isEmpty) return;
+
+              String deviceName =
+                  Platform.isAndroid ? 'Android Device' : 'iPhone';
+
+              await http.post(
+                Uri.parse('http://182.93.94.220:8005/api/fcm-tokens/'),
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': 'Bearer $accessToken',
+                },
+                body: jsonEncode({
+                  'token': fcmToken,
+                  'device_name': deviceName,
+                }),
+              );
+              developer.log('FCM token sent after login');
+            }
+          } catch (e) {
+            developer.log('FCM post-login error: $e');
+          }
+        });
       } else {
         final data = jsonDecode(response.body) as Map<String, dynamic>?;
         final msg =
@@ -188,7 +218,7 @@ class _LoginPageState extends State<LoginPage> {
             SnackBar(
               content: const Row(
                 children: [
-                  Icon(Icons.info_outline, color: Colors.white),
+                  Icon(Icons.info_outline, color: AppColors.whitecolor),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text('Please complete your profile to continue'),
@@ -243,7 +273,7 @@ class _LoginPageState extends State<LoginPage> {
                         fontSize: 30,
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.w700,
-                        color: Colors.white,
+                        color: AppColors.whitecolor,
                       ),
                     ),
                     Align(
@@ -266,7 +296,7 @@ class _LoginPageState extends State<LoginPage> {
                 width: mq.width,
                 height: mq.height / 1.6,
                 decoration: const BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.whitecolor,
                   borderRadius: BorderRadius.only(topLeft: Radius.circular(70)),
                 ),
                 child: Padding(
@@ -345,7 +375,7 @@ class _LoginPageState extends State<LoginPage> {
                                   children: [
                                     Checkbox(
                                       activeColor: _orange,
-                                      checkColor: Colors.white,
+                                      checkColor: AppColors.whitecolor,
                                       value: _rememberMe,
                                       onChanged:
                                           (v) =>
@@ -392,7 +422,7 @@ class _LoginPageState extends State<LoginPage> {
                                         width: 20,
                                         height: 20,
                                         child: CircularProgressIndicator(
-                                          color: Colors.white,
+                                          color: AppColors.whitecolor,
                                           strokeWidth: 2,
                                         ),
                                       )
@@ -400,7 +430,7 @@ class _LoginPageState extends State<LoginPage> {
                                         'Login',
                                         style: TextStyle(
                                           fontSize: 16,
-                                          color: Colors.white,
+                                          color: AppColors.whitecolor,
                                           fontWeight: FontWeight.bold,
                                           letterSpacing: 1.1,
                                         ),

@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Login.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/controllers/user_controller.dart';
 import 'package:innovator/Innovator/screens/Profile/profile_page.dart';
 import 'package:innovator/main.dart';
@@ -635,7 +636,7 @@ class _VideoFeedPageState extends State<VideoFeedPage> {
       key: _refreshIndicatorKey,
       onRefresh: _refresh,
       color: Colors.deepOrange,
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.whitecolor,
       strokeWidth: 3.0,
       displacement: 40.0,
       child: PageView.builder(
@@ -711,7 +712,10 @@ class _VideoFeedPageState extends State<VideoFeedPage> {
           children: [
             CircularProgressIndicator(color: Colors.deepOrange),
             SizedBox(height: 16),
-            Text('Loading videos...', style: TextStyle(color: Colors.white)),
+            Text(
+              'Loading videos...',
+              style: TextStyle(color: AppColors.whitecolor),
+            ),
           ],
         ),
       ),
@@ -734,7 +738,7 @@ class _VideoFeedPageState extends State<VideoFeedPage> {
             // Text(
             //   'You\'ve reached the end!',
             //   style: TextStyle(
-            //     color: Colors.white,
+            //     color: AppColors.whitecolor,
             //     fontSize: 18,
             //     fontWeight: FontWeight.bold,
             //   ),
@@ -743,7 +747,7 @@ class _VideoFeedPageState extends State<VideoFeedPage> {
             // Text(
             //   'Pull down to refresh for new content',
             //   style: TextStyle(
-            //     color: Colors.white70,
+            //     color: AppColors.whitecolor70,
             //     fontSize: 14,
             //   ),
             // ),
@@ -760,11 +764,11 @@ class _VideoFeedPageState extends State<VideoFeedPage> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.refresh, color: Colors.white, size: 20),
+                  Icon(Icons.refresh, color: AppColors.whitecolor, size: 20),
                   SizedBox(width: 8),
                   Text(
                     'Refresh for more',
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(color: AppColors.whitecolor),
                   ),
                 ],
               ),
@@ -834,7 +838,7 @@ class _VideoFeedPageState extends State<VideoFeedPage> {
                         _hasError && _errorMessage.contains('log in')
                             ? 'Log In'
                             : 'Retry',
-                        style: TextStyle(color: Colors.white),
+                        style: TextStyle(color: AppColors.whitecolor),
                       ),
                     ),
                   ],
@@ -850,7 +854,10 @@ class _VideoFeedPageState extends State<VideoFeedPage> {
                     Lottie.asset('animation/No-Content.json', height: 200),
                     Text(
                       'No video content available',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
+                      style: TextStyle(
+                        color: AppColors.whitecolor,
+                        fontSize: 16,
+                      ),
                     ),
                     SizedBox(height: 16),
                     ElevatedButton(
@@ -863,7 +870,7 @@ class _VideoFeedPageState extends State<VideoFeedPage> {
                       onPressed: _refresh,
                       child: Text(
                         'Refresh',
-                        style: TextStyle(color: Colors.white),
+                        style: TextStyle(color: AppColors.whitecolor),
                       ),
                     ),
                   ],
@@ -903,7 +910,10 @@ class _VideoFeedPageState extends State<VideoFeedPage> {
                         SizedBox(width: 8),
                         Text(
                           'Loading more...',
-                          style: TextStyle(color: Colors.white, fontSize: 12),
+                          style: TextStyle(
+                            color: AppColors.whitecolor,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
@@ -989,7 +999,7 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> {
               Text(
                 '${widget.content.likes}',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.whitecolor,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -1002,7 +1012,7 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> {
               IconButton(
                 icon: Icon(
                   _showComments ? Icons.chat : Icons.chat_bubble_outline,
-                  color: Colors.white,
+                  color: AppColors.whitecolor,
                   size: 32,
                 ),
                 onPressed: () {
@@ -1014,7 +1024,7 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> {
               Text(
                 '${widget.content.comments}',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.whitecolor,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -1026,13 +1036,17 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> {
             Column(
               children: [
                 IconButton(
-                  icon: Icon(Icons.share, color: Colors.white, size: 32),
+                  icon: Icon(
+                    Icons.share,
+                    color: AppColors.whitecolor,
+                    size: 32,
+                  ),
                   onPressed: () => _showShareOptions(context),
                 ),
                 Text(
                   '${widget.content.shares}',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.whitecolor,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1041,7 +1055,7 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> {
           SizedBox(height: 20),
           // More Options
           IconButton(
-            icon: Icon(Icons.more_vert, color: Colors.white, size: 32),
+            icon: Icon(Icons.more_vert, color: AppColors.whitecolor, size: 32),
             onPressed: () => _showOptionsDialog(context),
           ),
         ],
@@ -1107,7 +1121,7 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> {
                     Text(
                       widget.content.author.name,
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AppColors.whitecolor,
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
@@ -1116,7 +1130,10 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> {
                     // Show views count and engagement rate
                     Text(
                       '${widget.content.views} views • ${widget.content.engagementRate.toStringAsFixed(1)}% engagement',
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                      style: TextStyle(
+                        color: AppColors.whitecolor,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
@@ -1156,7 +1173,7 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> {
               ),
               child: Text(
                 '${widget.content.feedPosition} • ${widget.content.loadPriority}',
-                style: TextStyle(color: Colors.white70, fontSize: 10),
+                style: TextStyle(color: AppColors.whitecolor, fontSize: 10),
               ),
             ),
           // Expandable Status Text
@@ -1164,7 +1181,11 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> {
             ExpandableStatusText(
               text: widget.content.status,
               maxLines: 2,
-              style: TextStyle(color: Colors.white, fontSize: 14, height: 1.3),
+              style: TextStyle(
+                color: AppColors.whitecolor,
+                fontSize: 14,
+                height: 1.3,
+              ),
             ),
         ],
       ),
@@ -1270,7 +1291,7 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> {
         duration: Duration(milliseconds: 300),
         height: _showComments ? MediaQuery.of(context).size.height * 0.5 : 0,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.whitecolor,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child:
@@ -1333,7 +1354,7 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> {
                       : Center(
                         child: Text(
                           'No video available',
-                          style: TextStyle(color: Colors.white),
+                          style: TextStyle(color: AppColors.whitecolor),
                         ),
                       ),
             ),
@@ -1388,7 +1409,7 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> {
           //                 Text(
           //                   'You\'ve reached the end!',
           //                   style: TextStyle(
-          //                     color: Colors.white,
+          //                     color: AppColors.whitecolor,
           //                     fontSize: 18,
           //                     fontWeight: FontWeight.bold,
           //                   ),
@@ -1398,7 +1419,7 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> {
           //                 Text(
           //                   'Pull down to refresh for new content',
           //                   style: TextStyle(
-          //                     color: Colors.white70,
+          //                     color: AppColors.whitecolor70,
           //                     fontSize: 14,
           //                   ),
           //                   textAlign: TextAlign.center,
@@ -1418,7 +1439,7 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> {
   void _showOptionsDialog(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.whitecolor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1553,7 +1574,7 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.whitecolor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -2078,7 +2099,7 @@ class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
                   Text(
                     'Quality',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.whitecolor,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                     ),
@@ -2090,7 +2111,11 @@ class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
                         _showQualitySelector = false;
                       });
                     },
-                    child: Icon(Icons.close, color: Colors.white, size: 16),
+                    child: Icon(
+                      Icons.close,
+                      color: AppColors.whitecolor,
+                      size: 16,
+                    ),
                   ),
                 ],
               ),
@@ -2136,7 +2161,10 @@ class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
                       Text(
                         _qualityManager.getQualityLabel(quality),
                         style: TextStyle(
-                          color: isSelected ? Colors.deepOrange : Colors.white,
+                          color:
+                              isSelected
+                                  ? Colors.deepOrange
+                                  : AppColors.whitecolor,
                           fontWeight:
                               isSelected ? FontWeight.bold : FontWeight.normal,
                           fontSize: 12,
@@ -2204,7 +2232,7 @@ class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
                 Text(
                   '${_qualityManager.getQualityLabel(_currentVideoQuality)} • $speedText',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.whitecolor,
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                   ),
@@ -2231,7 +2259,7 @@ class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
               width: 3,
               height: 12 + (8 * animationValue),
               decoration: BoxDecoration(
-                color: Colors.white.withAlpha(80),
+                color: AppColors.whitecolor.withAlpha(80),
                 borderRadius: BorderRadius.circular(2),
               ),
             );
@@ -2249,7 +2277,7 @@ class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
           width: 4,
           height: 20,
           decoration: BoxDecoration(
-            color: Colors.white.withAlpha(30),
+            color: AppColors.whitecolor.withAlpha(30),
             borderRadius: BorderRadius.circular(2),
           ),
           child: Align(
@@ -2416,7 +2444,10 @@ class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
                         SizedBox(height: 12),
                         Text(
                           'Adjusting quality...',
-                          style: TextStyle(color: Colors.white, fontSize: 12),
+                          style: TextStyle(
+                            color: AppColors.whitecolor,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ],
@@ -2449,7 +2480,7 @@ class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
                 child: Icon(
                   Icons.play_arrow,
                   size: 50,
-                  color: Colors.white.withAlpha(90),
+                  color: AppColors.whitecolor.withAlpha(90),
                 ),
               ),
             ),
@@ -2482,7 +2513,7 @@ class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
                     Text(
                       'SOUND ON',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AppColors.whitecolor,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
@@ -2511,14 +2542,16 @@ class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
                     color:
                         _showQualitySelector
                             ? Colors.deepOrange
-                            : Colors.white.withAlpha(30),
+                            : AppColors.whitecolor.withAlpha(30),
                     width: 1,
                   ),
                 ),
                 child: Icon(
                   Icons.hd,
                   color:
-                      _showQualitySelector ? Colors.deepOrange : Colors.white,
+                      _showQualitySelector
+                          ? Colors.deepOrange
+                          : AppColors.whitecolor,
                   size: 20,
                 ),
               ),
@@ -2550,7 +2583,7 @@ class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
                     IconButton(
                       icon: Icon(
                         _isMuted ? Icons.volume_off : Icons.volume_up,
-                        color: _isMuted ? Colors.white : Colors.green,
+                        color: _isMuted ? AppColors.whitecolor : Colors.green,
                         size: 28,
                       ),
                       onPressed: _toggleMute,
@@ -2579,7 +2612,10 @@ class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
                     SizedBox(height: 12),
                     Text(
                       'Switching to ${_qualityManager.getQualityLabel(_currentVideoQuality)}...',
-                      style: TextStyle(color: Colors.white, fontSize: 14),
+                      style: TextStyle(
+                        color: AppColors.whitecolor,
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),
@@ -2607,13 +2643,16 @@ class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
                         height: 12,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: AppColors.whitecolor,
                         ),
                       ),
                       SizedBox(width: 8),
                       Text(
                         'Buffering...',
-                        style: TextStyle(color: Colors.white, fontSize: 10),
+                        style: TextStyle(
+                          color: AppColors.whitecolor,
+                          fontSize: 10,
+                        ),
                       ),
                     ],
                   ),
@@ -2681,7 +2720,7 @@ class _ExpandableStatusTextState extends State<ExpandableStatusText> {
     final TextPainter textPainter = TextPainter(
       text: TextSpan(
         text: widget.text,
-        style: widget.style ?? TextStyle(color: Colors.white),
+        style: widget.style ?? TextStyle(color: AppColors.whitecolor),
       ),
       maxLines: widget.maxLines,
       textDirection: TextDirection.ltr,
@@ -2703,7 +2742,7 @@ class _ExpandableStatusTextState extends State<ExpandableStatusText> {
       children: [
         Text(
           widget.text,
-          style: widget.style ?? TextStyle(color: Colors.white),
+          style: widget.style ?? TextStyle(color: AppColors.whitecolor),
           maxLines: _isExpanded ? null : widget.maxLines,
           overflow: _isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
         ),
