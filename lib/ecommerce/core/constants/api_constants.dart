@@ -4,8 +4,10 @@ class EcommerApi {
   static const String cartItems = '$baseUrl/cart-items/';
   static const String productDetails = '$baseUrl/products/';
   static String itemUpdate(String id) => '$baseUrl/cart-items/$id/';
-  static const String checkout = '$baseUrl/checkout/summary/';
-  static String paymentImageUpload(String orderId) =>
+  static const String checkout = '$baseUrl/checkout/summary/'; 
+  static String checkoutSummary = '$baseUrl/checkout/summary/';
+  static String payment = '$baseUrl/payment-qrs/public-list/';
+  static String orders(String orderId) =>
       '$baseUrl/orders/$orderId/confirm-payment/';
 
   // time out
