@@ -16,7 +16,6 @@ import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/controllers/user_controller.dart';
 import 'package:innovator/Innovator/screens/Course/home.dart';
 import 'package:innovator/Innovator/screens/Shop/Shop_Page.dart';
-import 'package:innovator/KMS/core/constants/service/auth_wrapper.dart';
 import 'package:innovator/Innovator/screens/Eliza_ChatBot/Elizahomescreen.dart';
 import 'package:innovator/Innovator/screens/Events/Events.dart';
 import 'package:innovator/Innovator/screens/F&Q/F&Qscreen.dart';
@@ -573,10 +572,10 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
                       onChanged: (value) {
                         setState(() => _KMSEnabled = value);
                         if (value) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => AuthWrapper()),
-                          );
+                          // Navigator.push(
+                          //   context,
+                          //   MaterialPageRoute(builder: (_) => AuthWrapper()),
+                          // );
                         }
                       },
                       inactiveTrackColor: AppColors.whitecolor.withAlpha(20),
