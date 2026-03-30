@@ -55,9 +55,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
   Future<void> _init() async {
     await _fetchHistory();
-    _connect();
-    // Mark incoming messages as read after opening the screen
-    await _markAsRead();
+    _connect(); // WS connects first; mark-as-read sent after connection is up
   }
 
   // ── REST: Chat History ─────────────────────────────────────────────────────
@@ -101,54 +99,23 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
   // ── REST: Mark as Read ─────────────────────────────────────────────────────
 
-  Future<void> _markAsRead() async {
-    if (_token.isEmpty || _myId.isEmpty) return;
+  void _markAsRead() {
+    if (state.wsStatus != WsStatus.connected) return;
     try {
-      final uri = Uri.parse('$_kHttpBase/api/chats/mark-as-read/');
-      final response = await http
-          .post(
-            uri,
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'Authorization': 'Bearer $_token',
-            },
-            body: json.encode({'sender_id': otherUserId}),
-          )
-          .timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        developer.log('[Chat] Mark-as-read: ${data['message']}');
-
-        // Update local message statuses for received messages
-        final updated =
-            state.messages.map((m) {
-              if (!m.isMine) {
-                return ChatMessage(
-                  id: m.id,
-                  text: m.text,
-                  isMine: false,
-                  timestamp: m.timestamp,
-                  status: MessageStatus.read,
-                );
-              }
-              return m;
-            }).toList();
-        state = state.copyWith(messages: updated);
-      }
+      _channel!.sink.add(json.encode({'type': 'mark_as_read'}));
+      developer.log('[WS] Sent mark_as_read');
     } catch (e) {
-      developer.log('[Chat] markAsRead error: $e');
+      developer.log('[WS] markAsRead error: $e');
     }
   }
 
   /// Called externally (e.g. when screen regains focus)
-  Future<void> markAsRead() => _markAsRead();
+  void markAsRead() => _markAsRead();
 
   /// Refresh history + re-mark read (pull-to-refresh)
   Future<void> refresh() async {
     await _fetchHistory();
-    await _markAsRead();
+    _markAsRead();
   }
 
   // ── WebSocket ──────────────────────────────────────────────────────────────
@@ -175,6 +142,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       state = state.copyWith(wsStatus: WsStatus.connected);
       _reconnectAttempts = 0;
       developer.log('[WS] Connected ✓');
+      _markAsRead();
 
       _sub = _channel!.stream.listen(
         _onMessage,
@@ -196,7 +164,29 @@ class ChatNotifier extends StateNotifier<ChatState> {
     try {
       final data = json.decode(raw.toString()) as Map<String, dynamic>;
       developer.log('[WS] Received: $data');
-
+      if (data['type'] == 'messages_read') {
+        final senderId = data['sender_id']?.toString() ?? '';
+        if (senderId == otherUserId) {
+          final updated =
+              state.messages.map((m) {
+                if (m.isMine && m.status != MessageStatus.read) {
+                  return ChatMessage(
+                    id: m.id,
+                    text: m.text,
+                    isMine: true,
+                    timestamp: m.timestamp,
+                    status: MessageStatus.read,
+                  );
+                }
+                return m;
+              }).toList();
+          state = state.copyWith(messages: updated);
+          developer.log(
+            '[WS] messages_read from $senderId — ticked all sent msgs read',
+          );
+        }
+        return;
+      }
       // Typing indicator
       if (data['type'] == 'typing') {
         state = state.copyWith(isTyping: data['is_typing'] == true);
@@ -254,7 +244,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       );
 
       // Mark as read immediately if it's from the other person
-      if (!isMine) _markAsRead();
+      // if (!isMine) _markAsRead();
     } catch (e) {
       developer.log('[WS] Parse error: $e  raw=$raw');
     }

@@ -15,7 +15,6 @@ import 'package:innovator/Innovator/screens/Feed/Inner_Homepage.dart';
 import 'package:innovator/Innovator/screens/Feed/Video_Feed.dart'
     show VideoFeedPage;
 import 'package:innovator/Innovator/screens/Follow/follow_Button.dart';
-import 'package:innovator/Innovator/screens/Follow/follow-Service.dart';
 import 'package:innovator/Innovator/screens/Profile/Edit_Profile.dart';
 import 'package:innovator/Innovator/screens/SHow_Specific_Profile/Show_Specific_Profile.dart';
 import 'package:innovator/Innovator/utils/Drawer/custom_drawer.dart';

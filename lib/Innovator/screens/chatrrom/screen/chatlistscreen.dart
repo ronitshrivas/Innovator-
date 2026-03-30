@@ -31,8 +31,16 @@ const Color _orangeMid = Color.fromRGBO(244, 135, 6, 0.18);
 // ─────────────────────────────────────────────────────────────────────────────
 
 class MutualFriendsNotifier extends StateNotifier<MutualFriendsState> {
-  MutualFriendsNotifier() : super(const MutualFriendsState()) {
+  final Ref _ref;
+  MutualFriendsNotifier(this._ref) : super(const MutualFriendsState()) {
+    // ← accept ref
     fetchMutualFriends();
+  }
+
+  void _setState(MutualFriendsState newState) {
+    state = newState;
+    // ← Always keep the FAB badge in sync, even when ChatListScreen is not mounted
+    _ref.read(chatUnreadCountProvider.notifier).state = newState.totalUnread;
   }
 
   String get _token => AppData().accessToken ?? '';
@@ -46,7 +54,7 @@ class MutualFriendsNotifier extends StateNotifier<MutualFriendsState> {
   // ── Fetch mutual friends ───────────────────────────────────────────────────
 
   Future<void> fetchMutualFriends() async {
-    state = state.copyWith(isLoading: true, error: null);
+    _setState(state.copyWith(isLoading: true, error: null));
     try {
       final response = await http
           .get(
@@ -64,25 +72,34 @@ class MutualFriendsNotifier extends StateNotifier<MutualFriendsState> {
                 .map(MutualFriend.fromJson)
                 .toList();
 
-        state = state.copyWith(
-          friends: list,
-          totalCount: count,
-          isLoading: false,
+        _setState(
+          state.copyWith(
+            // ← _setState
+            friends: list,
+            totalCount: count,
+            isLoading: false,
+          ),
         );
 
         developer.log('[ChatList] Loaded ${list.length} mutual friends');
         await _fetchAllUnreadCounts(list);
       } else {
-        state = state.copyWith(
-          isLoading: false,
-          error: 'Failed to load (${response.statusCode})',
+        _setState(
+          state.copyWith(
+            // ← _setState
+            isLoading: false,
+            error: 'Failed to load (${response.statusCode})',
+          ),
         );
       }
     } catch (e) {
       developer.log('[ChatList] fetchMutualFriends error: $e');
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Network error. Pull to refresh.',
+      _setState(
+        state.copyWith(
+          // ← _setState
+          isLoading: false,
+          error: 'Network error. Pull to refresh.',
+        ),
       );
     }
   }
@@ -97,7 +114,7 @@ class MutualFriendsNotifier extends StateNotifier<MutualFriendsState> {
       friends.length,
       (i) => friends[i].copyWithUnread(results[i]),
     );
-    state = state.copyWith(friends: updated);
+    _setState(state.copyWith(friends: updated));
     developer.log(
       '[ChatList] Unread: ${updated.map((f) => '${f.username}=${f.unreadCount}').join(', ')}',
     );
@@ -135,7 +152,7 @@ class MutualFriendsNotifier extends StateNotifier<MutualFriendsState> {
         state.friends
             .map((f) => f.id == friendId ? f.copyWithUnread(0) : f)
             .toList();
-    state = state.copyWith(friends: updated);
+    _setState(state.copyWith(friends: updated));
   }
 
   Future<bool> deleteConversation(String friendId) async {
@@ -156,7 +173,7 @@ class MutualFriendsNotifier extends StateNotifier<MutualFriendsState> {
 
       if (response.statusCode == 200) {
         final updated = state.friends.where((f) => f.id != friendId).toList();
-        state = state.copyWith(friends: updated);
+        _setState(state.copyWith(friends: updated));
         developer.log('[ChatList] Conversation deleted for $friendId');
         return true;
       }
@@ -178,10 +195,10 @@ class MutualFriendsNotifier extends StateNotifier<MutualFriendsState> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// autoDispose so it refreshes when ChatListScreen is re-entered
-final mutualFriendsProvider = StateNotifierProvider.autoDispose<
-  MutualFriendsNotifier,
-  MutualFriendsState
->((ref) => MutualFriendsNotifier());
+final mutualFriendsProvider =
+    StateNotifierProvider<MutualFriendsNotifier, MutualFriendsState>(
+      (ref) => MutualFriendsNotifier(ref),
+    );
 
 /// Non-autoDispose — survives navigation so the FAB on the home screen
 /// can always read the latest unread count even after ChatListScreen is popped.
@@ -195,10 +212,10 @@ class ChatListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(mutualFriendsProvider);
 
-    // Keep global FAB badge in sync
-    ref.listen<MutualFriendsState>(mutualFriendsProvider, (_, next) {
-      ref.read(chatUnreadCountProvider.notifier).state = next.totalUnread;
-    });
+    // // Keep global FAB badge in sync
+    // ref.listen<MutualFriendsState>(mutualFriendsProvider, (_, next) {
+    //   ref.read(chatUnreadCountProvider.notifier).state = next.totalUnread;
+    // });
 
     return Scaffold(
       backgroundColor: Colors.white,
