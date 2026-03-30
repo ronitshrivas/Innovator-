@@ -1,14 +1,10 @@
-// home_screen.dart
-import 'dart:async';
-import 'dart:convert';
+import 'dart:async'; 
 import 'package:flutter/material.dart';
 import 'package:innovator/Innovator/App_data/App_data.dart';
-import 'package:innovator/Innovator/screens/Course/course_details_screen.dart';
-import 'package:innovator/Innovator/screens/Course/services/api_services.dart';
-import 'package:innovator/Innovator/widget/FloatingMenuwidget.dart';
+import 'package:innovator/elearning/course_details_screen.dart';
+import 'package:innovator/elearning/services/api_services.dart'; 
 import 'dart:developer' as developer;
-import 'package:lottie/lottie.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:lottie/lottie.dart'; 
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});

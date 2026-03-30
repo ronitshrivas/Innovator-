@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:innovator/Innovator/models/Course_models.dart';
-import 'package:innovator/Innovator/screens/Course/services/api_services.dart';
+import 'package:innovator/elearning/services/api_services.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'dart:developer' as developer;
 

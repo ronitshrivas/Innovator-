@@ -4,8 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart'; 
-import 'package:get/get.dart';
-import 'package:innovator/ecommerce/screens/Shop/CardIconWidget/cart_state_manager.dart';
+import 'package:get/get.dart'; 
 import 'package:innovator/ecommerce/screens/Shop/Shop_Page.dart';
 import 'package:innovator/Innovator/screens/Splash_Screen/splash_screen.dart';
 import 'package:innovator/KMS/screens/auth/login_screen.dart';
@@ -262,10 +261,7 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
       getPages: [
         GetPage(
           name: '/shop',
-          page: () => const ShopPage(),
-          binding: BindingsBuilder(() {
-            Get.lazyPut<CartStateManager>(() => CartStateManager());
-          }),
+          page: () => const ShopPage(), 
         ),
       ],
 

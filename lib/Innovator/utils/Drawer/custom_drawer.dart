@@ -12,7 +12,7 @@ import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Login.dart';
 import 'package:innovator/Innovator/controllers/user_controller.dart';
-import 'package:innovator/Innovator/screens/Course/home.dart';
+import 'package:innovator/elearning/home.dart';
 import 'package:innovator/ecommerce/screens/Shop/Shop_Page.dart';
 import 'package:innovator/KMS/core/constants/service/auth_wrapper.dart';
 import 'package:innovator/Innovator/screens/Eliza_ChatBot/Elizahomescreen.dart';

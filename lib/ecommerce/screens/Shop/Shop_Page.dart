@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/Innovator/widget/Custom_refresh_Indicator.dart';
-import 'package:innovator/ecommerce/screens/Shop/Cart_List/cart_screen.dart';
+import 'package:innovator/ecommerce/screens/Shop/cart_screen.dart';
 import 'package:innovator/ecommerce/screens/Shop/Product_detail_Page.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:innovator/ecommerce/model/product_model.dart';

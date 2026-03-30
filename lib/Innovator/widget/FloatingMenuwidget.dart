@@ -1,14 +1,12 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:http/http.dart' as http;
+ import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
-import 'package:innovator/Innovator/screens/Course/home.dart';
+import 'package:innovator/elearning/home.dart';
 import 'package:innovator/Innovator/screens/CreatePost/createpost.dart';
 import 'package:innovator/Innovator/screens/Events/Events.dart';
-import 'package:innovator/ecommerce/screens/Shop/CardIconWidget/cart_state_manager.dart';
-import 'package:innovator/Innovator/utils/Drawer/custom_drawer.dart';
+ import 'package:innovator/Innovator/utils/Drawer/custom_drawer.dart';
 import 'package:innovator/Innovator/Notification/FCM_Services.dart';
 import 'package:innovator/innovator_home.dart';
 import 'package:innovator/Innovator/screens/Search/Searchpage.dart';
@@ -237,9 +235,7 @@ class _FloatingMenuWidgetState extends State<FloatingMenuWidget>
         _nav.push(MaterialPageRoute(builder: (_) => EventsHomePage()));
         break;
       case 'open_shop':
-        if (!Get.isRegistered<CartStateManager>()) {
-          Get.put(CartStateManager(), permanent: true);
-        }
+      
         // Get.find<CartStateManager>().refreshCartCount();
         _nav.push(MaterialPageRoute(builder: (_) => const ShopPage()));
         break;
