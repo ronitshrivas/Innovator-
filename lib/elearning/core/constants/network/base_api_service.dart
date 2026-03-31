@@ -2,10 +2,10 @@ import 'package:dio/dio.dart';
 
 import 'dio_client.dart';
 
-abstract class BaseApiService {
+abstract class ElearningBaseApiService {
   final Dio _dio;
 
-  BaseApiService({Dio? dio}) : _dio = dio ?? DioClient.instance;
+  ElearningBaseApiService({Dio? dio}) : _dio = dio ?? DioClient.instance;
 
   Future<T> get<T>(
     String endpoint, {

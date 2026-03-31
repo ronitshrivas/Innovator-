@@ -65,6 +65,8 @@ class AuthInterceptor extends Interceptor {
       handler.reject(err);
       return;
     }
+      final exception = mapDioError(err);
+  ToastUtils.showError(exception.message);
  
     handler.next(err);
   }

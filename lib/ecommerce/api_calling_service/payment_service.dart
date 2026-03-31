@@ -8,7 +8,7 @@ import 'package:innovator/ecommerce/core/constants/api_constants.dart';
 import 'package:innovator/ecommerce/core/constants/network/base_api_service.dart';
 import 'package:innovator/ecommerce/core/constants/network/dio_client.dart';
 
-class PaymentService extends BaseApiService {
+class PaymentService extends EcommerBaseApiService {
   PaymentService() : super(dio: DioClient.instance);
 
   Future<List<PaymentModel>> getPaymentQRs() async {

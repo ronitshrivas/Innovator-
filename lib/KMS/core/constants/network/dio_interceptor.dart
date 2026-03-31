@@ -279,29 +279,7 @@ class AppInterceptor extends Interceptor {
     }
   }
 
-
-  // String? _extractMessage(dynamic data) {
-  //   if (data == null) return null;
-
-  //   if (data is Map) { 
-  //     final flat =
-  //         data['message'] ?? data['detail'] ?? data['error'] ?? data['msg'];
-  //     if (flat != null) return flat.toString();
-
-  //     final nonField = data['non_field_errors'];
-  //     if (nonField is List && nonField.isNotEmpty) {
-  //       return nonField.first.toString();
-  //     }
-
-  //     for (final value in data.values) {
-  //       if (value is List && value.isNotEmpty) return value.first.toString();
-  //       if (value is String) return value;
-  //     }
-  //   }
-
-  //   if (data is String) return data;
-  //   return null;
-  // }
+ 
   String? _extractMessage(dynamic data) {
   if (data == null) return null;
 

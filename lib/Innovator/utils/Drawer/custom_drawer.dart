@@ -23,6 +23,7 @@ import 'package:innovator/Innovator/screens/Profile/profile_page.dart';
 import 'package:innovator/Innovator/screens/Report/Report_screen.dart';
 import 'package:innovator/Innovator/screens/Settings/settings.dart';
 import 'package:innovator/Innovator/utils/Drawer/drawer_cache_manager.dart';
+import 'package:innovator/elearning/screens/course_list_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -780,7 +781,7 @@ class _TrueInstantDrawerState extends State<TrueInstantDrawer> {
   );
   void _goToEliza() => _quickNavigate(() => ElizaChatScreen());
   void _goToEvents() => _quickNavigate(() => EventsHomePage());
-  void _gotoelearning() => _quickNavigate(() => const HomeScreen());
+  void _gotoelearning() => _quickNavigate(() => const CourseListScreen());
   void _gotoecommerce() => _quickNavigate(() => const ShopPage());
   void _goToReports() => _quickNavigate(() => ReportsScreen());
   void _goToPrivacy() =>

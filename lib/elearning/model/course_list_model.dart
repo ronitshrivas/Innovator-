@@ -1,57 +1,4 @@
-class CourseContent {
-  final String id;
-  final String title;
-  final String videoUrl;
-  final String? documentUrl;
-  final String courseLevel;
-  final int order;
-  final DateTime createdAt;
-  final String course;
-
-  CourseContent({
-    required this.id,
-    required this.title,
-    required this.videoUrl,
-    this.documentUrl,
-    required this.courseLevel,
-    required this.order,
-    required this.createdAt,
-    required this.course,
-  });
-
-  factory CourseContent.fromJson(Map<String, dynamic> json) {
-    return CourseContent(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      videoUrl: json['video_url'] as String,
-      documentUrl: json['document_url'] as String?,
-      courseLevel: json['course_level'] as String,
-      order: json['order'] as int,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      course: json['course'] as String,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'title': title,
-      'video_url': videoUrl,
-      'document_url': documentUrl,
-      'course_level': courseLevel,
-      'order': order,
-      'created_at': createdAt.toIso8601String(),
-      'course': course,
-    };
-  }
-
-  @override
-  String toString() {
-    return 'CourseContent(id: $id, title: $title, courseLevel: $courseLevel, order: $order)';
-  }
-}
-
-class Course {
+class CourseListModel {
   final String id;
   final String vendor;
   final String vendorName;
@@ -60,11 +7,12 @@ class Course {
   final String title;
   final String description;
   final double price;
+  final String courseType;
   final bool isPublished;
   final DateTime createdAt;
   final List<CourseContent> contents;
 
-  Course({
+  CourseListModel({
     required this.id,
     required this.vendor,
     required this.vendorName,
@@ -73,25 +21,29 @@ class Course {
     required this.title,
     required this.description,
     required this.price,
+    required this.courseType,
     required this.isPublished,
     required this.createdAt,
     required this.contents,
   });
 
-  factory Course.fromJson(Map<String, dynamic> json) {
-    return Course(
-      id: json['id'] as String,
-      vendor: json['vendor'] as String,
-      vendorName: json['vendor_name'] as String,
-      category: json['category'] as String,
-      categoryName: json['category_name'] as String,
-      title: json['title'] as String,
-      description: json['description'] as String,
-      price: double.parse(json['price'] as String),
-      isPublished: json['is_published'] as bool,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      contents: (json['contents'] as List<dynamic>)
-          .map((item) => CourseContent.fromJson(item as Map<String, dynamic>))
+  bool get isFree => courseType == 'free';
+
+  factory CourseListModel.fromJson(Map<String, dynamic> json) {
+    return CourseListModel(
+      id: json['id'],
+      vendor: json['vendor'],
+      vendorName: json['vendor_name'],
+      category: json['category'],
+      categoryName: json['category_name'],
+      title: json['title'],
+      description: json['description'],
+      price: double.parse(json['price']),
+      courseType: json['course_type'],
+      isPublished: json['is_published'],
+      createdAt: DateTime.parse(json['created_at']),
+      contents: (json['contents'] as List)
+          .map((e) => CourseContent.fromJson(e))
           .toList(),
     );
   }
@@ -106,19 +58,78 @@ class Course {
       'title': title,
       'description': description,
       'price': price.toStringAsFixed(2),
+      'course_type': courseType,
       'is_published': isPublished,
       'created_at': createdAt.toIso8601String(),
-      'contents': contents.map((c) => c.toJson()).toList(),
+      'contents': contents.map((e) => e.toJson()).toList(),
     };
   }
+}
 
-  @override
-  String toString() {
-    return 'Course(id: $id, title: $title, price: $price, isPublished: $isPublished)';
+class CourseContent {
+  final String id;
+  final String course;
+  final String title;
+  final String instructorName;
+  final String? videoUrl;       
+  final String? videoFile;      
+  final String? thumbnail;
+  final double duration;
+  final String? documentUrl;   
+  final String? documentFile;   
+  final String courseLevel;
+  final int order;
+  final DateTime createdAt;
+
+  CourseContent({
+    required this.id,
+    required this.course,
+    required this.title,
+    required this.instructorName,
+    this.videoUrl,
+    this.videoFile,
+    this.thumbnail,
+    required this.duration,
+    this.documentUrl,
+    this.documentFile,
+    required this.courseLevel,
+    required this.order,
+    required this.createdAt,
+  });
+
+  factory CourseContent.fromJson(Map<String, dynamic> json) {
+    return CourseContent(
+      id: json['id'],
+      course: json['course'],
+      title: json['title'],
+      instructorName: json['instructor_name'],
+      videoUrl: json['video_url'],
+      videoFile: json['video_file'],
+      thumbnail: json['thumbnail'],
+      duration: (json['duration'] as num).toDouble(),
+      documentUrl: json['document_url'],
+      documentFile: json['document_file'],
+      courseLevel: json['course_level'],
+      order: json['order'],
+      createdAt: DateTime.parse(json['created_at']),
+    );
   }
-} 
-List<Course> parseCourses(List<dynamic> jsonList) {
-  return jsonList
-      .map((item) => Course.fromJson(item as Map<String, dynamic>))
-      .toList();
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'course': course,
+      'title': title,
+      'instructor_name': instructorName,
+      'video_url': videoUrl,
+      'video_file': videoFile,
+      'thumbnail': thumbnail,
+      'duration': duration,
+      'document_url': documentUrl,
+      'document_file': documentFile,
+      'course_level': courseLevel,
+      'order': order,
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
 }
