@@ -9,6 +9,7 @@ class CourseListModel {
   final double price;
   final String courseType;
   final bool isPublished;
+  final bool isEnrolled;
   final DateTime createdAt;
   final List<CourseContent> contents;
 
@@ -23,7 +24,9 @@ class CourseListModel {
     required this.price,
     required this.courseType,
     required this.isPublished,
+    required this.isEnrolled,
     required this.createdAt,
+
     required this.contents,
   });
 
@@ -41,10 +44,12 @@ class CourseListModel {
       price: double.parse(json['price']),
       courseType: json['course_type'],
       isPublished: json['is_published'],
+      isEnrolled: json['is_enrolled'] ?? false,
       createdAt: DateTime.parse(json['created_at']),
-      contents: (json['contents'] as List)
-          .map((e) => CourseContent.fromJson(e))
-          .toList(),
+      contents:
+          (json['contents'] as List)
+              .map((e) => CourseContent.fromJson(e))
+              .toList(),
     );
   }
 
@@ -60,6 +65,7 @@ class CourseListModel {
       'price': price.toStringAsFixed(2),
       'course_type': courseType,
       'is_published': isPublished,
+      'is_enrolled': isEnrolled,
       'created_at': createdAt.toIso8601String(),
       'contents': contents.map((e) => e.toJson()).toList(),
     };
@@ -71,12 +77,12 @@ class CourseContent {
   final String course;
   final String title;
   final String instructorName;
-  final String? videoUrl;       
-  final String? videoFile;      
+  final String? videoUrl;
+  final String? videoFile;
   final String? thumbnail;
   final double duration;
-  final String? documentUrl;   
-  final String? documentFile;   
+  final String? documentUrl;
+  final String? documentFile;
   final String courseLevel;
   final int order;
   final DateTime createdAt;

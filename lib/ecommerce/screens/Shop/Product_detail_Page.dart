@@ -199,10 +199,11 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
       slivers: [
         //  App Bar with image gallery
         SliverAppBar(
+          leading: const Icon(Icons.arrow_back_ios, color: Colors.black87),
           expandedHeight: 340,
           pinned: true,
           backgroundColor: Colors.white,
-          foregroundColor: Colors.black87,
+          foregroundColor: Colors.black,
           elevation: 0,
           flexibleSpace: FlexibleSpaceBar(background: _imageGallery(imageUrls)),
         ),
@@ -486,7 +487,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                   width: _currentImageIndex == i ? 20 : 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: _currentImageIndex == i ? _kOrange : Colors.white,
+                    color: _currentImageIndex == i ? _kOrange : Colors.black87,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),

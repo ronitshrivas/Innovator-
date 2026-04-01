@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/Innovator/widget/Custom_refresh_Indicator.dart';
-import 'package:innovator/elearning/model/course_list_model.dart'; 
-import 'package:innovator/elearning/provider/course_provider.dart'; 
+import 'package:innovator/elearning/model/course_list_model.dart';
+import 'package:innovator/elearning/provider/course_provider.dart';
 import 'package:innovator/elearning/screens/course_details_screen.dart';
-import 'package:shimmer/shimmer.dart'; 
+import 'package:shimmer/shimmer.dart';
 
 class CourseListScreen extends ConsumerStatefulWidget {
   const CourseListScreen({Key? key}) : super(key: key);
@@ -21,7 +21,6 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
   String _searchQuery = '';
   String _selectedCategory = 'All';
 
-  // tabs: All | Free | Paid
   static const List<String> _tabs = ['All', 'Free', 'Paid'];
 
   @override
@@ -29,7 +28,12 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
     _searchController.addListener(() {
-      setState(() => _searchQuery = _searchController.text.trim().toLowerCase());
+      setState(
+        () => _searchQuery = _searchController.text.trim().toLowerCase(),
+      );
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(enrollmentProvider);
     });
   }
 
@@ -40,8 +44,6 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
     super.dispose();
   }
 
-  // ── filter helpers ────────────────────────────────────────────────────────
-
   List<CourseListModel> _filtered(List<CourseListModel> all, int tabIndex) {
     List<CourseListModel> list = all;
 
@@ -49,16 +51,15 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
     if (tabIndex == 1) list = list.where((c) => c.isFree).toList();
     if (tabIndex == 2) list = list.where((c) => !c.isFree).toList();
 
-    // category filter
     if (_selectedCategory != 'All') {
       list = list.where((c) => c.categoryName == _selectedCategory).toList();
     }
 
-    // search filter
     if (_searchQuery.isNotEmpty) {
-      list = list
-          .where((c) => c.title.toLowerCase().contains(_searchQuery))
-          .toList();
+      list =
+          list
+              .where((c) => c.title.toLowerCase().contains(_searchQuery))
+              .toList();
     }
 
     return list;
@@ -68,8 +69,6 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
     final cats = all.map((c) => c.categoryName).toSet().toList()..sort();
     return ['All', ...cats];
   }
-
-  // ── build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -84,8 +83,6 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
       ),
     );
   }
-
-  // ── skeleton ──────────────────────────────────────────────────────────────
 
   Widget _buildSkeleton() {
     return SafeArea(
@@ -114,8 +111,6 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
     );
   }
 
-  // ── error ─────────────────────────────────────────────────────────────────
-
   Widget _buildError(Object e) {
     return Center(
       child: Column(
@@ -123,18 +118,20 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
         children: [
           const Icon(Icons.error_outline, size: 56, color: Colors.redAccent),
           const SizedBox(height: 12),
-          Text('Failed to load courses',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w600)),
+          Text(
+            'Failed to load courses',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 6),
-          Text(e.toString(),
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: Colors.grey),
-              textAlign: TextAlign.center),
+          Text(
+            e.toString(),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: () => ref.refresh(courseListProvider),
@@ -146,39 +143,32 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
     );
   }
 
-  // ── main content ──────────────────────────────────────────────────────────
+Widget _buildContent(List<CourseListModel> courses) {
+  final categories = _categories(courses);
 
-  Widget _buildContent(List<CourseListModel> courses) {
-    final categories = _categories(courses);
-
-    return SafeArea(
-      child: CustomRefreshIndicator(
-        onRefresh: () async => ref.refresh(courseListProvider),
-        child: NestedScrollView(
-          headerSliverBuilder: (context, innerBoxIsScrolled) => [
-            SliverToBoxAdapter(child: _buildHeader(courses)),
-            SliverToBoxAdapter(
-              child: _buildCategoryChips(categories),
+  return SafeArea(
+    child: Column(
+      children: [ 
+        _buildHeader(courses),
+        _buildCategoryChips(categories),
+          Container(
+          color: Colors.white,
+          child: TabBar(
+            controller: _tabController,
+            tabs: _tabs.map((t) => Tab(text: t)).toList(),
+            labelColor: Colors.black,
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: Color.fromRGBO(244, 135, 6, 1),
+            indicatorWeight: 2.5,
+            isScrollable: false,
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
             ),
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _TabBarDelegate(
-                TabBar(
-                  controller: _tabController,
-                  tabs: _tabs
-                      .map((t) => Tab(text: t))
-                      .toList(),
-                  labelColor: const Color(0xFF2563EB),
-                  unselectedLabelColor: Colors.grey,
-                  indicatorColor: const Color(0xFF2563EB),
-                  indicatorWeight: 2.5,
-                  labelStyle: const TextStyle(
-                      fontWeight: FontWeight.w600, fontSize: 14),
-                ),
-              ),
-            ),
-          ],
-          body: TabBarView(
+          ),
+        ), 
+        Expanded(
+          child: TabBarView(
             controller: _tabController,
             children: List.generate(_tabs.length, (tabIdx) {
               return AnimatedBuilder(
@@ -192,11 +182,10 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
             }),
           ),
         ),
-      ),
-    );
-  }
-
-  // ── header (search bar) ───────────────────────────────────────────────────
+      ],
+    ),
+  );
+}
 
   Widget _buildHeader(List<CourseListModel>? courses) {
     return Container(
@@ -207,17 +196,20 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
         children: [
           Row(
             children: [
-              const Text('E-Learning',
-                  style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E293B))),
+              const Text(
+                'E-Learning',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
               const Spacer(),
               if (courses != null)
-                Text('${courses.length} courses',
-                    style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade500)),
+                Text(
+                  '${courses.length} courses',
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                ),
             ],
           ),
           const SizedBox(height: 12),
@@ -231,22 +223,27 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Search courses...',
-                hintStyle:
-                    TextStyle(color: Colors.grey.shade400, fontSize: 14),
-                prefixIcon:
-                    Icon(Icons.search, color: Colors.grey.shade400, size: 20),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.close, size: 18),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                        },
-                      )
-                    : null,
+                hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: Colors.grey.shade400,
+                  size: 20,
+                ),
+                suffixIcon:
+                    _searchQuery.isNotEmpty
+                        ? IconButton(
+                          icon: const Icon(Icons.close, size: 18),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                        )
+                        : null,
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
             ),
           ),
@@ -254,8 +251,6 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
       ),
     );
   }
-
-  // ── category chips ────────────────────────────────────────────────────────
 
   Widget _buildCategoryChips(List<String> categories) {
     return Container(
@@ -275,12 +270,15 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
               onTap: () => setState(() => _selectedCategory = cat),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
-                  color: selected
-                      ? const Color(0xFF2563EB)
-                      : const Color(0xFFF1F5F9),
+                  color:
+                      selected
+                          ? Color.fromRGBO(244, 135, 6, 1)
+                          : const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -299,12 +297,17 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
     );
   }
 
-  // ── grid ──────────────────────────────────────────────────────────────────
-
   Widget _buildGrid(List<CourseListModel> courses) {
-    return GridView.builder(
+  return CustomRefreshIndicator(
+    onRefresh: () async {
+      await Future.wait([
+        ref.refresh(courseListProvider.future),
+        ref.refresh(enrollmentProvider.future),
+      ]);
+    },
+    child: GridView.builder(
       padding: const EdgeInsets.all(16),
-      physics: const BouncingScrollPhysics(),
+      physics: const AlwaysScrollableScrollPhysics(),  
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 12,
@@ -321,8 +324,9 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildEmpty() {
     return Center(
@@ -331,18 +335,19 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
         children: [
           Icon(Icons.school_outlined, size: 64, color: Colors.grey.shade300),
           const SizedBox(height: 12),
-          Text('No courses found',
-              style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey.shade500,
-                  fontWeight: FontWeight.w500)),
+          Text(
+            'No courses found',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey.shade500,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ],
       ),
     );
   }
 }
-
-// ─── Course Card ─────────────────────────────────────────────────────────────
 
 class _CourseCard extends StatelessWidget {
   final CourseListModel course;
@@ -352,9 +357,8 @@ class _CourseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final thumbnail = course.contents.isNotEmpty
-        ? course.contents.first.thumbnail
-        : null;
+    final thumbnail =
+        course.contents.isNotEmpty ? course.contents.first.thumbnail : null;
 
     return GestureDetector(
       onTap: onTap,
@@ -378,17 +382,19 @@ class _CourseCard extends StatelessWidget {
               children: [
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(14)),
+                    top: Radius.circular(14),
+                  ),
                   child: AspectRatio(
                     aspectRatio: 16 / 9,
-                    child: thumbnail != null
-                        ? Image.network(
-                            thumbnail,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                _ThumbnailPlaceholder(),
-                          )
-                        : _ThumbnailPlaceholder(),
+                    child:
+                        thumbnail != null
+                            ? Image.network(
+                              thumbnail,
+                              fit: BoxFit.cover,
+                              errorBuilder:
+                                  (_, __, ___) => _ThumbnailPlaceholder(),
+                            )
+                            : _ThumbnailPlaceholder(),
                   ),
                 ),
                 // Lock icon overlay
@@ -399,11 +405,14 @@ class _CourseCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.55),
+                        color: Colors.black.withAlpha(140),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.lock,
-                          color: Colors.white, size: 12),
+                      child: const Icon(
+                        Icons.lock,
+                        color: Colors.white,
+                        size: 12,
+                      ),
                     ),
                   ),
                 // Free badge
@@ -413,16 +422,21 @@ class _CourseCard extends StatelessWidget {
                     left: 8,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF10B981),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Text('FREE',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        'FREE',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
               ],
@@ -440,36 +454,46 @@ class _CourseCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF1E293B)),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1E293B),
+                      ),
                     ),
-                    const SizedBox(height: 4),
                     Text(
                       course.categoryName,
                       style: TextStyle(
-                          fontSize: 11, color: Colors.grey.shade500),
+                        fontSize: 11,
+                        color: Colors.grey.shade500,
+                      ),
                     ),
                     const Spacer(),
                     Row(
                       children: [
                         Expanded(
-                          child: course.isFree
-                              ? const Text('Free',
-                                  style: TextStyle(
+                          child:
+                              course.isFree
+                                  ? const Text(
+                                    'Free',
+                                    style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
-                                      color: Color(0xFF10B981)))
-                              : Text(
-                                  'Rs. ${course.price.toStringAsFixed(0)}',
-                                  style: const TextStyle(
+                                      color: Color(0xFF10B981),
+                                    ),
+                                  )
+                                  : Text(
+                                    'Rs. ${course.price.toStringAsFixed(0)}',
+                                    style: const TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
-                                      color: Color(0xFF2563EB)),
-                                ),
+                                      color: Color.fromRGBO(244, 135, 6, 1),
+                                    ),
+                                  ),
                         ),
-                        Icon(Icons.play_circle_outline,
-                            size: 18, color: Colors.grey.shade400),
+                        Icon(
+                          Icons.play_circle_outline,
+                          size: 18,
+                          color: Colors.grey.shade400,
+                        ),
                       ],
                     ),
                   ],
@@ -483,16 +507,17 @@ class _CourseCard extends StatelessWidget {
   }
 }
 
-// ─── helpers ──────────────────────────────────────────────────────────────────
-
 class _ThumbnailPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
       color: const Color(0xFFE2E8F0),
       child: Center(
-        child: Icon(Icons.play_lesson_outlined,
-            color: Colors.grey.shade400, size: 32),
+        child: Icon(
+          Icons.play_lesson_outlined,
+          color: Colors.grey.shade400,
+          size: 32,
+        ),
       ),
     );
   }
@@ -503,25 +528,30 @@ class _SkeletonCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-          color: Colors.white, borderRadius: BorderRadius.circular(14)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
       child: Column(
         children: [
           AspectRatio(
-              aspectRatio: 16 / 9,
-              child: Container(
-                  decoration: const BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(14))))),
+            aspectRatio: 16 / 9,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+              ),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.all(10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                    height: 12,
-                    width: double.infinity,
-                    color: Colors.white),
+                  height: 12,
+                  width: double.infinity,
+                  color: Colors.white,
+                ),
                 const SizedBox(height: 6),
                 Container(height: 12, width: 80, color: Colors.white),
               ],
@@ -538,10 +568,7 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   _TabBarDelegate(this.tabBar);
 
   @override
-  Widget build(_, __, ___) => Container(
-        color: Colors.white,
-        child: tabBar,
-      );
+  Widget build(_, __, ___) => Container(color: Colors.white, child: tabBar);
 
   @override
   double get maxExtent => tabBar.preferredSize.height;
