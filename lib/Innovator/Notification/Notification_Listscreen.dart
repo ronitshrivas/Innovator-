@@ -361,8 +361,8 @@ class _NotificationListScreenState extends State<NotificationListScreen>
       context,
       MaterialPageRoute(
         builder:
-            (_) => SpecificPostScreen(
-              contentId: contentId,
+            (_) => NewFeedPostDetailScreen(
+              postId: contentId,
               highlightAction: action,
             ),
       ),
@@ -422,52 +422,68 @@ class _NotificationListScreenState extends State<NotificationListScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Notifications',
-          style: TextStyle(color: Colors.white),
-        ),
-        actions: [
-          if (notifications.isNotEmpty) ...[
-            _buildHeaderAction(Icons.sync, 'Sync', () async {
-              HapticFeedback.mediumImpact();
-              await fetchNotifications();
-              _showSuccessSnackbar('Synced with latest notifications');
-            }),
-            // _buildHeaderAction(
-            //   Icons.mark_email_read,
-            //   'Mark all read',
-            //   markAllAsRead,
-            // ),
-            const SizedBox(width: 4),
-            _buildHeaderAction(
-              Icons.delete_sweep,
-              'Delete all',
-              deleteAllNotifications,
-            ),
-            const SizedBox(width: 8),
-          ],
-        ],
-      ),
+      // appBar: AppBar(
+      //   title: const Text(
+      //     'Notifications',
+      //     style: TextStyle(color: Colors.white),
+      //   ),
+      //   actions: [
+      //     if (notifications.isNotEmpty) ...[
+      //       _buildHeaderAction(Icons.sync, 'Sync', () async {
+      //         HapticFeedback.mediumImpact();
+      //         await fetchNotifications();
+      //         _showSuccessSnackbar('Synced with latest notifications');
+      //       }),
+      //       // _buildHeaderAction(
+      //       //   Icons.mark_email_read,
+      //       //   'Mark all read',
+      //       //   markAllAsRead,
+      //       // ),
+      //       const SizedBox(width: 4),
+      //       _buildHeaderAction(
+      //         Icons.delete_sweep,
+      //         'Delete all',
+      //         deleteAllNotifications,
+      //       ),
+      //       const SizedBox(width: 8),
+      //     ],
+      //   ],
+      // ),
       backgroundColor: Colors.grey[50],
-      body: CustomScrollView(
-        controller: _scrollController,
-        slivers: [_buildFilterChips(), _buildNotificationList()],
+      body: Padding(
+        padding: EdgeInsets.symmetric(vertical: 40),
+        child: CustomScrollView(
+          controller: _scrollController,
+          slivers: [
+            SliverToBoxAdapter(
+              child: IconButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                icon: Icon(Icons.arrow_back_ios_new),
+                alignment: Alignment.topLeft,
+              ),
+            ),
+            //  _buildHeaderAction(),
+            _buildFilterChips(),
+            _buildNotificationList(),
+          ],
+        ),
       ),
       floatingActionButton: _buildFloatingActionButtons(),
     );
   }
 
-  Widget _buildHeaderAction(IconData icon, String tooltip, VoidCallback onTap) {
+  Widget _buildHeaderAction() {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {},
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: Colors.white.withAlpha(20),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(icon, color: Colors.white, size: 20),
+        //child: Icon(Icon, color: Colors.white, size: 20),
       ),
     );
   }

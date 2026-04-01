@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
@@ -31,7 +31,11 @@ class FloatingMenuOverlay {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       try {
         final overlay = Overlay.of(context, rootOverlay: true);
-        _entry = OverlayEntry(builder: (_) => const FloatingMenuWidget());
+        // FIX: OverlayEntry needs a ProviderScope so ConsumerStatefulWidget
+        // inside it can access Riverpod providers.
+        _entry = OverlayEntry(
+          builder: (_) => const ProviderScope(child: FloatingMenuWidget()),
+        );
         overlay.insert(_entry!);
       } catch (e) {
         developer.log('Error showing FloatingMenuOverlay: $e');
@@ -47,16 +51,19 @@ class FloatingMenuOverlay {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FLOATING MENU WIDGET
+// FIX: Changed StatefulWidget → ConsumerStatefulWidget so `ref` is available
+// for passing to SmoothDrawerService.showLeftDrawer(context, ref).
 // ─────────────────────────────────────────────────────────────────────────────
 
-class FloatingMenuWidget extends StatefulWidget {
+class FloatingMenuWidget extends ConsumerStatefulWidget {
   const FloatingMenuWidget({super.key});
 
   @override
-  _FloatingMenuWidgetState createState() => _FloatingMenuWidgetState();
+  ConsumerState<FloatingMenuWidget> createState() => _FloatingMenuWidgetState();
 }
 
-class _FloatingMenuWidgetState extends State<FloatingMenuWidget>
+// FIX: Changed State → ConsumerState — this is what gives us `ref`
+class _FloatingMenuWidgetState extends ConsumerState<FloatingMenuWidget>
     with SingleTickerProviderStateMixin {
   bool _isExpanded = false;
   late AnimationController _animationController;
@@ -115,14 +122,12 @@ class _FloatingMenuWidgetState extends State<FloatingMenuWidget>
         _buttonY = size.height * 0.5;
       });
     });
-    //_fetchUnreadNotificationCount();
     _setupPeriodicRefresh();
   }
 
   void _setupPeriodicRefresh() {
     Future.delayed(const Duration(seconds: 30), () {
       if (mounted) {
-        // _fetchUnreadNotificationCount();
         _setupPeriodicRefresh();
       }
     });
@@ -170,7 +175,6 @@ class _FloatingMenuWidgetState extends State<FloatingMenuWidget>
     });
   }
 
-  // Called when the floating button is dragged
   void _onFloatingButtonDragEnd(DraggableDetails details, Size size) {
     final dy = details.offset.dy;
     final dx = details.offset.dx;
@@ -197,12 +201,10 @@ class _FloatingMenuWidgetState extends State<FloatingMenuWidget>
     });
   }
 
-  // Called when the nav bar itself is long-press dragged away from edge
   void _onNavBarDragEnd(DraggableDetails details, Size size) {
     final dy = details.offset.dy;
     final dx = details.offset.dx;
 
-    // Only switch back to floating if dragged away from edges
     if (dy < size.height - _kEdgeThreshold && dy > _kEdgeThreshold) {
       setState(() {
         _menuMode = _MenuMode.floating;
@@ -237,10 +239,6 @@ class _FloatingMenuWidgetState extends State<FloatingMenuWidget>
         _nav.push(MaterialPageRoute(builder: (_) => EventsHomePage()));
         break;
       case 'open_shop':
-        // if (!Get.isRegistered<CartStateManager>()) {
-        //   Get.put(CartStateManager(), permanent: true);
-        // }
-        // Get.find<CartStateManager>().refreshCartCount();
         _nav.push(MaterialPageRoute(builder: (_) => const ShopPage()));
         break;
       case 'view_profile':
@@ -251,11 +249,12 @@ class _FloatingMenuWidgetState extends State<FloatingMenuWidget>
         await _nav.push(
           MaterialPageRoute(builder: (_) => const NotificationListScreen()),
         );
-        // _fetchUnreadNotificationCount();
         break;
       case 'drawer':
-        InstantCache.init(); // pre-warm synchronously before route push
-        SmoothDrawerService.showLeftDrawer(context);
+        // FIX: `ref` is now available because this is a ConsumerState.
+        // Both context and ref are passed — context for Navigator, ref for
+        // pre-warming the drawerProfileProvider before the route is pushed.
+        SmoothDrawerService.showLeftDrawer(context, ref);
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(
@@ -377,7 +376,6 @@ class _FloatingMenuWidgetState extends State<FloatingMenuWidget>
   // ── Nav bar widget ───────────────────────────────────────────────────────
 
   Widget _buildNavBar(Size size, {required bool isBottom}) {
-    // Account for status bar height when at top
     final topPadding = isBottom ? 0.0 : MediaQuery.of(context).padding.top;
 
     return Positioned(
@@ -395,7 +393,6 @@ class _FloatingMenuWidgetState extends State<FloatingMenuWidget>
           setState(() => _selectedNavIndex = i);
           _handleAction(_navItems[i]['action']);
         },
-        //  LongPressDraggable used inside _NavBar so normal taps pass through
         onDragEnd: (d) => _onNavBarDragEnd(d, size),
       ),
     );
@@ -498,6 +495,9 @@ class _FloatingMenuWidgetState extends State<FloatingMenuWidget>
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// _NavBar — unchanged, no Riverpod needed here
+// ─────────────────────────────────────────────────────────────────────────────
 class _NavBar extends StatefulWidget {
   final List<Map<String, dynamic>> items;
   final int selectedIndex;
@@ -581,7 +581,6 @@ class _NavBarState extends State<_NavBar> with SingleTickerProviderStateMixin {
 
           return Expanded(
             child: GestureDetector(
-              //    does NOT intercept short taps.
               onTap: () => widget.onItemTap(i),
               behavior: HitTestBehavior.opaque,
               child: Column(
@@ -662,7 +661,6 @@ class _NavBarState extends State<_NavBar> with SingleTickerProviderStateMixin {
 
     return SlideTransition(
       position: _anim,
-      //    only a held press starts a drag to reposition the bar.
       child: LongPressDraggable(
         delay: const Duration(milliseconds: 400),
         feedback: Opacity(

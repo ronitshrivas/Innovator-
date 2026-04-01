@@ -700,11 +700,13 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
   Future<void> _checkConnectivity() async {
     try {
       final result = await InternetAddress.lookup('google.com');
+      if (!mounted) return; // ← ADD THIS
       setState(() {
         _isOnline = result.isNotEmpty && result[0].rawAddress.isNotEmpty;
       });
       if (_isOnline) _refresh();
     } on SocketException catch (_) {
+      if (!mounted) return; // ← ADD THIS
       setState(() => _isOnline = false);
     }
   }

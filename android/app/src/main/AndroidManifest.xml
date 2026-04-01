@@ -230,12 +230,12 @@
         <!-- CRITICAL: Enable background processing -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_name"
-            android:value="Incoming Calls" />
+            android:value="High Importance Notifications"/>
 
         <!-- CRITICAL: Battery optimization whitelist -->
         <meta-data
             android:name="com.google.android.gms.car.notification.SmallIcon"
-            android:resource="@mipmap/ic_launcher" />
+            android:resource="@mipmap/ic_launcher"/>
 
     </application>
 

@@ -1,1667 +1,1450 @@
-import 'dart:async';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:innovator/Innovator/App_data/App_data.dart';
-import 'package:innovator/Innovator/constant/app_colors.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:html/parser.dart' as htmlParser;
 
-class EventsHomePage extends StatefulWidget {
-  @override
-  _EventsHomePageState createState() => _EventsHomePageState();
+// ─── Theme ────────────────────────────────────────────────────────────────────
+
+class _T {
+  static const bg = Color(0xFFF5F5F7);
+  static const surface = Color(0xFFFFFFFF);
+  static const surfaceHigh = Color(0xFFEFEFF0);
+  static const orange = Color(0xFFF48706);
+  static const orangeDim = Color(0x22F48706);
+  static const textPrimary = Color(0xFF1C1C1E);
+  static const textSecondary = Color(0xFF6C6C70);
+  static const divider = Color(0xFFE5E5EA);
+  static const green = Color(0xFF25A244);
+  static const greenDim = Color(0x1E25A244);
+  static const urgent = Color(0xFFD93025);
+  static const urgentDim = Color(0x1ED93025);
 }
 
-class _EventsHomePageState extends State<EventsHomePage>
-    with TickerProviderStateMixin {
-  List<TechEvent> events = [];
-  List<TechEvent> filteredEvents = [];
-  bool isLoading = true;
-  String selectedCountry = 'All';
-  String searchQuery = '';
-  late TabController _tabController;
-  Timer? _refreshTimer;
+// ─── API ──────────────────────────────────────────────────────────────────────
 
-  final List<String> countries = [
-    'All',
-    'Nepal',
-    'India',
-    'USA',
-    'UK',
-    'Germany',
-    'Singapore',
-    'Japan',
-    'Australia',
-    'Canada',
-    'France',
-  ];
+const _kBaseUrl = 'http://182.93.94.220:8005/api/events/';
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    loadEvents();
-    loadFavorites();
-    // Auto-refresh every 2 hours
-    _refreshTimer = Timer.periodic(Duration(hours: 2), (timer) {
-      loadEvents();
-    });
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    _refreshTimer?.cancel();
-    super.dispose();
-  }
-
-  Future<void> loadEvents() async {
-    setState(() {
-      isLoading = true;
-    });
-
-    String? cachedEventsJson; // Define cachedEventsJson at the method scope
-    try {
-      final List<TechEvent> fetchedEvents = [];
-      final prefs = await SharedPreferences.getInstance();
-
-      // Load cached events if available
-      cachedEventsJson = prefs.getString('cached_events');
-      if (cachedEventsJson != null) {
-        final List<dynamic> cachedEventsData = json.decode(cachedEventsJson);
-        setState(() {
-          events =
-              cachedEventsData
-                  .map((eventJson) => TechEvent.fromJson(eventJson))
-                  .toList();
-          filteredEvents = events;
-          isLoading = false;
-        });
-        filterEvents();
-        await loadFavorites();
-      } else {
-        // No cache exists, show loading state
-        setState(() {
-          events = [];
-          filteredEvents = [];
-          isLoading = true;
-        });
-      }
-
-      // Fetch new events from multiple sources concurrently
-      final results = await Future.wait([
-        fetchDevEventsData(),
-        fetchGDGEvents(),
-        fetchMeetupEvents(),
-        fetchTechConferences(),
-        fetchGitHubEvents(),
-        fetchBackendEvents(),
-      ]);
-
-      for (var eventList in results) {
-        fetchedEvents.addAll(eventList);
-      }
-
-      // Remove duplicates based on title and date
-      final uniqueEvents = <String, TechEvent>{};
-      for (var event in fetchedEvents) {
-        final key =
-            '${event.title.toLowerCase()}_${event.date.toString().substring(0, 10)}';
-        if (!uniqueEvents.containsKey(key)) {
-          uniqueEvents[key] = event;
-        }
-      }
-
-      final newEvents = uniqueEvents.values.toList();
-
-      // Check if new or updated events exist
-      bool hasNewEvents = true;
-      if (cachedEventsJson != null) {
-        final List<TechEvent> cachedEvents =
-            (json.decode(cachedEventsJson) as List)
-                .map((eventJson) => TechEvent.fromJson(eventJson))
-                .toList();
-        hasNewEvents = _hasNewEvents(newEvents, cachedEvents);
-      }
-
-      if (hasNewEvents) {
-        // Merge favorite status from cached events to new events
-        if (cachedEventsJson != null) {
-          final List<TechEvent> cachedEvents =
-              (json.decode(cachedEventsJson) as List)
-                  .map((eventJson) => TechEvent.fromJson(eventJson))
-                  .toList();
-          for (var newEvent in newEvents) {
-            final cachedEvent = cachedEvents.firstWhere(
-              (e) => e.id == newEvent.id,
-              orElse:
-                  () => TechEvent(
-                    id: '',
-                    title: '',
-                    description: '',
-                    location: '',
-                    country: '',
-                    date: DateTime.now(),
-                    url: '',
-                    category: '',
-                    price: '',
-                    organizer: '',
-                  ),
-            );
-            if (cachedEvent.id.isNotEmpty) {
-              newEvent.isFavorite = cachedEvent.isFavorite;
-            }
-          }
-        }
-
-        // Save new events to cache
-        final eventsJson = json.encode(
-          newEvents
-              .map(
-                (e) => {
-                  'id': e.id,
-                  'title': e.title,
-                  'description': e.description,
-                  'location': e.location,
-                  'country': e.country,
-                  'date': e.date.toIso8601String(),
-                  'url': e.url,
-                  'category': e.category,
-                  'price': e.price,
-                  'organizer': e.organizer,
-                  'isFavorite': e.isFavorite,
-                },
-              )
-              .toList(),
-        );
-        await prefs.setString('cached_events', eventsJson);
-
-        // Update state with new events
-        setState(() {
-          events = newEvents;
-          filteredEvents = events;
-          isLoading = false;
-        });
-        filterEvents();
-        await loadFavorites();
-
-        // Notify user of new events
-        if (cachedEventsJson != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('New events loaded and Saved')),
-          );
-        }
-      } else if (cachedEventsJson == null) {
-        // No cache existed, save and update with fetched events
-        final eventsJson = json.encode(
-          newEvents
-              .map(
-                (e) => {
-                  'id': e.id,
-                  'title': e.title,
-                  'description': e.description,
-                  'location': e.location,
-                  'country': e.country,
-                  'date': e.date.toIso8601String(),
-                  'url': e.url,
-                  'category': e.category,
-                  'price': e.price,
-                  'organizer': e.organizer,
-                  'isFavorite': e.isFavorite,
-                },
-              )
-              .toList(),
-        );
-        await prefs.setString('cached_events', eventsJson);
-
-        setState(() {
-          events = newEvents;
-          filteredEvents = events;
-          isLoading = false;
-        });
-        filterEvents();
-        await loadFavorites();
-      } else {
-        // No new events, ensure UI is updated if not already
-        setState(() {
-          isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            cachedEventsJson == null
-                ? 'Error loading events: $e. No cached events available.'
-                : 'Error fetching new events: $e. Showing cached events.',
-          ),
-        ),
-      );
-    }
-  }
-
-  // Helper method to check if new events exist
-  bool _hasNewEvents(List<TechEvent> newEvents, List<TechEvent> cachedEvents) {
-    if (newEvents.length != cachedEvents.length) return true;
-
-    final newEventKeys =
-        newEvents
-            .map(
-              (e) =>
-                  '${e.id}_${e.title.toLowerCase()}_${e.date.toString().substring(0, 10)}',
-            )
-            .toSet();
-    final cachedEventKeys =
-        cachedEvents
-            .map(
-              (e) =>
-                  '${e.id}_${e.title.toLowerCase()}_${e.date.toString().substring(0, 10)}',
-            )
-            .toSet();
-
-    return !newEventKeys.containsAll(cachedEventKeys) ||
-        !cachedEventKeys.containsAll(newEventKeys);
-  }
-
-  // Fetch from backend API
-  Future<List<TechEvent>> fetchBackendEvents() async {
-    try {
-      final List<TechEvent> backendEvents = [];
-      final authToken = AppData().accessToken;
-
-      final response = await http.get(
-        Uri.parse('http://182.93.94.210:3067/api/v1/events'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $authToken',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final eventsList = data['data']['events'] ?? [];
-
-        for (var eventData in eventsList) {
-          try {
-            backendEvents.add(
-              TechEvent(
-                id: eventData['_id'] ?? '',
-                title: eventData['title'] ?? '',
-                description: eventData['description'] ?? '',
-                location:
-                    eventData['location']['venue'] != null &&
-                            eventData['location']['city'] != null
-                        ? '${eventData['location']['venue']}, ${eventData['location']['city']}'
-                        : eventData['location']['city'] ?? 'Unknown Location',
-                country: _extractCountryFromLocation(
-                  eventData['location']['city'] ?? '',
-                ),
-                date:
-                    DateTime.tryParse(eventData['startDate'] ?? '') ??
-                    DateTime.now().add(Duration(days: 30)),
-                url:
-                    eventData['url'] ??
-                    'http://182.93.94.210:3067', // Default URL if not provided
-                category: _categorizeEvent(eventData['category'] ?? ''),
-                price:
-                    eventData['price']['isFree']
-                        ? 'Free'
-                        : '\$${eventData['price']['amount']} ${eventData['price']['currency']}',
-                organizer:
-                    eventData['eventMaker']['name'] ?? 'Unknown Organizer',
-                isBackendEvent: true, // Added to identify backend events
-              ),
-            );
-          } catch (e) {
-            print('Error parsing backend event: $e');
-          }
-        }
-      }
-
-      return backendEvents;
-    } catch (e) {
-      print('Error fetching backend events: $e');
-      return [];
-    }
-  }
-
-  // Fetch from dev.events using web scraping
-  Future<List<TechEvent>> fetchDevEventsData() async {
-    try {
-      final List<TechEvent> devEvents = [];
-
-      // Scrape dev.events for tech conferences
-      final response = await http.get(
-        Uri.parse('https://dev.events/tech'),
-        headers: {
-          'User-Agent':
-              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final document = htmlParser.parse(response.body);
-        final eventElements = document.querySelectorAll(
-          '.event-item, .conference-item, .event-card',
-        );
-
-        for (var element in eventElements) {
-          try {
-            final title =
-                element
-                    .querySelector('.event-title, .title, h3, h2')
-                    ?.text
-                    ?.trim() ??
-                '';
-            final description =
-                element
-                    .querySelector('.event-description, .description, p')
-                    ?.text
-                    ?.trim() ??
-                '';
-            final location =
-                element
-                    .querySelector('.event-location, .location')
-                    ?.text
-                    ?.trim() ??
-                '';
-            final dateText =
-                element.querySelector('.event-date, .date')?.text?.trim() ?? '';
-            final url = element.querySelector('a')?.attributes['href'] ?? '';
-
-            if (title.isNotEmpty) {
-              devEvents.add(
-                TechEvent(
-                  id: 'dev_${title.replaceAll(' ', '_').toLowerCase()}',
-                  title: title,
-                  description:
-                      description.isNotEmpty
-                          ? description
-                          : 'Tech conference focusing on latest technologies',
-                  location:
-                      location.isNotEmpty ? location : 'Various Locations',
-                  country: _extractCountryFromLocation(location),
-                  date: _parseDate(dateText),
-                  url: url.startsWith('http') ? url : 'https://dev.events$url',
-                  category: _categorizeEvent(title + ' ' + description),
-                  price: 'TBD',
-                  organizer: 'dev.events',
-                ),
-              );
-            }
-          } catch (e) {
-            print('Error parsing dev.events item: $e');
-          }
-        }
-      }
-
-      return devEvents;
-    } catch (e) {
-      print('Error fetching dev.events: $e');
-      return [];
-    }
-  }
-
-  // Fetch Google Developer Group events
-  Future<List<TechEvent>> fetchGDGEvents() async {
-    try {
-      final List<TechEvent> gdgEvents = [];
-
-      // Use GDG Community API endpoints
-      final response = await http.get(
-        Uri.parse('https://gdg.community.dev/api/events/'),
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; TechEventsApp/1.0)',
-          'Accept': 'application/json',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final eventsList = data['results'] ?? data['events'] ?? [];
-
-        for (var eventData in eventsList) {
-          try {
-            gdgEvents.add(
-              TechEvent(
-                id: 'gdg_${eventData['id'] ?? eventData['slug'] ?? ''}',
-                title: eventData['title'] ?? eventData['name'] ?? '',
-                description:
-                    eventData['description'] ?? eventData['summary'] ?? '',
-                location:
-                    eventData['location'] ??
-                    '${eventData['city'] ?? ''}, ${eventData['country'] ?? ''}',
-                country:
-                    eventData['country'] ??
-                    _extractCountryFromLocation(eventData['location'] ?? ''),
-                date:
-                    DateTime.tryParse(
-                      eventData['start_date'] ?? eventData['date'] ?? '',
-                    ) ??
-                    DateTime.now().add(Duration(days: 30)),
-                url:
-                    eventData['url'] ??
-                    eventData['link'] ??
-                    'https://gdg.community.dev',
-                category: 'Google Developer Group',
-                price: 'Free',
-                organizer: eventData['organizer'] ?? 'GDG Community',
-              ),
-            );
-          } catch (e) {
-            print('Error parsing GDG event: $e');
-          }
-        }
-      }
-
-      return gdgEvents;
-    } catch (e) {
-      print('Error fetching GDG events: $e');
-      return _getFallbackGDGEvents();
-    }
-  }
-
-  // Fetch Meetup events using their API
-  Future<List<TechEvent>> fetchMeetupEvents() async {
-    try {
-      final List<TechEvent> meetupEvents = [];
-
-      // Use Meetup's GraphQL API (public endpoints)
-      final queries = ['tech', 'programming', 'developer', 'AI', 'blockchain'];
-
-      for (String query in queries) {
-        try {
-          final response = await http.get(
-            Uri.parse('http://www.meetup.com/gql'),
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (compatible; TechEventsApp/1.0)',
-              'Accept': 'application/json',
-            },
-          );
-
-          // Fallback to scraping Meetup pages
-          final scrapingResponse = await http.get(
-            Uri.parse('https://www.meetup.com/find/?keywords=$query'),
-            headers: {
-              'User-Agent':
-                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            },
-          );
-
-          if (scrapingResponse.statusCode == 200) {
-            final document = htmlParser.parse(scrapingResponse.body);
-            final eventElements = document.querySelectorAll(
-              '[data-testid="event-card"]',
-            );
-
-            for (var element in eventElements.take(5)) {
-              try {
-                final title = element.querySelector('h3')?.text?.trim() ?? '';
-                final description =
-                    element.querySelector('p')?.text?.trim() ?? '';
-                final location =
-                    element
-                        .querySelector('[data-testid="event-location"]')
-                        ?.text
-                        ?.trim() ??
-                    '';
-                final dateText =
-                    element
-                        .querySelector('[data-testid="event-datetime"]')
-                        ?.text
-                        ?.trim() ??
-                    '';
-
-                if (title.isNotEmpty) {
-                  meetupEvents.add(
-                    TechEvent(
-                      id: 'meetup_${title.replaceAll(' ', '_').toLowerCase()}',
-                      title: title,
-                      description: description,
-                      location: location,
-                      country: _extractCountryFromLocation(location),
-                      date: _parseDate(dateText),
-                      url: 'https://www.meetup.com/find/?keywords=$query',
-                      category: _categorizeEvent(title + ' ' + description),
-                      price: 'Free',
-                      organizer: 'Meetup Community',
-                    ),
-                  );
-                }
-              } catch (e) {
-                print('Error parsing Meetup event: $e');
-              }
-            }
-          }
-        } catch (e) {
-          print('Error with Meetup query $query: $e');
-        }
-      }
-
-      return meetupEvents.isNotEmpty
-          ? meetupEvents
-          : _getFallbackMeetupEvents();
-    } catch (e) {
-      print('Error fetching Meetup events: $e');
-      return _getFallbackMeetupEvents();
-    }
-  }
-
-  // Fetch tech conferences from various sources
-  Future<List<TechEvent>> fetchTechConferences() async {
-    try {
-      final List<TechEvent> conferences = [];
-
-      // Scrape conference websites
-      final conferenceSites = [
-        'https://confs.tech/json',
-        'https://techconferences.org/api/events',
-      ];
-
-      for (String url in conferenceSites) {
-        try {
-          final response = await http.get(
-            Uri.parse(url),
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (compatible; TechEventsApp/1.0)',
-              'Accept': 'application/json',
-            },
-          );
-
-          if (response.statusCode == 200) {
-            final data = json.decode(response.body);
-            final eventsList = data is List ? data : (data['events'] ?? []);
-
-            for (var eventData in eventsList.take(20)) {
-              try {
-                conferences.add(
-                  TechEvent(
-                    id:
-                        'conf_${eventData['name']?.toString().replaceAll(' ', '_').toLowerCase() ?? ''}',
-                    title: eventData['name'] ?? eventData['title'] ?? '',
-                    description:
-                        eventData['description'] ??
-                        eventData['summary'] ??
-                        'Technology conference',
-                    location:
-                        '${eventData['city'] ?? ''}, ${eventData['country'] ?? ''}',
-                    country:
-                        eventData['country'] ??
-                        _extractCountryFromLocation(
-                          eventData['location'] ?? '',
-                        ),
-                    date:
-                        DateTime.tryParse(
-                          eventData['startDate'] ?? eventData['date'] ?? '',
-                        ) ??
-                        DateTime.now().add(Duration(days: 45)),
-                    url: eventData['url'] ?? eventData['website'] ?? '',
-                    category: _categorizeEvent(
-                      eventData['topics']?.join(', ') ??
-                          eventData['category'] ??
-                          'Tech Conference',
-                    ),
-                    price: eventData['price'] ?? 'TBD',
-                    organizer: eventData['organizer'] ?? 'Conference Organizer',
-                  ),
-                );
-              } catch (e) {
-                print('Error parsing conference event: $e');
-              }
-            }
-          }
-        } catch (e) {
-          print('Error fetching from $url: $e');
-        }
-      }
-
-      return conferences.isNotEmpty ? conferences : _getFallbackConferences();
-    } catch (e) {
-      print('Error fetching tech conferences: $e');
-      return _getFallbackConferences();
-    }
-  }
-
-  // Fetch GitHub events and developer meetups
-  Future<List<TechEvent>> fetchGitHubEvents() async {
-    try {
-      final List<TechEvent> githubEvents = [];
-
-      // Use GitHub's public API for events
-      final response = await http.get(
-        Uri.parse('https://api.github.com/events'),
-        headers: {
-          'User-Agent': 'TechEventsApp/1.0',
-          'Accept': 'application/vnd.github.v3+json',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final events = json.decode(response.body);
-
-        for (var event in events.take(10)) {
-          if (event['type'] == 'PublicEvent' ||
-              event['type'] == 'CreateEvent') {
-            try {
-              final repo = event['repo']['name'] ?? '';
-              final actor = event['actor']['display_login'] ?? '';
-
-              githubEvents.add(
-                TechEvent(
-                  id: 'github_${event['id']}',
-                  title: 'Open Source: ${repo.split('/').last}',
-                  description: 'Latest development in ${repo} repository',
-                  location: 'Online',
-                  country: 'Global',
-                  date:
-                      DateTime.tryParse(event['created_at'] ?? '') ??
-                      DateTime.now(),
-                  url: 'https://github.com/$repo',
-                  category: 'Open Source',
-                  price: 'Free',
-                  organizer: actor,
-                ),
-              );
-            } catch (e) {
-              print('Error parsing GitHub event: $e');
-            }
-          }
-        }
-      }
-
-      return githubEvents;
-    } catch (e) {
-      print('Error fetching GitHub events: $e');
-      return [];
-    }
-  }
-
-  // Fallback events when APIs fail
-  List<TechEvent> _getFallbackGDGEvents() {
-    return [
-      TechEvent(
-        id: 'gdg_devfest_2025',
-        title: 'DevFest 2025 - Global',
-        description:
-            'Community-run developer events hosted by Google Developer Groups around the world',
-        location: 'Multiple Cities',
-        country: 'Global',
-        date: DateTime.now().add(Duration(days: 30)),
-        url: 'https://gdg.community.dev/events/',
-        category: 'Google Developer Group',
-        price: 'Free',
-        organizer: 'GDG Community',
-      ),
-    ];
-  }
-
-  List<TechEvent> _getFallbackMeetupEvents() {
-    return [
-      TechEvent(
-        id: 'meetup_tech_global',
-        title: 'Global Tech Meetups',
-        description:
-            'Join local tech communities and developer meetups worldwide',
-        location: 'Various Cities',
-        country: 'Global',
-        date: DateTime.now().add(Duration(days: 7)),
-        url: 'https://www.meetup.com/topics/tech/',
-        category: 'Networking',
-        price: 'Free',
-        organizer: 'Meetup Communities',
-      ),
-    ];
-  }
-
-  List<TechEvent> _getFallbackConferences() {
-    return [
-      TechEvent(
-        id: 'conf_tech_2025',
-        title: 'Global Tech Conference 2025',
-        description:
-            'Annual technology conference featuring latest innovations and trends',
-        location: 'San Francisco, USA',
-        country: 'USA',
-        date: DateTime.now().add(Duration(days: 60)),
-        url: 'https://dev.events/tech',
-        category: 'Technology',
-        price: '\$299',
-        organizer: 'Tech Conference Org',
-      ),
-    ];
-  }
-
-  String _extractCountryFromLocation(String location) {
-    final countryMappings = {
-      'usa': 'USA',
-      'united states': 'USA',
-      'us': 'USA',
-      'india': 'India',
-      'in': 'India',
-      'nepal': 'Nepal',
-      'np': 'Nepal',
-      'uk': 'UK',
-      'united kingdom': 'UK',
-      'britain': 'UK',
-      'germany': 'Germany',
-      'de': 'Germany',
-      'singirs': 'Singapore',
-      'sg': 'Singapore',
-      'japan': 'Japan',
-      'jp': 'Japan',
-      'australia': 'Australia',
-      'au': 'Australia',
-      'canada': 'Canada',
-      'ca': 'Canada',
-      'france': 'France',
-      'fr': 'France',
-    };
-
-    final locationLower = location.toLowerCase();
-    for (var entry in countryMappings.entries) {
-      if (locationLower.contains(entry.key)) {
-        return entry.value;
-      }
-    }
-    return 'Global';
-  }
-
-  DateTime _parseDate(String dateText) {
-    try {
-      // Try various date formats
-      final cleanDate = dateText.replaceAll(RegExp(r'[^\d\-/\s:]'), '').trim();
-
-      // Try parsing different formats
-      final formats = [
-        RegExp(r'(\d{4})-(\d{2})-(\d{2})'),
-        RegExp(r'(\d{1,2})/(\d{1,2})/(\d{4})'),
-        RegExp(r'(\d{1,2})-(\d{1,2})-(\d{4})'),
-      ];
-
-      for (var format in formats) {
-        final match = format.firstMatch(cleanDate);
-        if (match != null) {
-          try {
-            return DateTime.parse(
-              '${match.group(1)}-${match.group(2)}-${match.group(3)}',
-            );
-          } catch (e) {
-            // Try different order
-            try {
-              return DateTime.parse(
-                '${match.group(3)}-${match.group(1)}-${match.group(2)}',
-              );
-            } catch (e) {
-              continue;
-            }
-          }
-        }
-      }
-    } catch (e) {
-      print('Error parsing date: $dateText');
-    }
-
-    // Return a future date if parsing fails
-    return DateTime.now().add(
-      Duration(days: 30 + (dateText.hashCode % 60).abs()),
-    );
-  }
-
-  String _categorizeEvent(String text) {
-    final textLower = text.toLowerCase();
-
-    if (textLower.contains('ai') ||
-        textLower.contains('artificial intelligence') ||
-        textLower.contains('machine learning')) {
-      return 'Artificial Intelligence';
-    } else if (textLower.contains('mobile') ||
-        textLower.contains('android') ||
-        textLower.contains('ios') ||
-        textLower.contains('flutter')) {
-      return 'Mobile Development';
-    } else if (textLower.contains('web') ||
-        textLower.contains('javascript') ||
-        textLower.contains('react') ||
-        textLower.contains('vue')) {
-      return 'Web Development';
-    } else if (textLower.contains('blockchain') ||
-        textLower.contains('crypto') ||
-        textLower.contains('bitcoin')) {
-      return 'Blockchain';
-    } else if (textLower.contains('security') || textLower.contains('cyber')) {
-      return 'Security';
-    } else if (textLower.contains('devops') ||
-        textLower.contains('cloud') ||
-        textLower.contains('aws') ||
-        textLower.contains('docker')) {
-      return 'DevOps & Cloud';
-    } else if (textLower.contains('python') ||
-        textLower.contains('java') ||
-        textLower.contains('golang')) {
-      return 'Programming Languages';
-    } else if (textLower.contains('data') ||
-        textLower.contains('analytics') ||
-        textLower.contains('big data')) {
-      return 'Data Science';
-    } else if (textLower.contains('open source') ||
-        textLower.contains('github')) {
-      return 'Open Source';
-    } else if (textLower.contains('conference')) {
-      return 'Technology';
-    } else {
-      return 'General Tech';
-    }
-  }
-
-  void filterEvents() {
-    setState(() {
-      filteredEvents =
-          events.where((event) {
-            bool matchesCountry =
-                selectedCountry == 'All' || event.country == selectedCountry;
-            bool matchesSearch =
-                searchQuery.isEmpty ||
-                event.title.toLowerCase().contains(searchQuery.toLowerCase()) ||
-                event.description.toLowerCase().contains(
-                  searchQuery.toLowerCase(),
-                ) ||
-                event.category.toLowerCase().contains(
-                  searchQuery.toLowerCase(),
-                ) ||
-                event.location.toLowerCase().contains(
-                  searchQuery.toLowerCase(),
-                );
-            return matchesCountry && matchesSearch;
-          }).toList();
-
-      // Sort by date (upcoming first)
-      filteredEvents.sort((a, b) => a.date.compareTo(b.date));
-    });
-  }
-
-  Future<void> loadFavorites() async {
-    final prefs = await SharedPreferences.getInstance();
-    final favoriteIds = prefs.getStringList('favorite_events') ?? [];
-
-    setState(() {
-      for (var event in events) {
-        event.isFavorite = favoriteIds.contains(event.id);
-      }
-    });
-  }
-
-  Future<void> toggleFavorite(TechEvent event) async {
-    final prefs = await SharedPreferences.getInstance();
-    final favoriteIds = prefs.getStringList('favorite_events') ?? [];
-
-    setState(() {
-      event.isFavorite = !event.isFavorite;
-    });
-
-    if (event.isFavorite) {
-      favoriteIds.add(event.id);
-    } else {
-      favoriteIds.remove(event.id);
-    }
-
-    await prefs.setStringList('favorite_events', favoriteIds);
-  }
-
-  Future<void> launchURL(String url) async {
-    final Uri uri = Uri.parse(url);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Could not launch $url')));
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.whitecolor,
-      appBar: AppBar(
-        title: Text(
-          'Global Tech Events',
-          style: TextStyle(color: AppColors.whitecolor),
-        ),
-        backgroundColor: Color.fromRGBO(244, 135, 6, 1),
-        actions: [
-          Padding(
-            padding: EdgeInsets.only(right: 10, left: 10),
-            child: PopupMenuButton<String>(
-              onSelected: (value) {
-                setState(() {
-                  selectedCountry = value;
-                });
-                filterEvents();
-              },
-              itemBuilder:
-                  (context) =>
-                      countries
-                          .map(
-                            (country) => PopupMenuItem(
-                              value: country,
-                              child: Text(country),
-                            ),
-                          )
-                          .toList(),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.filter_list, color: AppColors.whitecolor),
-                  Text(
-                    ' $selectedCountry',
-                    style: TextStyle(color: AppColors.whitecolor),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-        bottom: TabBar(
-          indicatorColor: AppColors.whitecolor,
-
-          unselectedLabelStyle: TextStyle(color: AppColors.whitecolor),
-          labelStyle: TextStyle(
-            color: AppColors.whitecolor,
-            fontWeight: FontWeight.bold,
-          ),
-          controller: _tabController,
-          tabs: [
-            Tab(
-              text: 'All Events',
-
-              icon: Icon(Icons.event, color: AppColors.whitecolor),
-            ),
-            Tab(
-              text: 'Favorites',
-              icon: Icon(Icons.favorite, color: AppColors.whitecolor),
-            ),
-            Tab(
-              text: 'Categories',
-              icon: Icon(Icons.category, color: AppColors.whitecolor),
-            ),
-          ],
-        ),
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: EdgeInsets.all(16.0),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search events, locations, categories...',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                filled: true,
-                fillColor: Colors.grey[100],
-              ),
-              onChanged: (value) {
-                setState(() {
-                  searchQuery = value;
-                });
-                filterEvents();
-              },
-            ),
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildEventsList(filteredEvents),
-                _buildEventsList(
-                  filteredEvents.where((e) => e.isFavorite).toList(),
-                ),
-                _buildCategoriesView(),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEventsList(List<TechEvent> eventsList) {
-    if (isLoading) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading Tech events from around the world...'),
-            SizedBox(height: 8),
-          ],
-        ),
-      );
-    }
-
-    if (eventsList.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.event_busy, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
-            Text('No events found'),
-            SizedBox(height: 8),
-            Text('Try adjusting your filters or refresh'),
-          ],
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: loadEvents,
-      child: ListView.builder(
-        padding: EdgeInsets.all(16),
-        itemCount: eventsList.length,
-        itemBuilder: (context, index) {
-          final event = eventsList[index];
-          return _buildEventCard(event);
-        },
-      ),
-    );
-  }
-
-  Widget _buildEventCard(TechEvent event) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final eventDay = DateTime(
-      event.date.year,
-      event.date.month,
-      event.date.day,
-    );
-
-    final daysUntil = eventDay.difference(today).inDays;
-    if (daysUntil < 0) return const SizedBox.shrink();
-
-    final bool isToday = daysUntil == 0;
-    final bool isTomorrow = daysUntil == 1;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      color: AppColors.whitecolor,
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap:
-            () =>
-                event.isBackendEvent
-                    ? Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => EventDetailPage(eventId: event.id),
-                      ),
-                    )
-                    : launchURL(event.url),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          event.title,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          event.organizer,
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(
-                      event.isFavorite ? Icons.favorite : Icons.favorite_border,
-                      color: event.isFavorite ? Colors.red : Colors.grey,
-                    ),
-                    onPressed: () => toggleFavorite(event),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                event.description,
-                style: const TextStyle(fontSize: 14, height: 1.4),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 12),
-
-              Row(
-                children: [
-                  const Icon(Icons.location_on, size: 16, color: Colors.grey),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      event.location,
-                      style: const TextStyle(color: Colors.grey, fontSize: 14),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _getCategoryColor(event.category),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      event.category,
-                      style: const TextStyle(
-                        color: AppColors.whitecolor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.calendar_today,
-                        size: 16,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${event.date.day}/${event.date.month}/${event.date.year}',
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: daysUntil <= 1 ? Colors.orange : Colors.green,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          isToday
-                              ? 'Today'
-                              : isTomorrow
-                              ? 'Tomorrow'
-                              : '$daysUntil days',
-                          style: const TextStyle(
-                            color: AppColors.whitecolor,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    event.price,
-                    style: TextStyle(
-                      color:
-                          event.price.toLowerCase() == 'free'
-                              ? Colors.green
-                              : Colors.grey[600],
-                      fontSize: 14,
-                      fontWeight:
-                          event.price.toLowerCase() == 'free'
-                              ? FontWeight.w600
-                              : FontWeight.normal,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoriesView() {
-    final categories = events.map((e) => e.category).toSet().toList();
-    categories.sort();
-
-    return ListView.builder(
-      padding: EdgeInsets.all(16),
-      itemCount: categories.length,
-      itemBuilder: (context, index) {
-        final category = categories[index];
-        final categoryEvents =
-            events.where((e) => e.category == category).length;
-
-        return Card(
-          margin: EdgeInsets.only(bottom: 12),
-          child: ListTile(
-            tileColor: AppColors.whitecolor,
-
-            leading: CircleAvatar(
-              backgroundColor: _getCategoryColor(category),
-              child: Icon(
-                _getCategoryIcon(category),
-                color: AppColors.whitecolor,
-                size: 20,
-              ),
-            ),
-            title: Text(category),
-            subtitle: Text('$categoryEvents events'),
-            trailing: Icon(Icons.arrow_forward_ios),
-            onTap: () {
-              setState(() {
-                searchQuery = category;
-                _tabController.animateTo(0);
-              });
-              filterEvents();
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  Color _getCategoryColor(String category) {
-    switch (category.toLowerCase()) {
-      case 'artificial intelligence':
-      case 'ai':
-        return Colors.purple;
-      case 'mobile development':
-        return Colors.blue;
-      case 'web development':
-        return Colors.orange;
-      case 'blockchain':
-        return Colors.green;
-      case 'security':
-        return Colors.red;
-      case 'devops':
-        return Colors.teal;
-      case 'fintech':
-        return Colors.indigo;
-      case 'cloud computing':
-        return Colors.lightBlue;
-      case 'technology':
-        return Colors.blueGrey;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  IconData _getCategoryIcon(String category) {
-    switch (category.toLowerCase()) {
-      case 'artificial intelligence':
-      case 'ai':
-        return Icons.psychology;
-      case 'mobile development':
-        return Icons.phone_android;
-      case 'web development':
-        return Icons.web;
-      case 'blockchain':
-        return Icons.link;
-      case 'security':
-        return Icons.security;
-      case 'devops':
-        return Icons.settings;
-      case 'fintech':
-        return Icons.attach_money;
-      case 'cloud computing':
-        return Icons.cloud;
-      case 'technology':
-        return Icons.computer;
-      default:
-        return Icons.event;
-    }
-  }
-}
+// ─── Model ────────────────────────────────────────────────────────────────────
 
 class TechEvent {
   final String id;
   final String title;
   final String description;
   final String location;
-  final String country;
   final DateTime date;
-  final String url;
-  final String category;
-  final String price;
-  final String organizer;
+  final String createdByUsername;
+  final int participantsCount;
+  final bool isParticipant;
+  final DateTime createdAt;
   bool isFavorite;
-  final bool isBackendEvent; // Added to identify backend events
 
   TechEvent({
     required this.id,
     required this.title,
     required this.description,
     required this.location,
-    required this.country,
     required this.date,
-    required this.url,
-    required this.category,
-    required this.price,
-    required this.organizer,
+    required this.createdByUsername,
+    required this.participantsCount,
+    required this.isParticipant,
+    required this.createdAt,
     this.isFavorite = false,
-    this.isBackendEvent = false,
   });
 
-  factory TechEvent.fromJson(Map<String, dynamic> json) {
-    return TechEvent(
-      id: json['id'] ?? '',
-      title: json['title'] ?? '',
-      description: json['description'] ?? '',
-      location: json['location'] ?? '',
-      country: json['country'] ?? '',
-      date: DateTime.tryParse(json['date'] ?? '') ?? DateTime.now(),
-      url: json['url'] ?? '',
-      category: json['category'] ?? 'General',
-      price: json['price'] ?? 'N/A',
-      organizer: json['organizer'] ?? '',
-      isFavorite: json['isFavorite'] ?? false,
-      isBackendEvent: json['isBackendEvent'] ?? false,
-    );
-  }
+  factory TechEvent.fromJson(Map<String, dynamic> j) => TechEvent(
+    id: j['id'] ?? '',
+    title: j['title'] ?? '',
+    description: j['description'] ?? '',
+    location: j['location'] ?? '',
+    date: DateTime.tryParse(j['date'] ?? '') ?? DateTime.now(),
+    createdByUsername: j['created_by_username'] ?? '',
+    participantsCount: j['participants_count'] ?? 0,
+    isParticipant: j['is_participant'] ?? false,
+    createdAt: DateTime.tryParse(j['created_at'] ?? '') ?? DateTime.now(),
+    isFavorite: j['isFavorite'] ?? false,
+  );
 
   Map<String, dynamic> toJson() => {
     'id': id,
     'title': title,
     'description': description,
     'location': location,
-    'country': country,
     'date': date.toIso8601String(),
-    'url': url,
-    'category': category,
-    'price': price,
-    'organizer': organizer,
+    'created_by_username': createdByUsername,
+    'participants_count': participantsCount,
+    'is_participant': isParticipant,
+    'created_at': createdAt.toIso8601String(),
     'isFavorite': isFavorite,
-    'isBackendEvent': isBackendEvent,
   };
+
+  TechEvent copyWith({bool? isFavorite}) => TechEvent(
+    id: id,
+    title: title,
+    description: description,
+    location: location,
+    date: date,
+    createdByUsername: createdByUsername,
+    participantsCount: participantsCount,
+    isParticipant: isParticipant,
+    createdAt: createdAt,
+    isFavorite: isFavorite ?? this.isFavorite,
+  );
 }
 
-class EventDetailPage extends StatefulWidget {
-  final String eventId;
+// ─── State ────────────────────────────────────────────────────────────────────
 
-  const EventDetailPage({Key? key, required this.eventId}) : super(key: key);
+class EventsState {
+  final List<TechEvent> events;
+  final bool isLoading;
+  final String? error;
+  final String searchQuery;
+  final int activeTab;
+  final Set<String> favoriteIds;
+
+  const EventsState({
+    this.events = const [],
+    this.isLoading = false,
+    this.error,
+    this.searchQuery = '',
+    this.activeTab = 0,
+    this.favoriteIds = const {},
+  });
+
+  List<TechEvent> get filteredEvents {
+    final q = searchQuery.toLowerCase();
+    final base =
+        events.where((e) {
+            if (q.isEmpty) return true;
+            return e.title.toLowerCase().contains(q) ||
+                e.description.toLowerCase().contains(q) ||
+                e.location.toLowerCase().contains(q) ||
+                e.createdByUsername.toLowerCase().contains(q);
+          }).toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
+    return activeTab == 1 ? base.where((e) => e.isFavorite).toList() : base;
+  }
+
+  int get savedCount => events.where((e) => e.isFavorite).length;
+
+  int get upcomingCount =>
+      events.where((e) => e.date.isAfter(DateTime.now())).length;
+
+  EventsState copyWith({
+    List<TechEvent>? events,
+    bool? isLoading,
+    String? error,
+    String? searchQuery,
+    int? activeTab,
+    Set<String>? favoriteIds,
+  }) => EventsState(
+    events: events ?? this.events,
+    isLoading: isLoading ?? this.isLoading,
+    error: error,
+    searchQuery: searchQuery ?? this.searchQuery,
+    activeTab: activeTab ?? this.activeTab,
+    favoriteIds: favoriteIds ?? this.favoriteIds,
+  );
+}
+
+// ─── Notifier ─────────────────────────────────────────────────────────────────
+
+class EventsNotifier extends StateNotifier<EventsState> {
+  EventsNotifier() : super(const EventsState()) {
+    _init();
+  }
+
+  Future<void> _init() async {
+    await _loadFavorites();
+    await fetchEvents();
+  }
+
+  Future<void> _loadFavorites() async {
+    final prefs = await SharedPreferences.getInstance();
+    final ids = prefs.getStringList('favorite_events') ?? [];
+    state = state.copyWith(favoriteIds: ids.toSet());
+  }
+
+  Future<void> fetchEvents() async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cached = prefs.getString('cached_events');
+      if (cached != null) {
+        final list =
+            (json.decode(cached) as List)
+                .map((e) => TechEvent.fromJson(e))
+                .toList();
+        _applyFavorites(list);
+        state = state.copyWith(events: list, isLoading: false);
+      }
+      final res = await http.get(Uri.parse(_kBaseUrl));
+      if (res.statusCode == 200) {
+        final fresh =
+            (json.decode(res.body) as List)
+                .map((e) => TechEvent.fromJson(e))
+                .toList();
+        _applyFavorites(fresh);
+        await prefs.setString(
+          'cached_events',
+          json.encode(fresh.map((e) => e.toJson()).toList()),
+        );
+        state = state.copyWith(events: fresh, isLoading: false);
+      } else {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'HTTP ${res.statusCode}',
+        );
+      }
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+
+  void _applyFavorites(List<TechEvent> list) {
+    for (var e in list) e.isFavorite = state.favoriteIds.contains(e.id);
+  }
+
+  Future<void> toggleFavorite(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final ids = Set<String>.from(state.favoriteIds);
+    ids.contains(id) ? ids.remove(id) : ids.add(id);
+    await prefs.setStringList('favorite_events', ids.toList());
+    final updated =
+        state.events
+            .map(
+              (e) => e.id == id ? e.copyWith(isFavorite: ids.contains(id)) : e,
+            )
+            .toList();
+    state = state.copyWith(events: updated, favoriteIds: ids);
+  }
+
+  Future<bool> createEvent({
+    required String title,
+    required String description,
+    required String location,
+    required String date,
+    String authToken = '',
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse(_kBaseUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          if (authToken.isNotEmpty) 'Authorization': 'Bearer $authToken',
+        },
+        body: json.encode({
+          'title': title,
+          'description': description,
+          'location': location,
+          'date': date,
+          'participants': [],
+        }),
+      );
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        await fetchEvents();
+        return true;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void setSearch(String q) => state = state.copyWith(searchQuery: q);
+  void setTab(int i) => state = state.copyWith(activeTab: i);
+}
+
+// ─── Provider ─────────────────────────────────────────────────────────────────
+
+final eventsProvider = StateNotifierProvider<EventsNotifier, EventsState>(
+  (ref) => EventsNotifier(),
+);
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  PAGE
+// ═════════════════════════════════════════════════════════════════════════════
+
+class EventsHomePage extends ConsumerStatefulWidget {
+  const EventsHomePage({Key? key}) : super(key: key);
 
   @override
-  _EventDetailPageState createState() => _EventDetailPageState();
+  ConsumerState<EventsHomePage> createState() => _EventsHomePageState();
 }
 
-class _EventDetailPageState extends State<EventDetailPage> {
-  Map<String, dynamic>? eventDetails;
-  bool isLoading = true;
-  bool isError = false;
+class _EventsHomePageState extends ConsumerState<EventsHomePage> {
+  final _searchCtrl = TextEditingController();
+  final _scrollCtrl = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    fetchEventDetails();
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+      ),
+    );
   }
 
-  Future<void> fetchEventDetails() async {
-    try {
-      final authToken = AppData().accessToken;
-      final response = await http.get(
-        Uri.parse('http://182.93.94.210:3067/api/v1/events/${widget.eventId}'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $authToken',
-        },
-      );
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        setState(() {
-          eventDetails = data['data'];
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          isError = true;
-          isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        isError = true;
-        isLoading = false;
-      });
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(eventsProvider);
+    final notifier = ref.read(eventsProvider.notifier);
+
+    return Scaffold(
+      backgroundColor: _T.bg,
+      body: SafeArea(
+        bottom: false,
+        child: Stack(
+          children: [
+            RefreshIndicator(
+              color: _T.orange,
+              backgroundColor: _T.surface,
+              onRefresh: notifier.fetchEvents,
+              child: CustomScrollView(
+                controller: _scrollCtrl,
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  // ── Hero ──────────────────────────────────────────────────
+                  SliverToBoxAdapter(
+                    child: IconButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      icon: Icon(Icons.arrow_back_ios_new),
+                      alignment: Alignment.topLeft,
+                    ),
+                  ),
+
+                  // ── Search + Tabs (sticky) ─────────────────────────────
+                  SliverAppBar(
+                    pinned: true,
+                    floating: false,
+                    backgroundColor: _T.bg,
+                    elevation: 0,
+                    toolbarHeight: 0,
+                    collapsedHeight: 0,
+                    expandedHeight: 0,
+                    automaticallyImplyLeading: false,
+                    flexibleSpace: null,
+                    bottom: PreferredSize(
+                      preferredSize: const Size.fromHeight(116),
+                      child: _SearchTabsBar(
+                        searchCtrl: _searchCtrl,
+                        state: state,
+                        onSearch: notifier.setSearch,
+                        onTab: notifier.setTab,
+                      ),
+                    ),
+                  ),
+
+                  // ── List ──────────────────────────────────────────────────
+                  if (state.isLoading && state.events.isEmpty)
+                    const SliverFillRemaining(child: _LoadingView())
+                  else if (state.error != null && state.events.isEmpty)
+                    SliverFillRemaining(
+                      child: _ErrorView(
+                        error: state.error!,
+                        onRetry: notifier.fetchEvents,
+                      ),
+                    )
+                  else if (state.filteredEvents.isEmpty)
+                    const SliverFillRemaining(child: _EmptyView())
+                  else
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(
+                        16,
+                        4,
+                        16,
+                        MediaQuery.of(context).padding.bottom + 90,
+                      ),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (ctx, i) =>
+                              _EventCard(event: state.filteredEvents[i]),
+                          childCount: state.filteredEvents.length,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            // ── FAB ──────────────────────────────────────────────────────
+            Positioned(
+              bottom: MediaQuery.of(context).padding.bottom + 20,
+              right: 20,
+              child: _CreateFAB(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Hero Section ─────────────────────────────────────────────────────────────
+
+class _HeroSection extends StatelessWidget {
+  final EventsState state;
+  const _HeroSection({required this.state});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFFF3E0), Color(0xFFF5F5F7)],
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Brand row
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: _T.orange,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: const Icon(
+                  Icons.bolt_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'TECHEVENTS',
+                style: TextStyle(
+                  color: _T.orange,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 3,
+                ),
+              ),
+              const Spacer(),
+              Consumer(
+                builder:
+                    (ctx, ref, _) => GestureDetector(
+                      onTap:
+                          () => ref.read(eventsProvider.notifier).fetchEvents(),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: _T.surface,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: _T.divider),
+                        ),
+                        child: const Icon(
+                          Icons.refresh_rounded,
+                          color: _T.textSecondary,
+                          size: 17,
+                        ),
+                      ),
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 22),
+
+          // Headline
+          RichText(
+            text: const TextSpan(
+              style: TextStyle(
+                fontSize: 30,
+                fontWeight: FontWeight.w900,
+                height: 1.15,
+                letterSpacing: -0.8,
+              ),
+              children: [
+                TextSpan(
+                  text: 'Discover\n',
+                  style: TextStyle(color: _T.textPrimary),
+                ),
+                TextSpan(
+                  text: '& Join ',
+                  style: TextStyle(color: _T.textPrimary),
+                ),
+                TextSpan(text: 'Events', style: TextStyle(color: _T.orange)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+
+          // Stat pills
+          Wrap(
+            spacing: 8,
+            children: [
+              _Pill(
+                label: 'upcoming',
+                value: '${state.upcomingCount}',
+                color: _T.orange,
+              ),
+              _Pill(
+                label: 'saved',
+                value: '${state.savedCount}',
+                color: _T.green,
+              ),
+              _Pill(
+                label: 'total',
+                value: '${state.events.length}',
+                color: _T.textSecondary,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Pill extends StatelessWidget {
+  final String label, value;
+  final Color color;
+  const _Pill({required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: color.withOpacity(0.22)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(width: 5),
+        Text(
+          label,
+          style: TextStyle(color: color.withOpacity(0.65), fontSize: 12),
+        ),
+      ],
+    ),
+  );
+}
+
+// ─── Sticky Search + Tabs ─────────────────────────────────────────────────────
+
+class _SearchTabsBar extends StatelessWidget {
+  final TextEditingController searchCtrl;
+  final EventsState state;
+  final void Function(String) onSearch;
+  final void Function(int) onTab;
+
+  const _SearchTabsBar({
+    required this.searchCtrl,
+    required this.state,
+    required this.onSearch,
+    required this.onTab,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: _T.bg,
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Search bar
+          SizedBox(
+            height: 46,
+            child: TextField(
+              controller: searchCtrl,
+              onChanged: onSearch,
+              style: const TextStyle(color: _T.textPrimary, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: 'Search events, places…',
+                hintStyle: const TextStyle(
+                  color: _T.textSecondary,
+                  fontSize: 14,
+                ),
+                prefixIcon: const Icon(
+                  Icons.search_rounded,
+                  color: _T.textSecondary,
+                  size: 19,
+                ),
+                suffixIcon:
+                    searchCtrl.text.isNotEmpty
+                        ? GestureDetector(
+                          onTap: () {
+                            searchCtrl.clear();
+                            onSearch('');
+                          },
+                          child: const Icon(
+                            Icons.cancel_rounded,
+                            color: _T.textSecondary,
+                            size: 17,
+                          ),
+                        )
+                        : null,
+                filled: true,
+                fillColor: _T.surface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(13),
+                  borderSide: const BorderSide(color: _T.divider),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(13),
+                  borderSide: const BorderSide(color: _T.divider),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(13),
+                  borderSide: const BorderSide(color: _T.orange, width: 1.2),
+                ),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Tab row
+          Row(
+            children: [
+              _TabChip(
+                label: 'All',
+                count: state.events.length,
+                active: state.activeTab == 0,
+                onTap: () => onTab(0),
+              ),
+              const SizedBox(width: 8),
+              _TabChip(
+                label: 'Saved',
+                count: state.savedCount,
+                active: state.activeTab == 1,
+                onTap: () => onTab(1),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TabChip extends StatelessWidget {
+  final String label;
+  final int count;
+  final bool active;
+  final VoidCallback onTap;
+  const _TabChip({
+    required this.label,
+    required this.count,
+    required this.active,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      decoration: BoxDecoration(
+        color: active ? _T.orange : _T.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: active ? _T.orange : _T.divider),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: active ? Colors.white : _T.textSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+            decoration: BoxDecoration(
+              color: active ? Colors.white.withOpacity(0.22) : _T.surfaceHigh,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              '$count',
+              style: TextStyle(
+                color: active ? Colors.white : _T.textSecondary,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+// ─── Event Card ───────────────────────────────────────────────────────────────
+
+class _EventCard extends ConsumerWidget {
+  final TechEvent event;
+  const _EventCard({required this.event});
+
+  static const _months = [
+    'JAN',
+    'FEB',
+    'MAR',
+    'APR',
+    'MAY',
+    'JUN',
+    'JUL',
+    'AUG',
+    'SEP',
+    'OCT',
+    'NOV',
+    'DEC',
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final today = DateTime.now();
+    final eventDay = DateTime(
+      event.date.year,
+      event.date.month,
+      event.date.day,
+    );
+    final diff =
+        eventDay
+            .difference(DateTime(today.year, today.month, today.day))
+            .inDays;
+
+    if (diff < 0) return const SizedBox.shrink();
+
+    final isToday = diff == 0;
+    final isSoon = diff <= 3;
+    final accent =
+        isToday
+            ? _T.urgent
+            : isSoon
+            ? _T.orange
+            : _T.green;
+    final accentDim =
+        isToday
+            ? _T.urgentDim
+            : isSoon
+            ? _T.orangeDim
+            : _T.greenDim;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: _T.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _T.divider),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 10,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          splashColor: _T.orange.withOpacity(0.05),
+          onTap: () {},
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Top ──
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Date block
+                    Container(
+                      width: 50,
+                      height: 58,
+                      decoration: BoxDecoration(
+                        color: accent.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: accent.withOpacity(0.22)),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            '${event.date.day}',
+                            style: TextStyle(
+                              color: accent,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                              height: 1,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _months[event.date.month - 1],
+                            style: TextStyle(
+                              color: accent.withOpacity(0.65),
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            event.title,
+                            style: const TextStyle(
+                              color: _T.textPrimary,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              height: 1.3,
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.person_outline_rounded,
+                                size: 12,
+                                color: _T.textSecondary,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                event.createdByUsername,
+                                style: const TextStyle(
+                                  color: _T.textSecondary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Bookmark btn
+                    GestureDetector(
+                      onTap:
+                          () => ref
+                              .read(eventsProvider.notifier)
+                              .toggleFavorite(event.id),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color:
+                              event.isFavorite ? _T.orangeDim : _T.surfaceHigh,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          event.isFavorite
+                              ? Icons.bookmark_rounded
+                              : Icons.bookmark_outline_rounded,
+                          color:
+                              event.isFavorite ? _T.orange : _T.textSecondary,
+                          size: 17,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                // ── Description ──
+                Text(
+                  event.description,
+                  style: const TextStyle(
+                    color: _T.textSecondary,
+                    fontSize: 13,
+                    height: 1.5,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+
+                const SizedBox(height: 12),
+
+                // ── Divider ──
+                Container(height: 1, color: _T.divider),
+                const SizedBox(height: 10),
+
+                // ── Footer ──
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on_rounded,
+                      size: 13,
+                      color: _T.textSecondary,
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        event.location,
+                        style: const TextStyle(
+                          color: _T.textSecondary,
+                          fontSize: 12,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // People count
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _T.surfaceHigh,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.people_alt_rounded,
+                            size: 11,
+                            color: _T.textSecondary,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            '${event.participantsCount}',
+                            style: const TextStyle(
+                              color: _T.textSecondary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    // Days badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: accentDim,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        isToday
+                            ? '● Today'
+                            : diff == 1
+                            ? 'Tomorrow'
+                            : '$diff days',
+                        style: TextStyle(
+                          color: accent,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── FAB ──────────────────────────────────────────────────────────────────────
+
+class _CreateFAB extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap:
+        () => showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => const _CreateEventSheet(),
+        ),
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        color: _T.orange,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            color: _T.orange.withOpacity(0.45),
+            blurRadius: 22,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.add_rounded, color: Colors.white, size: 20),
+          SizedBox(width: 7),
+          Text(
+            'New Event',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+// ─── States ───────────────────────────────────────────────────────────────────
+
+class _LoadingView extends StatelessWidget {
+  const _LoadingView();
+  @override
+  Widget build(BuildContext context) => const Center(
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        CircularProgressIndicator(color: _T.orange, strokeWidth: 2),
+        SizedBox(height: 14),
+        Text(
+          'Fetching events…',
+          style: TextStyle(color: _T.textSecondary, fontSize: 14),
+        ),
+      ],
+    ),
+  );
+}
+
+class _ErrorView extends ConsumerWidget {
+  final String error;
+  final VoidCallback onRetry;
+  const _ErrorView({required this.error, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: _T.urgent.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.wifi_off_rounded,
+              color: _T.urgent,
+              size: 32,
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Connection Error',
+            style: TextStyle(
+              color: _T.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            error,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: _T.textSecondary, fontSize: 13),
+          ),
+          const SizedBox(height: 24),
+          GestureDetector(
+            onTap: onRetry,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 13),
+              decoration: BoxDecoration(
+                color: _T.orange,
+                borderRadius: BorderRadius.circular(13),
+              ),
+              child: const Text(
+                'Try Again',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _EmptyView extends StatelessWidget {
+  const _EmptyView();
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: _T.surface,
+            shape: BoxShape.circle,
+            border: Border.all(color: _T.divider),
+          ),
+          child: const Icon(
+            Icons.event_busy_rounded,
+            color: _T.textSecondary,
+            size: 34,
+          ),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'No events found',
+          style: TextStyle(
+            color: _T.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'Try a different search or create one',
+          style: TextStyle(color: _T.textSecondary, fontSize: 14),
+        ),
+      ],
+    ),
+  );
+}
+
+// ─── Create Sheet ─────────────────────────────────────────────────────────────
+
+class _CreateEventSheet extends ConsumerStatefulWidget {
+  const _CreateEventSheet();
+  @override
+  ConsumerState<_CreateEventSheet> createState() => _CreateEventSheetState();
+}
+
+class _CreateEventSheetState extends ConsumerState<_CreateEventSheet> {
+  final _formKey = GlobalKey<FormState>();
+  final _titleCtrl = TextEditingController();
+  final _descCtrl = TextEditingController();
+  final _locCtrl = TextEditingController();
+  DateTime? _date;
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _descCtrl.dispose();
+    _locCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final p = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().add(const Duration(days: 7)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder:
+          (ctx, child) => Theme(
+            data: ThemeData.light().copyWith(
+              colorScheme: const ColorScheme.light(
+                primary: _T.orange,
+                surface: _T.surface,
+              ),
+            ),
+            child: child!,
+          ),
+    );
+    if (p != null) setState(() => _date = p);
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_date == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please pick a date')));
+      return;
+    }
+    setState(() => _busy = true);
+    final ds =
+        '${_date!.year}-${_date!.month.toString().padLeft(2, '0')}'
+        '-${_date!.day.toString().padLeft(2, '0')}';
+    final ok = await ref
+        .read(eventsProvider.notifier)
+        .createEvent(
+          title: _titleCtrl.text.trim(),
+          description: _descCtrl.text.trim(),
+          location: _locCtrl.text.trim(),
+          date: ds,
+        );
+    setState(() => _busy = false);
+    if (mounted) {
+      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading event details: $e')),
+        SnackBar(
+          backgroundColor: ok ? _T.green : _T.urgent,
+          content: Text(ok ? 'Event created!' : 'Failed to create event'),
+        ),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Event Details',
-          style: TextStyle(color: AppColors.whitecolor),
-        ),
-        backgroundColor: Color.fromRGBO(244, 135, 6, 1),
+    return Container(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      body:
-          isLoading
-              ? Center(child: CircularProgressIndicator())
-              : isError
-              ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.error, size: 64, color: Colors.red),
-                    SizedBox(height: 16),
-                    Text('Error loading event details'),
-                    SizedBox(height: 8),
-                    ElevatedButton(
-                      onPressed: fetchEventDetails,
-                      child: Text('Retry'),
-                    ),
-                  ],
-                ),
-              )
-              : SingleChildScrollView(
-                padding: EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      eventDetails?['title'] ?? 'Unknown Event',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.indigo[900],
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'By ${eventDetails?['eventMaker']['name'] ?? 'Unknown Organizer'}',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 16),
-                    ),
-                    SizedBox(height: 16),
-                    _buildDetailRow(
-                      Icons.description,
-                      'Description',
-                      eventDetails?['description'] ??
-                          'No description available',
-                    ),
-                    SizedBox(height: 12),
-                    _buildDetailRow(
-                      Icons.location_on,
-                      'Location',
-                      eventDetails?['location']['isOnline'] == true
-                          ? 'Online'
-                          : '${eventDetails?['location']['venue'] ?? ''}, ${eventDetails?['location']['city'] ?? ''}',
-                    ),
-                    SizedBox(height: 12),
-                    _buildDetailRow(
-                      Icons.calendar_today,
-                      'Date & Time',
-                      '${_formatDate(eventDetails?['startDate'])} to ${_formatDate(eventDetails?['endDate'])}',
-                    ),
-                    SizedBox(height: 12),
-                    _buildDetailRow(
-                      Icons.category,
-                      'Category',
-                      _categorizeEvent(eventDetails?['category'] ?? ''),
-                    ),
-                    SizedBox(height: 12),
-                    _buildDetailRow(
-                      Icons.monetization_on,
-                      'Price',
-                      eventDetails?['price']['isFree'] == true
-                          ? 'Free'
-                          : '\$${eventDetails?['price']['amount']} ${eventDetails?['price']['currency']}',
-                    ),
-                    SizedBox(height: 12),
-                    _buildDetailRow(
-                      Icons.people,
-                      'Attendees',
-                      '${eventDetails?['currentAttendees'] ?? 0}/${eventDetails?['maxAttendees'] ?? 'Unlimited'}',
-                    ),
-                    SizedBox(height: 12),
-                    _buildDetailRow(
-                      Icons.email,
-                      'Contact',
-                      eventDetails?['contactInfo']['email'] ??
-                          'No contact info',
-                    ),
-                    SizedBox(height: 12),
-                    if (eventDetails?['requirements']?.isNotEmpty ?? false)
-                      _buildRequirementsSection(),
-                    SizedBox(height: 16),
-                    if (eventDetails?['registrationRequired'] == true)
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Color.fromRGBO(244, 135, 6, 1),
-                          foregroundColor: AppColors.whitecolor,
-                          minimumSize: Size(double.infinity, 48),
-                        ),
-                        onPressed: () {
-                          // TODO: Implement registration logic
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Registration feature coming soon!',
-                              ),
-                            ),
-                          );
-                        },
-                        child: Text('Register Now'),
-                      ),
-                  ],
-                ),
-              ),
-    );
-  }
-
-  Widget _buildDetailRow(IconData icon, String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 20, color: Colors.grey[600]),
-        SizedBox(width: 8),
-        Expanded(
+      decoration: const BoxDecoration(
+        color: _T.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+        child: Form(
+          key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[800],
+              // Handle
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: _T.divider,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-              SizedBox(height: 4),
-              Text(
-                value,
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: _T.orangeDim,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.add_box_rounded,
+                      color: _T.orange,
+                      size: 19,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Create Event',
+                    style: TextStyle(
+                      color: _T.textPrimary,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              _Field(
+                ctrl: _titleCtrl,
+                label: 'Event Title',
+                icon: Icons.title_rounded,
+                validator:
+                    (v) => (v?.trim().isEmpty ?? true) ? 'Required' : null,
+              ),
+              const SizedBox(height: 12),
+              _Field(
+                ctrl: _descCtrl,
+                label: 'Description',
+                icon: Icons.notes_rounded,
+                maxLines: 3,
+                validator:
+                    (v) => (v?.trim().isEmpty ?? true) ? 'Required' : null,
+              ),
+              const SizedBox(height: 12),
+              _Field(
+                ctrl: _locCtrl,
+                label: 'Location',
+                icon: Icons.location_on_rounded,
+                validator:
+                    (v) => (v?.trim().isEmpty ?? true) ? 'Required' : null,
+              ),
+              const SizedBox(height: 12),
+
+              // Date picker row
+              GestureDetector(
+                onTap: _pickDate,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 15,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _T.surfaceHigh,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _T.divider),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_month_rounded,
+                        color: _date != null ? _T.orange : _T.textSecondary,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        _date == null
+                            ? 'Select Date'
+                            : '${_date!.day} ${_monthName(_date!.month)} ${_date!.year}',
+                        style: TextStyle(
+                          color:
+                              _date != null ? _T.textPrimary : _T.textSecondary,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _T.orange,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 0,
+                  ),
+                  onPressed: _busy ? null : _submit,
+                  child:
+                      _busy
+                          ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                          : const Text(
+                            'Publish Event',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                ),
               ),
             ],
           ),
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildRequirementsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Requirements',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey[800],
-          ),
-        ),
-        SizedBox(height: 8),
-        ...eventDetails!['requirements']
-            .map<Widget>(
-              (req) => Padding(
-                padding: EdgeInsets.only(left: 28, bottom: 4),
-                child: Row(
-                  children: [
-                    Icon(Icons.check_circle, size: 16, color: Colors.grey[600]),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        req,
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            )
-            .toList(),
-      ],
-    );
-  }
+  static const _mNames = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+  String _monthName(int m) => _mNames[m - 1];
+}
 
-  String _formatDate(String? dateStr) {
-    if (dateStr == null) return 'Unknown';
-    final date = DateTime.tryParse(dateStr);
-    if (date == null) return 'Unknown';
-    return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-  }
+class _Field extends StatelessWidget {
+  final TextEditingController ctrl;
+  final String label;
+  final IconData icon;
+  final int maxLines;
+  final String? Function(String?)? validator;
 
-  String _categorizeEvent(String text) {
-    final textLower = text.toLowerCase();
-    if (textLower.contains('conference')) {
-      return 'Technology';
-    }
-    return 'General Tech';
-  }
+  const _Field({
+    required this.ctrl,
+    required this.label,
+    required this.icon,
+    this.maxLines = 1,
+    this.validator,
+  });
+
+  @override
+  Widget build(BuildContext context) => TextFormField(
+    controller: ctrl,
+    maxLines: maxLines,
+    validator: validator,
+    style: const TextStyle(color: _T.textPrimary, fontSize: 15),
+    decoration: InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: _T.textSecondary),
+      prefixIcon: Icon(icon, color: _T.textSecondary, size: 18),
+      filled: true,
+      fillColor: _T.surfaceHigh,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: _T.divider),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: _T.divider),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: _T.orange, width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: _T.urgent),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+    ),
+  );
 }

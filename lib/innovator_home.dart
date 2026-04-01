@@ -1,33 +1,43 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// lib/Innovator/screens/Feed/homepage.dart  (or wherever your Homepage lives)
+//
+// CHANGES FROM YOUR ORIGINAL:
+//   1. StatefulWidget → ConsumerStatefulWidget  (needed for ref)
+//   2. State → ConsumerState                    (needed for ref)
+//   3. didChangeAppLifecycleState wired to setAppActive()
+//      resumed → 8-second polling (fast, user is looking at the app)
+//      paused  → 30-second polling (slow, saves battery)
+//   4. Everything else is IDENTICAL to your original
+// ─────────────────────────────────────────────────────────────────────────────
+
 import 'dart:developer';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // ← NEW
 import 'package:in_app_update/in_app_update.dart';
+import 'package:innovator/Innovator/provider/notification_provider.dart';
 import 'package:innovator/Innovator/screens/Feed/Inner_Homepage.dart';
 import 'package:innovator/Innovator/screens/Feed/Video_Feed.dart';
 import 'package:innovator/Innovator/widget/FloatingMenuwidget.dart';
 
-class Homepage extends StatefulWidget {
+// ── CHANGE 1: StatefulWidget → ConsumerStatefulWidget ──────────────────────
+class Homepage extends ConsumerStatefulWidget {
   const Homepage({super.key});
 
   @override
-  _HomepageState createState() => _HomepageState();
+  ConsumerState<Homepage> createState() => _HomepageState();
 }
 
-class _HomepageState extends State<Homepage>
+// ── CHANGE 2: State<Homepage> → ConsumerState<Homepage> ────────────────────
+class _HomepageState extends ConsumerState<Homepage>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  // final NotificationPollingService _pollingService =
-  //     NotificationPollingService();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    // Check for app updates
     _checkForUpdate();
-
-    // Start notification polling
-    // _startNotificationPolling();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       FloatingMenuOverlay.show(context);
@@ -37,29 +47,40 @@ class _HomepageState extends State<Homepage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    // Note: We don't stop polling here as it should continue app-wide
     super.dispose();
   }
 
+  // ── CHANGE 3: Wire lifecycle to polling speed ───────────────────────────
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     switch (state) {
       case AppLifecycleState.resumed:
-        log('App resumed - starting notification polling');
-        // _pollingService.startPolling();
-        // _pollingService.forceCheck();
+        // User opened the app → switch to fast polling (every 8 seconds)
+        // Also triggers an immediate poll so the user sees fresh notifications
+        // the moment they return to the app.
+        log('App resumed → fast polling');
+        ref.read(notificationProvider.notifier).setAppActive(true);
         break;
+
       case AppLifecycleState.paused:
-        log('App paused - stopping notification polling');
-        // _pollingService.stopPolling();
+        // App went to background → switch to slow polling (every 30 seconds)
+        // This is battery-friendly. FCM handles background system tray
+        // notifications independently — this polling is only for the
+        // in-app banner when the app is open.
+        log('App paused → slow polling');
+        ref.read(notificationProvider.notifier).setAppActive(false);
         break;
+
       case AppLifecycleState.inactive:
       case AppLifecycleState.detached:
       case AppLifecycleState.hidden:
+        // No polling changes needed for these states
         break;
     }
   }
+
+  // ── Everything below is IDENTICAL to your original ─────────────────────
 
   Future<void> _checkForUpdate() async {
     try {
@@ -149,7 +170,6 @@ class _HomepageState extends State<Homepage>
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
-      //    FloatingMenuOverlay handles it globally above all screens.
       body: GestureDetector(
         onHorizontalDragEnd: (DragEndDetails details) {
           if (details.primaryVelocity! < -200) {

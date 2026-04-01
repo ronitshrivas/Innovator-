@@ -25,21 +25,11 @@ class _PrivacyPolicyState extends State<PrivacyPolicy>
       key: _scaffoldKey, // Add the scaffold key here
 
       backgroundColor: const Color(0xffEDF4FE),
+
       // backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Color.fromRGBO(244, 135, 6, 1),
-        automaticallyImplyLeading: true,
-        centerTitle: true,
-        title: Text(
-          'Privacy Policy',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: AppColors.whitecolor,
-          ),
-        ),
-      ),
       body: Stack(
         children: [
+          // SizedBox(height: 20),
           Padding(
             padding: const EdgeInsets.only(top: 65, right: 20, left: 20),
             child: SingleChildScrollView(
@@ -48,6 +38,12 @@ class _PrivacyPolicyState extends State<PrivacyPolicy>
                 mainAxisAlignment: MainAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  IconButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    icon: Icon(Icons.arrow_back_ios),
+                  ),
                   Text(
                     'What is the Privacy Policy and what does it cover?',
                     softWrap: true,

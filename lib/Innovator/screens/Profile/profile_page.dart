@@ -1040,19 +1040,31 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.whitecolor,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text('My Profile'),
-      ),
+
+      // appBar: AppBar(
+      //   backgroundColor: AppColors.whitecolor,
+      //   automaticallyImplyLeading: false,
+      //   leading: IconButton(
+      //     icon: const Icon(Icons.arrow_back_ios),
+      //     onPressed: () => Navigator.pop(context),
+      //   ),
+      //   title: const Text('My Profile'),
+      // ),
       body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 40),
         child: CustomScrollView(
           controller: _scrollController,
           slivers: [
+            SliverToBoxAdapter(
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back_ios),
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                alignment: Alignment.centerLeft,
+                // padding: EdgeInsets.zero,
+              ),
+            ),
             SliverToBoxAdapter(
               child: FutureBuilder<UserProfileData>(
                 future: _profileFuture,
@@ -1062,42 +1074,39 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                   }
                   if (snapshot.hasError) {
                     return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.error_outline,
-                              size: 48,
-                              color: Colors.red,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            size: 48,
+                            color: Colors.red,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Error loading profile',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
                             ),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'Error loading profile',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                          ),
+                          const SizedBox(height: 8),
+                          ElevatedButton(
+                            onPressed: () => setState(() => _loadProfile()),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color.fromRGBO(
+                                244,
+                                135,
+                                6,
+                                1,
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            ElevatedButton(
-                              onPressed: () => setState(() => _loadProfile()),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color.fromRGBO(
-                                  244,
-                                  135,
-                                  6,
-                                  1,
-                                ),
-                              ),
-                              child: const Text(
-                                'Try Again',
-                                style: TextStyle(color: AppColors.whitecolor),
-                              ),
+                            child: const Text(
+                              'Try Again',
+                              style: TextStyle(color: AppColors.whitecolor),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     );
                   }
