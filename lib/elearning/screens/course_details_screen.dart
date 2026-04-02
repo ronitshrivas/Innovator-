@@ -3,6 +3,7 @@
 // import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:innovator/elearning/model/course_list_model.dart';
 // import 'package:innovator/elearning/provider/course_provider.dart';
+// import 'package:url_launcher/url_launcher.dart';
 // import 'package:video_player/video_player.dart';
 // import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 // import 'package:shimmer/shimmer.dart';
@@ -16,9 +17,10 @@
 // }
 
 // class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
-//     with SingleTickerProviderStateMixin {
+//     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
 //   late TabController _tabController;
 //   VideoPlayerController? _videoController;
+//   String? _pendingPaymentCourseId;
 
 //   bool _videoInitialized = false;
 //   bool _videoError = false;
@@ -31,6 +33,7 @@
 //   @override
 //   void initState() {
 //     super.initState();
+//     WidgetsBinding.instance.addObserver(this);
 //     _tabController = TabController(length: _tabs.length, vsync: this);
 //     WidgetsBinding.instance.addPostFrameCallback((_) => _maybeStartVideo());
 //   }
@@ -48,22 +51,36 @@
 
 //   @override
 //   void dispose() {
+//     WidgetsBinding.instance.removeObserver(this);
 //     _tabController.dispose();
 //     _videoController?.dispose();
-//     // restore orientation when leaving
 //     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 //     super.dispose();
 //   }
-
-//   // ── video init ────────────────────────────────────────────────────────────
+// @override
+// void didChangeAppLifecycleState(AppLifecycleState state) {
+//   if (state == AppLifecycleState.resumed && _pendingPaymentCourseId != null) {
+//     final courseId = _pendingPaymentCourseId!;
+//     _pendingPaymentCourseId = null;
+//     // Small delay so the screen is fully visible before sheet pops up
+//     Future.delayed(const Duration(milliseconds: 400), () {
+//       if (mounted) _showPaymentReturnSheet(courseId);
+//     });
+//   }
+// }
+//   // video init
 
 //   void _initVideo(CourseContent content) {
-//     _videoController?.dispose();
+//     final oldController = _videoController;
+
 //     setState(() {
+//       _videoController = null;
 //       _videoInitialized = false;
 //       _videoError = false;
 //       _isVideoLoading = true;
 //     });
+
+//     oldController?.dispose();
 
 //     final url =
 //         (content.videoUrl != null && content.videoUrl!.isNotEmpty)
@@ -80,59 +97,279 @@
 //       return;
 //     }
 
-//     _videoController = VideoPlayerController.networkUrl(Uri.parse(url))
-//       ..initialize()
-//           .then((_) {
-//             if (mounted)
-//               setState(() {
-//                 _videoInitialized = true;
-//                 _isVideoLoading = false;
-//               });
-//           })
-//           .catchError((_) {
-//             if (mounted)
-//               setState(() {
-//                 _videoError = true;
-//                 _isVideoLoading = false;
-//               });
+//     final controller = VideoPlayerController.networkUrl(Uri.parse(url));
+//     controller
+//         .initialize()
+//         .then((_) {
+//           if (!mounted) {
+//             controller.dispose();
+//             return;
+//           }
+//           setState(() {
+//             _videoController = controller;
+//             _videoInitialized = true;
+//             _isVideoLoading = false;
 //           });
+//         })
+//         .catchError((_) {
+//           if (!mounted) {
+//             controller.dispose();
+//             return;
+//           }
+//           setState(() {
+//             _videoError = true;
+//             _isVideoLoading = false;
+//           });
+//         });
 //   }
 
-//   // ── enroll ────────────────────────────────────────────────────────────────
+//   void _showErrorSnack(String msg) {
+//     if (!mounted) return;
+//     ScaffoldMessenger.of(context).showSnackBar(
+//       SnackBar(
+//         content: Text(msg),
+//         backgroundColor: Colors.redAccent,
+//         behavior: SnackBarBehavior.floating,
+//         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+//       ),
+//     );
+//   }
+
+//   void _showPaymentReturnSheet(String courseId, String pidx) {
+//     showModalBottomSheet(
+//       context: context,
+//       isDismissible: false,
+//       enableDrag: false,
+//       backgroundColor: Colors.white,
+//       shape: const RoundedRectangleBorder(
+//         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+//       ),
+//       builder: (sheetCtx) {
+//         bool confirming = false;
+
+//         return StatefulBuilder(
+//           builder:
+//               (_, setSheetState) => Padding(
+//                 padding: const EdgeInsets.fromLTRB(24, 28, 24, 36),
+//                 child: Column(
+//                   mainAxisSize: MainAxisSize.min,
+//                   children: [
+//                     // Handle bar
+//                     Container(
+//                       width: 40,
+//                       height: 4,
+//                       decoration: BoxDecoration(
+//                         color: Colors.grey.shade300,
+//                         borderRadius: BorderRadius.circular(2),
+//                       ),
+//                     ),
+//                     const SizedBox(height: 24),
+
+//                     Container(
+//                       padding: const EdgeInsets.all(16),
+//                       decoration: BoxDecoration(
+//                         color: const Color(0xFFEFF6FF),
+//                         shape: BoxShape.circle,
+//                       ),
+//                       child: const Icon(
+//                         Icons.payment_rounded,
+//                         size: 36,
+//                         color: Color(0xFF2563EB),
+//                       ),
+//                     ),
+//                     const SizedBox(height: 16),
+
+//                     const Text(
+//                       'Complete your payment',
+//                       style: TextStyle(
+//                         fontSize: 17,
+//                         fontWeight: FontWeight.bold,
+//                         color: Color(0xFF1E293B),
+//                       ),
+//                     ),
+//                     const SizedBox(height: 8),
+//                     Text(
+//                       'Once you\'ve paid on Khalti, tap the button below to activate your enrollment.',
+//                       textAlign: TextAlign.center,
+//                       style: TextStyle(
+//                         fontSize: 13,
+//                         color: Colors.grey.shade600,
+//                         height: 1.5,
+//                       ),
+//                     ),
+//                     const SizedBox(height: 28),
+
+//                     // "I've Paid" button
+//                     SizedBox(
+//                       width: double.infinity,
+//                       child: ElevatedButton(
+//                         onPressed:
+//                             confirming
+//                                 ? null
+//                                 : () async {
+//                                   setSheetState(() => confirming = true);
+//                                   try {
+//                                     await ref
+//                                         .read(courseServiceProvider)
+//                                         .enrollCourse(courseId);
+//                                     ref
+//                                         .read(enrolledCoursesProvider.notifier)
+//                                         .enroll(courseId);
+
+//                                     if (mounted) Navigator.pop(sheetCtx);
+
+//                                     _videoStarted = true;
+//                                     if (widget.course.contents.isNotEmpty) {
+//                                       _initVideo(widget.course.contents.first);
+//                                     }
+//                                     if (mounted) {
+//                                       ScaffoldMessenger.of(
+//                                         context,
+//                                       ).showSnackBar(
+//                                         SnackBar(
+//                                           content: const Text(
+//                                             'Enrollment confirmed! 🎉',
+//                                           ),
+//                                           backgroundColor: const Color(
+//                                             0xFF10B981,
+//                                           ),
+//                                           behavior: SnackBarBehavior.floating,
+//                                           shape: RoundedRectangleBorder(
+//                                             borderRadius: BorderRadius.circular(
+//                                               10,
+//                                             ),
+//                                           ),
+//                                         ),
+//                                       );
+//                                     }
+//                                   } catch (_) {
+//                                     setSheetState(() => confirming = false);
+//                                     if (mounted) {
+//                                       ScaffoldMessenger.of(
+//                                         context,
+//                                       ).showSnackBar(
+//                                         SnackBar(
+//                                           content: const Text(
+//                                             'Payment not verified yet. Please wait and try again.',
+//                                           ),
+//                                           backgroundColor: Colors.orange,
+//                                           behavior: SnackBarBehavior.floating,
+//                                           shape: RoundedRectangleBorder(
+//                                             borderRadius: BorderRadius.circular(
+//                                               10,
+//                                             ),
+//                                           ),
+//                                         ),
+//                                       );
+//                                     }
+//                                   }
+//                                 },
+//                         style: ElevatedButton.styleFrom(
+//                           backgroundColor: const Color(0xFF2563EB),
+//                           foregroundColor: Colors.white,
+//                           padding: const EdgeInsets.symmetric(vertical: 14),
+//                           shape: RoundedRectangleBorder(
+//                             borderRadius: BorderRadius.circular(12),
+//                           ),
+//                         ),
+//                         child:
+//                             confirming
+//                                 ? const SizedBox(
+//                                   height: 20,
+//                                   width: 20,
+//                                   child: CircularProgressIndicator(
+//                                     color: Colors.white,
+//                                     strokeWidth: 2,
+//                                   ),
+//                                 )
+//                                 : const Text(
+//                                   "I've Paid — Activate Enrollment",
+//                                   style: TextStyle(
+//                                     fontWeight: FontWeight.bold,
+//                                     fontSize: 14,
+//                                   ),
+//                                 ),
+//                       ),
+//                     ),
+//                     const SizedBox(height: 12),
+
+//                     // Cancel / go back to pay
+//                     TextButton(
+//                       onPressed:
+//                           confirming ? null : () => Navigator.pop(sheetCtx),
+//                       child: const Text(
+//                         'Cancel',
+//                         style: TextStyle(color: Colors.grey),
+//                       ),
+//                     ),
+//                   ],
+//                 ),
+//               ),
+//         );
+//       },
+//     );
+//   }
 
 //   Future<void> _enroll() async {
 //     final courseId = widget.course.id;
 //     ref.read(enrollLoadingProvider(courseId).notifier).setLoading(true);
+
 //     try {
-//       await ref.read(courseServiceProvider).enrollCourse(courseId);
-//       ref.read(enrolledCoursesProvider.notifier).enroll(courseId);
-//       ref.read(enrollLoadingProvider(courseId).notifier).setLoading(false);
-//       _videoStarted = true;
-//       if (widget.course.contents.isNotEmpty) {
-//         _initVideo(widget.course.contents.first);
-//       }
-//       if (mounted) {
-//         ScaffoldMessenger.of(context).showSnackBar(
-//           SnackBar(
-//             content: Text(
-//               widget.course.isFree
-//                   ? 'Enrolled! Start learning now. 🎉'
-//                   : 'Request sent. Complete payment to unlock.',
+//       if (widget.course.isFree) {
+//         //FREE: enroll directly
+//         await ref.read(courseServiceProvider).enrollCourse(courseId);
+//         ref.read(enrolledCoursesProvider.notifier).enroll(courseId);
+//         ref.read(enrollLoadingProvider(courseId).notifier).setLoading(false);
+
+//         _videoStarted = true;
+//         if (widget.course.contents.isNotEmpty) {
+//           _initVideo(widget.course.contents.first);
+//         }
+//         if (mounted) {
+//           ScaffoldMessenger.of(context).showSnackBar(
+//             SnackBar(
+//               content: const Text('Enrolled! Start learning now. 🎉'),
+//               backgroundColor: const Color(0xFF10B981),
+//               behavior: SnackBarBehavior.floating,
+//               shape: RoundedRectangleBorder(
+//                 borderRadius: BorderRadius.circular(10),
+//               ),
 //             ),
-//             backgroundColor: Color(0xFF10B981),
-//             behavior: SnackBarBehavior.floating,
-//             shape: RoundedRectangleBorder(
-//               borderRadius: BorderRadius.circular(10),
-//             ),
-//           ),
-//         );
+//           );
+//         }
+//       } else {
+//         final result = await ref
+//             .read(courseServiceProvider)
+//             .initiatePayment(courseId);
+//         ref.read(enrollLoadingProvider(courseId).notifier).setLoading(false);
+
+//         final paymentUrl = result['payment_url'] as String?;
+//         final pidx = result['pidx'] as String?;
+
+//         if (paymentUrl == null || pidx == null) {
+//           _showErrorSnack('Could not initiate payment. Please try again.');
+//           return;
+//         }
+
+//         // Open Khalti checkout in browser
+//         final uri = Uri.parse(paymentUrl);
+//         if (await canLaunchUrl(uri)) {
+//           await launchUrl(uri, mode: LaunchMode.externalApplication);
+//         } else {
+//           _showErrorSnack('Could not open payment page.');
+//           return;
+//         }
+
+//         // After returning from browser, ask user to confirm payment
+//         if (!mounted) return;
+//         _showPaymentReturnSheet(courseId, pidx);
 //       }
 //     } catch (e) {
 //       ref.read(enrollLoadingProvider(courseId).notifier).setLoading(false);
+//       _showErrorSnack('Something went wrong. Please try again.');
 //     }
 //   }
 
-      
 //   @override
 //   Widget build(BuildContext context) {
 //     final enrolledIds = ref.watch(enrolledCoursesProvider);
@@ -148,7 +385,7 @@
 //     }
 
 //     return Scaffold(
-//       backgroundColor: Color(0xFFF5F7FA),
+//       backgroundColor: const Color(0xFFF5F7FA),
 //       body: Column(
 //         children: [
 //           _buildVideoSection(isEnrolled),
@@ -168,7 +405,7 @@
 //     );
 //   }
 
-//   // ── title bar ─────────────────────────────────────────────────────────────
+//   // title bar
 
 //   Widget _buildTitleBar() {
 //     return Container(
@@ -185,9 +422,9 @@
 //                   child: Container(
 //                     padding: const EdgeInsets.all(6),
 //                     decoration: BoxDecoration(
-//                       color: Color(0xFFF5F7FA),
+//                       color: const Color(0xFFF5F7FA),
 //                       borderRadius: BorderRadius.circular(8),
-//                       border: Border.all(color: Color(0xFFE2E8F0)),
+//                       border: Border.all(color: const Color(0xFFE2E8F0)),
 //                     ),
 //                     child: const Icon(
 //                       Icons.arrow_back_ios_new,
@@ -217,9 +454,9 @@
 //           TabBar(
 //             controller: _tabController,
 //             tabs: _tabs.map((t) => Tab(text: t)).toList(),
-//             labelColor: Color(0xFF2563EB),
-//             unselectedLabelColor: Color(0xFF94A3B8),
-//             indicatorColor: Color(0xFF2563EB),
+//             labelColor: const Color(0xFF2563EB),
+//             unselectedLabelColor: const Color(0xFF94A3B8),
+//             indicatorColor: const Color(0xFF2563EB),
 //             indicatorWeight: 2.5,
 //             labelStyle: const TextStyle(
 //               fontWeight: FontWeight.w600,
@@ -230,6 +467,8 @@
 //       ),
 //     );
 //   }
+
+//   // video section
 
 //   Widget _buildVideoSection(bool isEnrolled) {
 //     final isLoading = ref.watch(enrollLoadingProvider(widget.course.id));
@@ -249,9 +488,10 @@
 //                 _videoShimmer()
 //               else if (_videoError)
 //                 _videoErrorWidget()
-//               else if (_videoInitialized)
-//                 // ✅ Full-featured video player with all controls
+//               else if (_videoInitialized && _videoController != null)
+//                 // ValueKey ensures a brand-new widget (and initState) per controller
 //                 _VideoPlayerWithControls(
+//                   key: ValueKey(_videoController),
 //                   controller: _videoController!,
 //                   onFullscreen: _openFullscreen,
 //                 )
@@ -279,7 +519,6 @@
 //                 ),
 //               ),
 
-//               // enroll button
 //               if (!isEnrolled)
 //                 Positioned(
 //                   bottom: 14,
@@ -329,7 +568,7 @@
 //     ),
 //   );
 
-//   // ── Lessons tab ───────────────────────────────────────────────────────────
+//   // Lessons tab
 
 //   Widget _buildLessonsTab(bool isEnrolled) {
 //     final contents = widget.course.contents;
@@ -345,9 +584,7 @@
 //           onTap:
 //               isEnrolled
 //                   ? () {
-//                     setState(() {
-//                       _selectedIndex = i;
-//                     });
+//                     setState(() => _selectedIndex = i);
 //                     _initVideo(c);
 //                     _tabController.animateTo(0);
 //                   }
@@ -360,7 +597,7 @@
 //               color: active ? const Color(0xFFEFF6FF) : Colors.white,
 //               borderRadius: BorderRadius.circular(12),
 //               border: Border.all(
-//                 color: active ? Color(0xFF2563EB) : Colors.transparent,
+//                 color: active ? const Color(0xFF2563EB) : Colors.transparent,
 //                 width: 1.5,
 //               ),
 //               boxShadow: [
@@ -427,7 +664,7 @@
 //                               vertical: 2,
 //                             ),
 //                             decoration: BoxDecoration(
-//                               color: Color(0xFFF5F7FA),
+//                               color: const Color(0xFFF5F7FA),
 //                               borderRadius: BorderRadius.circular(4),
 //                             ),
 //                             child: Text(
@@ -450,7 +687,10 @@
 //                       active
 //                           ? Icons.pause_circle_filled
 //                           : Icons.play_circle_outline,
-//                       color: active ? Color(0xFF2563EB) : Color(0xFF94A3B8),
+//                       color:
+//                           active
+//                               ? const Color(0xFF2563EB)
+//                               : const Color(0xFF94A3B8),
 //                       size: 22,
 //                     )
 //                     : const Icon(
@@ -480,7 +720,7 @@
 //     ),
 //   );
 
-//   // ── Docs tab ──────────────────────────────────────────────────────────────
+//   // Docs tab
 
 //   Widget _buildDocsTab(bool isEnrolled) {
 //     final docs =
@@ -499,7 +739,7 @@
 //     );
 //   }
 
-//   // ── About tab ─────────────────────────────────────────────────────────────
+//   // About tab
 
 //   Widget _buildAboutTab(bool isEnrolled) {
 //     final course = widget.course;
@@ -532,7 +772,7 @@
 //             icon: Icons.library_books_outlined,
 //             label: 'Total Lessons',
 //             value: '${course.contents.length} lessons',
-//             iconColor: Color(0xFF10B981),
+//             iconColor: const Color(0xFF10B981),
 //           ),
 //           if (!course.isFree) ...[
 //             const SizedBox(height: 10),
@@ -540,7 +780,7 @@
 //               icon: Icons.sell_outlined,
 //               label: 'Price',
 //               value: 'Rs. ${course.price.toStringAsFixed(0)}',
-//               iconColor: Color(0xFF2563EB),
+//               iconColor: const Color(0xFF2563EB),
 //             ),
 //           ],
 //           const SizedBox(height: 16),
@@ -589,16 +829,17 @@
 //   );
 // }
 
-// // ─── Video Player With Full Controls ──────────────────────────────────────────
+// // Video Player With Full Controls
 
 // class _VideoPlayerWithControls extends StatefulWidget {
 //   final VideoPlayerController controller;
 //   final VoidCallback onFullscreen;
 
 //   const _VideoPlayerWithControls({
+//     Key? key,
 //     required this.controller,
 //     required this.onFullscreen,
-//   });
+//   }) : super(key: key);
 
 //   @override
 //   State<_VideoPlayerWithControls> createState() =>
@@ -609,39 +850,19 @@
 //   bool _showControls = true;
 //   bool _isDragging = false;
 
-//   // Available playback speeds
 //   static const List<double> _speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 //   double _currentSpeed = 1.0;
-
-//   // Auto-hide timer
 //   DateTime _lastTap = DateTime.now();
 
-   
 //   @override
 //   void initState() {
 //     super.initState();
-//     widget.controller.addListener(_onControllerUpdate);
-//     WidgetsBinding.instance.addPostFrameCallback((_) {
-//       if (mounted) setState(() {});
-//     });
 //     _scheduleHide();
 //   }
 
-// @override
-// void didUpdateWidget(_VideoPlayerWithControls oldWidget) {
-//   super.didUpdateWidget(oldWidget);
-//   if (oldWidget.controller != widget.controller) {
-//     oldWidget.controller.removeListener(_onControllerUpdate);
-//     widget.controller.addListener(_onControllerUpdate);
-//     _currentSpeed = 1.0;  
-//     setState(() {});
-//   }
-// }
-
-
-//   void _onControllerUpdate() {
-//     if (mounted) setState(() {});
-//   }
+//   // No manual addListener needed — ValueListenableBuilder handles all
+//   // position/duration/isPlaying updates automatically and re-subscribes
+//   // whenever widget.controller changes.
 
 //   void _scheduleHide() {
 //     Future.delayed(const Duration(seconds: 3), () {
@@ -661,26 +882,17 @@
 //     if (_showControls) _scheduleHide();
 //   }
 
-//   // void _skip(int seconds) {
-//   //   final current = widget.controller.value.position;
-//   //   final total = widget.controller.value.duration;
-//   //   final target = current + Duration(seconds: seconds);
-//   //   final clamped =
-//   //       target < Duration.zero
-//   //           ? Duration.zero
-//   //           : (target > total ? total : target);
-//   //   widget.controller.seekTo(clamped);
-//   // }
 //   void _skip(int seconds) {
-//     final total = widget.controller.value.duration;
-//     if (total == Duration.zero) return;
-//     final current = widget.controller.value.position;
+//     final ctrl = widget.controller;
+//     final duration = ctrl.value.duration;
+//     if (duration == Duration.zero) return;
+//     final current = ctrl.value.position;
 //     final target = current + Duration(seconds: seconds);
 //     final clamped =
 //         target < Duration.zero
 //             ? Duration.zero
-//             : (target > total ? total : target);
-//     widget.controller.seekTo(clamped);
+//             : (target > duration ? duration : target);
+//     ctrl.seekTo(clamped);
 //   }
 
 //   String _formatDuration(Duration d) {
@@ -769,39 +981,30 @@
 //   }
 
 //   @override
-//   void dispose() {
-//     widget.controller.removeListener(_onControllerUpdate);
-//     super.dispose();
-//   }
-
-//   @override
 //   Widget build(BuildContext context) {
-//     final ctrl = widget.controller;
-//     final value = ctrl.value;
-//     final isPlaying = value.isPlaying;
-//     final position = value.position;
-//     final duration = value.duration;
-//     final progress =
-//         duration.inMilliseconds > 0
-//             ? position.inMilliseconds / duration.inMilliseconds
-//             : 0.0;
-
 //     return GestureDetector(
 //       onTap: _toggleControls,
 //       child: Stack(
 //         fit: StackFit.expand,
 //         children: [
-//           // ── Video ─────────────────────────────────────────────────────────
-//           FittedBox(
-//             fit: BoxFit.cover,
-//             child: SizedBox(
-//               width: value.size.width,
-//               height: value.size.height,
-//               child: VideoPlayer(ctrl),
-//             ),
+//           // Video
+//           ValueListenableBuilder<VideoPlayerValue>(
+//             valueListenable: widget.controller,
+//             builder: (_, value, __) {
+//               final w = value.size.width > 0 ? value.size.width : 16.0;
+//               final h = value.size.height > 0 ? value.size.height : 9.0;
+//               return FittedBox(
+//                 fit: BoxFit.cover,
+//                 child: SizedBox(
+//                   width: w,
+//                   height: h,
+//                   child: VideoPlayer(widget.controller),
+//                 ),
+//               );
+//             },
 //           ),
 
-//           // ── Controls overlay ──────────────────────────────────────────────
+//           // Controls overlay
 //           AnimatedOpacity(
 //             opacity: _showControls ? 1.0 : 0.0,
 //             duration: const Duration(milliseconds: 250),
@@ -821,230 +1024,254 @@
 //                     stops: const [0.0, 0.3, 0.6, 1.0],
 //                   ),
 //                 ),
-//                 child: Stack(
-//                   children: [
-//                     // ── Top row: speed + fullscreen ───────────────────────────
-//                     Positioned(
-//                       top: 8,
-//                       right: 8,
-//                       child: Row(
-//                         children: [
-//                           // Speed button
-//                           GestureDetector(
+//                 // ValueListenableBuilder reads position/duration/isPlaying
+//                 // directly from the controller on every controller event —
+//                 // no manual setState listener needed, no stale values.
+//                 child: ValueListenableBuilder<VideoPlayerValue>(
+//                   valueListenable: widget.controller,
+//                   builder: (_, value, __) {
+//                     final isPlaying = value.isPlaying;
+//                     final position = value.position;
+//                     final duration = value.duration;
+//                     final progress =
+//                         duration.inMilliseconds > 0
+//                             ? (position.inMilliseconds /
+//                                     duration.inMilliseconds)
+//                                 .clamp(0.0, 1.0)
+//                             : 0.0;
+
+//                     return Stack(
+//                       children: [
+//                         // Top: speed + fullscreen
+//                         Positioned(
+//                           top: 8,
+//                           right: 8,
+//                           child: GestureDetector(
 //                             behavior: HitTestBehavior.opaque,
-//                             onTap: () {
-//                               _lastTap = DateTime.now();
-//                               _showSpeedPicker();
-//                             },
-//                             child: Container(
-//                               padding: const EdgeInsets.symmetric(
-//                                 horizontal: 10,
-//                                 vertical: 5,
-//                               ),
-//                               decoration: BoxDecoration(
-//                                 color: Colors.black.withAlpha(130),
-//                                 borderRadius: BorderRadius.circular(6),
-//                                 border: Border.all(
-//                                   color: Colors.white.withAlpha(60),
-//                                 ),
-//                               ),
-//                               child: Text(
-//                                 _currentSpeed == 1.0 ? '1x' : '${_currentSpeed}x',
-//                                 style: const TextStyle(
-//                                   color: Colors.white,
-//                                   fontSize: 12,
-//                                   fontWeight: FontWeight.bold,
-//                                 ),
-//                               ),
-//                             ),
-//                           ),
-//                           const SizedBox(width: 8),
-//                           // Fullscreen button
-//                           GestureDetector(
-//                             onTap: () {
-//                               _lastTap = DateTime.now();
-//                               widget.onFullscreen();
-//                             },
-//                             child: Container(
-//                               padding: const EdgeInsets.all(6),
-//                               decoration: BoxDecoration(
-//                                 color: Colors.black.withAlpha(130),
-//                                 borderRadius: BorderRadius.circular(6),
-//                                 border: Border.all(
-//                                   color: Colors.white.withAlpha(60),
-//                                 ),
-//                               ),
-//                               child: const Icon(
-//                                 Icons.fullscreen,
-//                                 color: Colors.white,
-//                                 size: 18,
-//                               ),
-//                             ),
-//                           ),
-//                         ],
-//                       ),
-//                     ),
-              
-//                     // ── Centre row: skip back | play/pause | skip forward ─────
-//                     Center(
-//                       child: Row(
-//                         mainAxisSize: MainAxisSize.min,
-//                         children: [
-//                           // Skip back 10s
-//                           GestureDetector(
-//                             onTap: () {
-//                               _lastTap = DateTime.now();
-//                               _skip(-10);
-//                             },
-//                             child: Container(
-//                               padding: const EdgeInsets.all(10),
-//                               decoration: BoxDecoration(
-//                                 color: Colors.black.withAlpha(100),
-//                                 shape: BoxShape.circle,
-//                               ),
-//                               child: const Icon(
-//                                 Icons.replay_10,
-//                                 color: Colors.white,
-//                                 size: 28,
-//                               ),
-//                             ),
-//                           ),
-//                           const SizedBox(width: 24),
-              
-//                           // Play / Pause
-//                           GestureDetector(
-//                             onTap: () {
-//                               _lastTap = DateTime.now();
-//                               setState(
-//                                 () => isPlaying ? ctrl.pause() : ctrl.play(),
-//                               );
-//                             },
-//                             child: Container(
-//                               padding: const EdgeInsets.all(14),
-//                               decoration: BoxDecoration(
-//                                 color: Colors.black.withAlpha(140),
-//                                 shape: BoxShape.circle,
-//                                 border: Border.all(
-//                                   color: Colors.white.withAlpha(80),
-//                                   width: 2,
-//                                 ),
-//                               ),
-//                               child: Icon(
-//                                 isPlaying
-//                                     ? Icons.pause_rounded
-//                                     : Icons.play_arrow_rounded,
-//                                 color: Colors.white,
-//                                 size: 36,
-//                               ),
-//                             ),
-//                           ),
-//                           const SizedBox(width: 24),
-              
-//                           // Skip forward 10s
-//                           GestureDetector(
-//                             onTap: () {
-//                               _lastTap = DateTime.now();
-//                               _skip(10);
-//                             },
-//                             child: Container(
-//                               padding: const EdgeInsets.all(10),
-//                               decoration: BoxDecoration(
-//                                 color: Colors.black.withAlpha(100),
-//                                 shape: BoxShape.circle,
-//                               ),
-//                               child: const Icon(
-//                                 Icons.forward_10,
-//                                 color: Colors.white,
-//                                 size: 28,
-//                               ),
-//                             ),
-//                           ),
-//                         ],
-//                       ),
-//                     ),
-              
-//                     // ── Bottom: time + seek bar ───────────────────────────────
-//                     Positioned(
-//                       bottom: 0,
-//                       left: 0,
-//                       right: 0,
-//                       child: Padding(
-//                         padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           children: [
-//                             // Time labels
-//                             Row(
+//                             onTap:
+//                                 () {}, // absorb — stop bubble to _toggleControls
+//                             child: Row(
 //                               children: [
-//                                 Text(
-//                                   _formatDuration(position),
-//                                   style: const TextStyle(
-//                                     color: Colors.white,
-//                                     fontSize: 11,
-//                                     fontWeight: FontWeight.w500,
+//                                 GestureDetector(
+//                                   behavior: HitTestBehavior.opaque,
+//                                   onTap: () {
+//                                     _lastTap = DateTime.now();
+//                                     _showSpeedPicker();
+//                                   },
+//                                   child: Container(
+//                                     padding: const EdgeInsets.symmetric(
+//                                       horizontal: 10,
+//                                       vertical: 5,
+//                                     ),
+//                                     decoration: BoxDecoration(
+//                                       color: Colors.black.withAlpha(130),
+//                                       borderRadius: BorderRadius.circular(6),
+//                                       border: Border.all(
+//                                         color: Colors.white.withAlpha(60),
+//                                       ),
+//                                     ),
+//                                     child: Text(
+//                                       _currentSpeed == 1.0
+//                                           ? '1x'
+//                                           : '${_currentSpeed}x',
+//                                       style: const TextStyle(
+//                                         color: Colors.white,
+//                                         fontSize: 12,
+//                                         fontWeight: FontWeight.bold,
+//                                       ),
+//                                     ),
 //                                   ),
 //                                 ),
-//                                 const Spacer(),
-//                                 Text(
-//                                   _formatDuration(duration),
-//                                   style: TextStyle(
-//                                     color: Colors.white.withAlpha(180),
-//                                     fontSize: 11,
+//                                 const SizedBox(width: 8),
+//                                 GestureDetector(
+//                                   behavior: HitTestBehavior.opaque,
+//                                   onTap: () {
+//                                     _lastTap = DateTime.now();
+//                                     widget.onFullscreen();
+//                                   },
+//                                   child: Container(
+//                                     padding: const EdgeInsets.all(6),
+//                                     decoration: BoxDecoration(
+//                                       color: Colors.black.withAlpha(130),
+//                                       borderRadius: BorderRadius.circular(6),
+//                                       border: Border.all(
+//                                         color: Colors.white.withAlpha(60),
+//                                       ),
+//                                     ),
+//                                     child: const Icon(
+//                                       Icons.fullscreen,
+//                                       color: Colors.white,
+//                                       size: 18,
+//                                     ),
 //                                   ),
 //                                 ),
 //                               ],
 //                             ),
-//                             const SizedBox(height: 4),
-              
-//                             // Seek slider
-//                             SliderTheme(
-//                               data: SliderTheme.of(context).copyWith(
-//                                 trackHeight: 3,
-//                                 thumbShape: const RoundSliderThumbShape(
-//                                   enabledThumbRadius: 7,
+//                           ),
+//                         ),
+
+//                         // Centre: skip back | play/pause | skip forward
+//                         Center(
+//                           child: GestureDetector(
+//                             behavior: HitTestBehavior.opaque,
+//                             onTap: () {}, // absorb
+//                             child: Row(
+//                               mainAxisSize: MainAxisSize.min,
+//                               children: [
+//                                 GestureDetector(
+//                                   behavior: HitTestBehavior.opaque,
+//                                   onTap: () {
+//                                     _lastTap = DateTime.now();
+//                                     _skip(-10);
+//                                   },
+//                                   child: Container(
+//                                     padding: const EdgeInsets.all(10),
+//                                     decoration: BoxDecoration(
+//                                       color: Colors.black.withAlpha(100),
+//                                       shape: BoxShape.circle,
+//                                     ),
+//                                     child: const Icon(
+//                                       Icons.replay_10,
+//                                       color: Colors.white,
+//                                       size: 28,
+//                                     ),
+//                                   ),
 //                                 ),
-//                                 overlayShape: const RoundSliderOverlayShape(
-//                                   overlayRadius: 14,
+//                                 const SizedBox(width: 24),
+
+//                                 GestureDetector(
+//                                   behavior: HitTestBehavior.opaque,
+//                                   onTap: () {
+//                                     _lastTap = DateTime.now();
+//                                     isPlaying
+//                                         ? widget.controller.pause()
+//                                         : widget.controller.play();
+//                                   },
+//                                   child: Container(
+//                                     padding: const EdgeInsets.all(14),
+//                                     decoration: BoxDecoration(
+//                                       color: Colors.black.withAlpha(140),
+//                                       shape: BoxShape.circle,
+//                                       border: Border.all(
+//                                         color: Colors.white.withAlpha(80),
+//                                         width: 2,
+//                                       ),
+//                                     ),
+//                                     child: Icon(
+//                                       isPlaying
+//                                           ? Icons.pause_rounded
+//                                           : Icons.play_arrow_rounded,
+//                                       color: Colors.white,
+//                                       size: 36,
+//                                     ),
+//                                   ),
 //                                 ),
-//                                 activeTrackColor: const Color(0xFF2563EB),
-//                                 inactiveTrackColor: Colors.white.withAlpha(60),
-//                                 thumbColor: Colors.white,
-//                                 overlayColor: Colors.white.withAlpha(40),
-//                               ),
-//                               child: Slider(
-//                                 value: progress.clamp(0.0, 1.0),
-//                                 onChangeStart: (_) {
-//                                   setState(() => _isDragging = true);
-//                                   _lastTap = DateTime.now();
-//                                 },
-//                                 // onChanged: (v) {
-//                                 //   final target = Duration(
-//                                 //     milliseconds:
-//                                 //         (v * duration.inMilliseconds).toInt(),
-//                                 //   );
-//                                 //   ctrl.seekTo(target);
-//                                 //   setState(() {});
-//                                 // },
-//                                 onChanged: (v) {
-//                 final dur = widget.controller.value.duration;
-//                 if (dur == Duration.zero) return; // <-- add this guard
-//                 final target = Duration(
-//                   milliseconds: (v * dur.inMilliseconds).toInt(),
-//                 );
-//                 widget.controller.seekTo(target);
-//                 setState(() {});
-//               },
-//                                 onChangeEnd: (_) {
-//                                   setState(() => _isDragging = false);
-//                                   _scheduleHide();
-//                                 },
+//                                 const SizedBox(width: 24),
+
+//                                 GestureDetector(
+//                                   behavior: HitTestBehavior.opaque,
+//                                   onTap: () {
+//                                     _lastTap = DateTime.now();
+//                                     _skip(10);
+//                                   },
+//                                   child: Container(
+//                                     padding: const EdgeInsets.all(10),
+//                                     decoration: BoxDecoration(
+//                                       color: Colors.black.withAlpha(100),
+//                                       shape: BoxShape.circle,
+//                                     ),
+//                                     child: const Icon(
+//                                       Icons.forward_10,
+//                                       color: Colors.white,
+//                                       size: 28,
+//                                     ),
+//                                   ),
+//                                 ),
+//                               ],
+//                             ),
+//                           ),
+//                         ),
+
+//                         // Bottom: time + seek bar
+//                         Positioned(
+//                           bottom: 0,
+//                           left: 0,
+//                           right: 0,
+//                           child: GestureDetector(
+//                             behavior: HitTestBehavior.opaque,
+//                             onTap: () {}, // absorb
+//                             child: Padding(
+//                               padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+//                               child: Column(
+//                                 mainAxisSize: MainAxisSize.min,
+//                                 children: [
+//                                   Row(
+//                                     children: [
+//                                       Text(
+//                                         _formatDuration(position),
+//                                         style: const TextStyle(
+//                                           color: Colors.white,
+//                                           fontSize: 11,
+//                                           fontWeight: FontWeight.w500,
+//                                         ),
+//                                       ),
+//                                       const Spacer(),
+//                                       Text(
+//                                         _formatDuration(duration),
+//                                         style: TextStyle(
+//                                           color: Colors.white.withAlpha(180),
+//                                           fontSize: 11,
+//                                         ),
+//                                       ),
+//                                     ],
+//                                   ),
+//                                   const SizedBox(height: 4),
+//                                   SliderTheme(
+//                                     data: SliderTheme.of(context).copyWith(
+//                                       trackHeight: 3,
+//                                       thumbShape: const RoundSliderThumbShape(
+//                                         enabledThumbRadius: 7,
+//                                       ),
+//                                       overlayShape:
+//                                           const RoundSliderOverlayShape(
+//                                             overlayRadius: 14,
+//                                           ),
+//                                       activeTrackColor: const Color(0xFF2563EB),
+//                                       inactiveTrackColor: Colors.white
+//                                           .withAlpha(60),
+//                                       thumbColor: Colors.white,
+//                                       overlayColor: Colors.white.withAlpha(40),
+//                                     ),
+//                                     child: Slider(
+//                                       value: progress,
+//                                       onChangeStart: (_) {
+//                                         _isDragging = true;
+//                                         _lastTap = DateTime.now();
+//                                       },
+//                                       onChanged: (v) {
+//                                         if (duration == Duration.zero) return;
+//                                         widget.controller.seekTo(
+//                                           Duration(
+//                                             milliseconds:
+//                                                 (v * duration.inMilliseconds)
+//                                                     .toInt(),
+//                                           ),
+//                                         );
+//                                       },
+//                                       onChangeEnd: (_) {
+//                                         _isDragging = false;
+//                                         _scheduleHide();
+//                                       },
+//                                     ),
+//                                   ),
+//                                 ],
 //                               ),
 //                             ),
-//                           ],
+//                           ),
 //                         ),
-//                       ),
-//                     ),
-//                   ],
+//                       ],
+//                     );
+//                   },
 //                 ),
 //               ),
 //             ),
@@ -1055,7 +1282,7 @@
 //   }
 // }
 
-// // ─── Fullscreen Video Screen ──────────────────────────────────────────────────
+// // Fullscreen Video Screen
 
 // class _FullscreenVideoScreen extends StatefulWidget {
 //   final VideoPlayerController controller;
@@ -1069,7 +1296,6 @@
 //   @override
 //   void initState() {
 //     super.initState();
-//     // Force landscape on entering fullscreen
 //     SystemChrome.setPreferredOrientations([
 //       DeviceOrientation.landscapeLeft,
 //       DeviceOrientation.landscapeRight,
@@ -1079,7 +1305,6 @@
 
 //   @override
 //   void dispose() {
-//     // Restore portrait on exit
 //     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 //     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 //     super.dispose();
@@ -1091,15 +1316,16 @@
 //       backgroundColor: Colors.black,
 //       body: SafeArea(
 //         child: _VideoPlayerWithControls(
+//           key: ValueKey(widget.controller),
 //           controller: widget.controller,
-//           onFullscreen: () => Navigator.pop(context), // exit fullscreen
+//           onFullscreen: () => Navigator.pop(context),
 //         ),
 //       ),
 //     );
 //   }
 // }
 
-// // ─── Locked Overlay ───────────────────────────────────────────────────────────
+// // Locked Overlay
 
 // class _LockedOverlay extends StatelessWidget {
 //   final CourseListModel course;
@@ -1155,7 +1381,7 @@
 //   }
 // }
 
-// // ─── Enroll Button ────────────────────────────────────────────────────────────
+// // Enroll Button
 
 // class _EnrollButton extends StatelessWidget {
 //   final bool isFree;
@@ -1172,7 +1398,7 @@
 
 //   @override
 //   Widget build(BuildContext context) {
-//     final color = isFree ? Color(0xFF10B981) : Color(0xFF2563EB);
+//     final color = isFree ? const Color(0xFF10B981) : const Color(0xFF2563EB);
 //     final label = isFree ? 'Enroll for Free' : 'Pay to Enroll';
 //     final icon = isFree ? Icons.school_rounded : Icons.payment_rounded;
 
@@ -1229,7 +1455,7 @@
 //   }
 // }
 
-// // ─── Course Badge ─────────────────────────────────────────────────────────────
+// // Course Badge
 
 // class _CourseBadge extends StatelessWidget {
 //   final bool isFree;
@@ -1247,13 +1473,13 @@
 //       style: TextStyle(
 //         fontSize: 12,
 //         fontWeight: FontWeight.w600,
-//         color: isFree ? const Color(0xFF059669) : Color(0xFF2563EB),
+//         color: isFree ? const Color(0xFF059669) : const Color(0xFF2563EB),
 //       ),
 //     ),
 //   );
 // }
 
-// // ─── Doc Item ─────────────────────────────────────────────────────────────────
+// // Doc Item
 
 // class _DocItem extends StatelessWidget {
 //   final CourseContent content;
@@ -1359,7 +1585,7 @@
 //   );
 // }
 
-// // ─── PDF Viewer ───────────────────────────────────────────────────────────────
+// // PDF Viewer
 
 // class _PdfViewScreen extends StatelessWidget {
 //   final String url;
@@ -1374,18 +1600,18 @@
 //         style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
 //       ),
 //       backgroundColor: Colors.white,
-//       foregroundColor: Color(0xFF1E293B),
+//       foregroundColor: const Color(0xFF1E293B),
 //       elevation: 0,
 //       bottom: PreferredSize(
 //         preferredSize: const Size.fromHeight(1),
-//         child: Container(height: 1, color: Color(0xFFE2E8F0)),
+//         child: Container(height: 1, color: const Color(0xFFE2E8F0)),
 //       ),
 //     ),
 //     body: SfPdfViewer.network(url),
 //   );
 // }
 
-// // ─── About Card ───────────────────────────────────────────────────────────────
+// // About Card
 
 // class _AboutCard extends StatelessWidget {
 //   final IconData icon;
@@ -1447,13 +1673,13 @@
 //   );
 // }
 
-
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/elearning/model/course_list_model.dart';
 import 'package:innovator/elearning/provider/course_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:shimmer/shimmer.dart';
@@ -1467,7 +1693,7 @@ class CourseDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
   VideoPlayerController? _videoController;
 
@@ -1477,18 +1703,91 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
   int _selectedIndex = 0;
   bool _videoStarted = false;
 
+  // Payment verification state
+  bool _pendingPaymentCheck = false;
+  bool _isVerifyingPayment = false;
+
   static const List<String> _tabs = ['Lessons', 'Docs', 'About'];
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: _tabs.length, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _maybeStartVideo());
   }
 
+  //App Lifecycle: auto-verify payment on resume
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _pendingPaymentCheck) {
+      _pendingPaymentCheck = false;
+      Future.delayed(const Duration(milliseconds: 400), _verifyAndUnlock);
+    }
+  }
+
+  /// Silently refreshes enrollment; if now enrolled → auto-play video.
+  Future<void> _verifyAndUnlock() async {
+    if (!mounted) return;
+    setState(() => _isVerifyingPayment = true);
+
+    try {
+      // Refresh enrollment list from server
+      await ref.refresh(enrollmentProvider.future);
+
+      if (!mounted) return;
+
+      final isNowEnrolled = ref
+          .read(enrolledCoursesProvider)
+          .contains(widget.course.id);
+
+      if (isNowEnrolled) {
+        setState(() => _isVerifyingPayment = false);
+        _videoStarted = true;
+        if (widget.course.contents.isNotEmpty) {
+          _initVideo(widget.course.contents.first);
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Payment verified! Start learning now. 🎉'),
+              backgroundColor: const Color(0xFF10B981),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
+        }
+      } else {
+        // Not yet enrolled — payment may still be processing
+        setState(() => _isVerifyingPayment = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                'Payment is being processed. Please wait a moment.',
+              ),
+              backgroundColor: Colors.orange,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
+        }
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isVerifyingPayment = false);
+    }
+  }
+
   void _maybeStartVideo() {
     if (_videoStarted || !mounted) return;
-    final enrolled = ref.read(enrolledCoursesProvider).contains(widget.course.id);
+    final enrolled = ref
+        .read(enrolledCoursesProvider)
+        .contains(widget.course.id);
     if (enrolled && widget.course.contents.isNotEmpty) {
       _videoStarted = true;
       _initVideo(widget.course.contents.first);
@@ -1497,18 +1796,15 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     _videoController?.dispose();
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     super.dispose();
   }
 
-  // ── video init ────────────────────────────────────────────────────────────
-  //
-  // KEY FIX: save old controller reference, clear state first, THEN dispose
-  // old controller so the widget tree has already detached from it before
-  // dispose() is called. This prevents a disposed-controller listener from
-  // accidentally firing and resetting position/duration.
+  //Video Init
+
   void _initVideo(CourseContent content) {
     final oldController = _videoController;
 
@@ -1537,61 +1833,103 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
     }
 
     final controller = VideoPlayerController.networkUrl(Uri.parse(url));
-    controller.initialize().then((_) {
-      if (!mounted) {
-        controller.dispose();
-        return;
-      }
-      setState(() {
-        _videoController = controller;
-        _videoInitialized = true;
-        _isVideoLoading = false;
-      });
-    }).catchError((_) {
-      if (!mounted) {
-        controller.dispose();
-        return;
-      }
-      setState(() {
-        _videoError = true;
-        _isVideoLoading = false;
-      });
-    });
+    controller
+        .initialize()
+        .then((_) {
+          if (!mounted) {
+            controller.dispose();
+            return;
+          }
+          setState(() {
+            _videoController = controller;
+            _videoInitialized = true;
+            _isVideoLoading = false;
+          });
+        })
+        .catchError((_) {
+          if (!mounted) {
+            controller.dispose();
+            return;
+          }
+          setState(() {
+            _videoError = true;
+            _isVideoLoading = false;
+          });
+        });
   }
 
-  // ── enroll ────────────────────────────────────────────────────────────────
+  //Enroll
 
   Future<void> _enroll() async {
     final courseId = widget.course.id;
     ref.read(enrollLoadingProvider(courseId).notifier).setLoading(true);
+
     try {
-      await ref.read(courseServiceProvider).enrollCourse(courseId);
-      ref.read(enrolledCoursesProvider.notifier).enroll(courseId);
-      ref.read(enrollLoadingProvider(courseId).notifier).setLoading(false);
-      _videoStarted = true;
-      if (widget.course.contents.isNotEmpty) {
-        _initVideo(widget.course.contents.first);
-      }
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              widget.course.isFree
-                  ? 'Enrolled! Start learning now. 🎉'
-                  : 'Request sent. Complete payment to unlock.',
+      if (widget.course.isFree) {
+        //FREE: enroll directly
+        await ref.read(courseServiceProvider).enrollCourse(courseId);
+        await ref.refresh(enrollmentProvider.future);
+        ref.read(enrollLoadingProvider(courseId).notifier).setLoading(false);
+
+        _videoStarted = true;
+        if (widget.course.contents.isNotEmpty) {
+          _initVideo(widget.course.contents.first);
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Enrolled! Start learning now. 🎉'),
+              backgroundColor: const Color(0xFF10B981),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-            backgroundColor: const Color(0xFF10B981),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        );
+          );
+        }
+      } else {
+        //PAID: open Khalti, auto-verify on return
+        final result = await ref
+            .read(courseServiceProvider)
+            .initiatePayment(courseId);
+        ref.read(enrollLoadingProvider(courseId).notifier).setLoading(false);
+
+        final paymentUrl = result['payment_url'] as String?;
+
+        if (paymentUrl == null) {
+          _showErrorSnack('Could not initiate payment. Please try again.');
+          return;
+        }
+
+        final uri = Uri.parse(paymentUrl);
+        if (await canLaunchUrl(uri)) {
+          // Mark that we're waiting for the user to return from payment
+          _pendingPaymentCheck = true;
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          // Verification happens automatically in didChangeAppLifecycleState
+        } else {
+          _showErrorSnack('Could not open payment page.');
+        }
       }
     } catch (e) {
       ref.read(enrollLoadingProvider(courseId).notifier).setLoading(false);
+      _showErrorSnack('Something went wrong. Please try again.');
     }
   }
+
+  void _showErrorSnack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  //Build
 
   @override
   Widget build(BuildContext context) {
@@ -1609,26 +1947,79 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      body: Column(
+      body: Stack(
         children: [
-          _buildVideoSection(isEnrolled),
-          _buildTitleBar(),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildLessonsTab(isEnrolled),
-                _buildDocsTab(isEnrolled),
-                _buildAboutTab(isEnrolled),
-              ],
-            ),
+          Column(
+            children: [
+              _buildVideoSection(isEnrolled),
+              _buildTitleBar(),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildLessonsTab(isEnrolled),
+                    _buildDocsTab(isEnrolled),
+                    _buildAboutTab(isEnrolled),
+                  ],
+                ),
+              ),
+            ],
           ),
+
+          //Payment verification overlay
+          if (_isVerifyingPayment)
+            Container(
+              color: Colors.black.withAlpha(160),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 28,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(
+                        height: 40,
+                        width: 40,
+                        child: CircularProgressIndicator(
+                          color: Color(0xFF2563EB),
+                          strokeWidth: 3,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Verifying payment...',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Please wait while we confirm your enrollment.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 
-  // ── title bar ─────────────────────────────────────────────────────────────
+  //Title Bar
 
   Widget _buildTitleBar() {
     return Container(
@@ -1677,9 +2068,9 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
           TabBar(
             controller: _tabController,
             tabs: _tabs.map((t) => Tab(text: t)).toList(),
-            labelColor: const Color(0xFF2563EB),
+            labelColor: Colors.black,
             unselectedLabelColor: const Color(0xFF94A3B8),
-            indicatorColor: const Color(0xFF2563EB),
+            indicatorColor: Color.fromRGBO(244, 135, 6, 1),
             indicatorWeight: 2.5,
             labelStyle: const TextStyle(
               fontWeight: FontWeight.w600,
@@ -1691,7 +2082,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
     );
   }
 
-  // ── video section ─────────────────────────────────────────────────────────
+  //Video Section
 
   Widget _buildVideoSection(bool isEnrolled) {
     final isLoading = ref.watch(enrollLoadingProvider(widget.course.id));
@@ -1712,7 +2103,6 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
               else if (_videoError)
                 _videoErrorWidget()
               else if (_videoInitialized && _videoController != null)
-                // ValueKey ensures a brand-new widget (and initState) per controller
                 _VideoPlayerWithControls(
                   key: ValueKey(_videoController),
                   controller: _videoController!,
@@ -1721,7 +2111,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
               else
                 _videoShimmer(),
 
-              // back button
+              // Back button
               Positioned(
                 top: 10,
                 left: 10,
@@ -1791,7 +2181,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
     ),
   );
 
-  // ── Lessons tab ───────────────────────────────────────────────────────────
+  //Lessons Tab
 
   Widget _buildLessonsTab(bool isEnrolled) {
     final contents = widget.course.contents;
@@ -1817,10 +2207,13 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: active ? const Color(0xFFEFF6FF) : Colors.white,
+              // color: active ? Colors.grey.shade200 : Colors.white,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: active ? const Color(0xFF2563EB) : Colors.transparent,
+                color:
+                    active
+                        ? Color.fromRGBO(244, 135, 6, 1)
+                        : Colors.transparent,
                 width: 1.5,
               ),
               boxShadow: [
@@ -1930,20 +2323,20 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
   }
 
   Widget _thumbPlaceholder(int order) => Container(
-    color: const Color(0xFFEFF6FF),
+      color: const Color(0xFFFEF3C7),
     child: Center(
       child: Text(
         '$order',
         style: const TextStyle(
           fontWeight: FontWeight.bold,
-          color: Color(0xFF93C5FD),
+         color: Color(0xFFF59E0B),
           fontSize: 16,
         ),
       ),
     ),
   );
 
-  // ── Docs tab ──────────────────────────────────────────────────────────────
+  //Docs Tab
 
   Widget _buildDocsTab(bool isEnrolled) {
     final docs =
@@ -1958,12 +2351,11 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: docs.length,
-      itemBuilder: (_, i) =>
-          _DocItem(content: docs[i], isEnrolled: isEnrolled),
+      itemBuilder: (_, i) => _DocItem(content: docs[i], isEnrolled: isEnrolled),
     );
   }
 
-  // ── About tab ─────────────────────────────────────────────────────────────
+  //About Tab
 
   Widget _buildAboutTab(bool isEnrolled) {
     final course = widget.course;
@@ -1998,7 +2390,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
             value: '${course.contents.length} lessons',
             iconColor: const Color(0xFF10B981),
           ),
-          if (!course.isFree) ...[
+          if (!course.isFree && !isEnrolled) ...[
             const SizedBox(height: 10),
             _AboutCard(
               icon: Icons.sell_outlined,
@@ -2053,7 +2445,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
   );
 }
 
-// ─── Video Player With Full Controls ──────────────────────────────────────────
+//Video Player With Controls
 
 class _VideoPlayerWithControls extends StatefulWidget {
   final VideoPlayerController controller;
@@ -2083,10 +2475,6 @@ class _VideoPlayerWithControlsState extends State<_VideoPlayerWithControls> {
     super.initState();
     _scheduleHide();
   }
-
-  // No manual addListener needed — ValueListenableBuilder handles all
-  // position/duration/isPlaying updates automatically and re-subscribes
-  // whenever widget.controller changes.
 
   void _scheduleHide() {
     Future.delayed(const Duration(seconds: 3), () {
@@ -2211,8 +2599,7 @@ class _VideoPlayerWithControlsState extends State<_VideoPlayerWithControls> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // ── Video ─────────────────────────────────────────────────────────
-          // ValueListenableBuilder picks up size changes (e.g. first frame)
+          // Video
           ValueListenableBuilder<VideoPlayerValue>(
             valueListenable: widget.controller,
             builder: (_, value, __) {
@@ -2229,7 +2616,7 @@ class _VideoPlayerWithControlsState extends State<_VideoPlayerWithControls> {
             },
           ),
 
-          // ── Controls overlay ──────────────────────────────────────────────
+          // Controls overlay
           AnimatedOpacity(
             opacity: _showControls ? 1.0 : 0.0,
             duration: const Duration(milliseconds: 250),
@@ -2249,9 +2636,6 @@ class _VideoPlayerWithControlsState extends State<_VideoPlayerWithControls> {
                     stops: const [0.0, 0.3, 0.6, 1.0],
                   ),
                 ),
-                // ValueListenableBuilder reads position/duration/isPlaying
-                // directly from the controller on every controller event —
-                // no manual setState listener needed, no stale values.
                 child: ValueListenableBuilder<VideoPlayerValue>(
                   valueListenable: widget.controller,
                   builder: (_, value, __) {
@@ -2267,13 +2651,13 @@ class _VideoPlayerWithControlsState extends State<_VideoPlayerWithControls> {
 
                     return Stack(
                       children: [
-                        // ── Top: speed + fullscreen ──────────────────────────
+                        // Top: speed + fullscreen
                         Positioned(
                           top: 8,
                           right: 8,
                           child: GestureDetector(
                             behavior: HitTestBehavior.opaque,
-                            onTap: () {}, // absorb — stop bubble to _toggleControls
+                            onTap: () {},
                             child: Row(
                               children: [
                                 GestureDetector(
@@ -2334,11 +2718,11 @@ class _VideoPlayerWithControlsState extends State<_VideoPlayerWithControls> {
                           ),
                         ),
 
-                        // ── Centre: skip back | play/pause | skip forward ────
+                        // Centre: skip back | play/pause | skip forward
                         Center(
                           child: GestureDetector(
                             behavior: HitTestBehavior.opaque,
-                            onTap: () {}, // absorb
+                            onTap: () {},
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -2362,7 +2746,6 @@ class _VideoPlayerWithControlsState extends State<_VideoPlayerWithControls> {
                                   ),
                                 ),
                                 const SizedBox(width: 24),
-
                                 GestureDetector(
                                   behavior: HitTestBehavior.opaque,
                                   onTap: () {
@@ -2391,7 +2774,6 @@ class _VideoPlayerWithControlsState extends State<_VideoPlayerWithControls> {
                                   ),
                                 ),
                                 const SizedBox(width: 24),
-
                                 GestureDetector(
                                   behavior: HitTestBehavior.opaque,
                                   onTap: () {
@@ -2416,14 +2798,14 @@ class _VideoPlayerWithControlsState extends State<_VideoPlayerWithControls> {
                           ),
                         ),
 
-                        // ── Bottom: time + seek bar ──────────────────────────
+                        // Bottom: time + seek bar
                         Positioned(
                           bottom: 0,
                           left: 0,
                           right: 0,
                           child: GestureDetector(
                             behavior: HitTestBehavior.opaque,
-                            onTap: () {}, // absorb
+                            onTap: () {},
                             child: Padding(
                               padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
                               child: Column(
@@ -2453,21 +2835,18 @@ class _VideoPlayerWithControlsState extends State<_VideoPlayerWithControls> {
                                   SliderTheme(
                                     data: SliderTheme.of(context).copyWith(
                                       trackHeight: 3,
-                                      thumbShape:
-                                          const RoundSliderThumbShape(
-                                            enabledThumbRadius: 7,
-                                          ),
+                                      thumbShape: const RoundSliderThumbShape(
+                                        enabledThumbRadius: 7,
+                                      ),
                                       overlayShape:
                                           const RoundSliderOverlayShape(
                                             overlayRadius: 14,
                                           ),
-                                      activeTrackColor:
-                                          const Color(0xFF2563EB),
-                                      inactiveTrackColor:
-                                          Colors.white.withAlpha(60),
+                                      activeTrackColor: const Color(0xFF2563EB),
+                                      inactiveTrackColor: Colors.white
+                                          .withAlpha(60),
                                       thumbColor: Colors.white,
-                                      overlayColor:
-                                          Colors.white.withAlpha(40),
+                                      overlayColor: Colors.white.withAlpha(40),
                                     ),
                                     child: Slider(
                                       value: progress,
@@ -2479,9 +2858,9 @@ class _VideoPlayerWithControlsState extends State<_VideoPlayerWithControls> {
                                         if (duration == Duration.zero) return;
                                         widget.controller.seekTo(
                                           Duration(
-                                            milliseconds: (v *
-                                                    duration.inMilliseconds)
-                                                .toInt(),
+                                            milliseconds:
+                                                (v * duration.inMilliseconds)
+                                                    .toInt(),
                                           ),
                                         );
                                       },
@@ -2509,7 +2888,7 @@ class _VideoPlayerWithControlsState extends State<_VideoPlayerWithControls> {
   }
 }
 
-// ─── Fullscreen Video Screen ──────────────────────────────────────────────────
+//Fullscreen Video Screen
 
 class _FullscreenVideoScreen extends StatefulWidget {
   final VideoPlayerController controller;
@@ -2552,7 +2931,7 @@ class _FullscreenVideoScreenState extends State<_FullscreenVideoScreen> {
   }
 }
 
-// ─── Locked Overlay ───────────────────────────────────────────────────────────
+//Locked Overlay
 
 class _LockedOverlay extends StatelessWidget {
   final CourseListModel course;
@@ -2608,7 +2987,7 @@ class _LockedOverlay extends StatelessWidget {
   }
 }
 
-// ─── Enroll Button ────────────────────────────────────────────────────────────
+//Enroll Button
 
 class _EnrollButton extends StatelessWidget {
   final bool isFree;
@@ -2662,8 +3041,7 @@ class _EnrollButton extends StatelessWidget {
                   ),
                 )
                 : Row(
-                  mainAxisSize:
-                      fullWidth ? MainAxisSize.max : MainAxisSize.min,
+                  mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(icon, color: Colors.white, size: 18),
@@ -2683,7 +3061,7 @@ class _EnrollButton extends StatelessWidget {
   }
 }
 
-// ─── Course Badge ─────────────────────────────────────────────────────────────
+//Course Badge
 
 class _CourseBadge extends StatelessWidget {
   final bool isFree;
@@ -2693,7 +3071,7 @@ class _CourseBadge extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
     decoration: BoxDecoration(
-      color: isFree ? const Color(0xFFD1FAE5) : const Color(0xFFDBEAFE),
+      color: Color.fromRGBO(244, 135, 6, 1),
       borderRadius: BorderRadius.circular(20),
     ),
     child: Text(
@@ -2701,13 +3079,13 @@ class _CourseBadge extends StatelessWidget {
       style: TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w600,
-        color: isFree ? const Color(0xFF059669) : const Color(0xFF2563EB),
+        color: Colors.white,
       ),
     ),
   );
 }
 
-// ─── Doc Item ─────────────────────────────────────────────────────────────────
+//Doc Item
 
 class _DocItem extends StatelessWidget {
   final CourseContent content;
@@ -2763,10 +3141,7 @@ class _DocItem extends StatelessWidget {
               const SizedBox(height: 3),
               Text(
                 'Lesson ${content.order} · Document',
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: Color(0xFF94A3B8),
-                ),
+                style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
               ),
             ],
           ),
@@ -2816,7 +3191,7 @@ class _DocItem extends StatelessWidget {
   );
 }
 
-// ─── PDF Viewer ───────────────────────────────────────────────────────────────
+//PDF Viewer
 
 class _PdfViewScreen extends StatelessWidget {
   final String url;
@@ -2842,7 +3217,7 @@ class _PdfViewScreen extends StatelessWidget {
   );
 }
 
-// ─── About Card ───────────────────────────────────────────────────────────────
+//About Card
 
 class _AboutCard extends StatelessWidget {
   final IconData icon;
@@ -2886,10 +3261,7 @@ class _AboutCard extends StatelessWidget {
           children: [
             Text(
               label,
-              style: const TextStyle(
-                fontSize: 11,
-                color: Color(0xFF94A3B8),
-              ),
+              style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
             ),
             const SizedBox(height: 3),
             Text(

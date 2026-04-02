@@ -47,7 +47,6 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
   List<CourseListModel> _filtered(List<CourseListModel> all, int tabIndex) {
     List<CourseListModel> list = all;
 
-    // tab filter
     if (tabIndex == 1) list = list.where((c) => c.isFree).toList();
     if (tabIndex == 2) list = list.where((c) => !c.isFree).toList();
 
@@ -98,8 +97,8 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 0.72,
+                  mainAxisSpacing: 15,
+                  childAspectRatio: 0.78,
                 ),
                 itemCount: 6,
                 itemBuilder: (_, __) => _SkeletonCard(),
@@ -143,49 +142,49 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
     );
   }
 
-Widget _buildContent(List<CourseListModel> courses) {
-  final categories = _categories(courses);
+  Widget _buildContent(List<CourseListModel> courses) {
+    final categories = _categories(courses);
 
-  return SafeArea(
-    child: Column(
-      children: [ 
-        _buildHeader(courses),
-        _buildCategoryChips(categories),
+    return SafeArea(
+      child: Column(
+        children: [
+          _buildHeader(courses),
+          _buildCategoryChips(categories),
           Container(
-          color: Colors.white,
-          child: TabBar(
-            controller: _tabController,
-            tabs: _tabs.map((t) => Tab(text: t)).toList(),
-            labelColor: Colors.black,
-            unselectedLabelColor: Colors.grey,
-            indicatorColor: Color.fromRGBO(244, 135, 6, 1),
-            indicatorWeight: 2.5,
-            isScrollable: false,
-            labelStyle: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
+            color: Colors.white,
+            child: TabBar(
+              controller: _tabController,
+              tabs: _tabs.map((t) => Tab(text: t)).toList(),
+              labelColor: Colors.black,
+              unselectedLabelColor: Colors.grey,
+              indicatorColor: const Color.fromRGBO(244, 135, 6, 1),
+              indicatorWeight: 2.5,
+              isScrollable: false,
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
             ),
           ),
-        ), 
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: List.generate(_tabs.length, (tabIdx) {
-              return AnimatedBuilder(
-                animation: _tabController,
-                builder: (_, __) {
-                  final filtered = _filtered(courses, tabIdx);
-                  if (filtered.isEmpty) return _buildEmpty();
-                  return _buildGrid(filtered);
-                },
-              );
-            }),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: List.generate(_tabs.length, (tabIdx) {
+                return AnimatedBuilder(
+                  animation: _tabController,
+                  builder: (_, __) {
+                    final filtered = _filtered(courses, tabIdx);
+                    if (filtered.isEmpty) return _buildEmpty();
+                    return _buildGrid(filtered);
+                  },
+                );
+              }),
+            ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 
   Widget _buildHeader(List<CourseListModel>? courses) {
     return Container(
@@ -213,7 +212,6 @@ Widget _buildContent(List<CourseListModel> courses) {
             ],
           ),
           const SizedBox(height: 12),
-          // Search bar
           Container(
             decoration: BoxDecoration(
               color: const Color(0xFFF1F5F9),
@@ -277,7 +275,7 @@ Widget _buildContent(List<CourseListModel> courses) {
                 decoration: BoxDecoration(
                   color:
                       selected
-                          ? Color.fromRGBO(244, 135, 6, 1)
+                          ? const Color.fromRGBO(244, 135, 6, 1)
                           : const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(20),
                 ),
@@ -298,35 +296,44 @@ Widget _buildContent(List<CourseListModel> courses) {
   }
 
   Widget _buildGrid(List<CourseListModel> courses) {
-  return CustomRefreshIndicator(
-    onRefresh: () async {
-      await Future.wait([
-        ref.refresh(courseListProvider.future),
-        ref.refresh(enrollmentProvider.future),
-      ]);
-    },
-    child: GridView.builder(
-      padding: const EdgeInsets.all(16),
-      physics: const AlwaysScrollableScrollPhysics(),  
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 0.68,
-      ),
-      itemCount: courses.length,
-      itemBuilder: (_, i) => _CourseCard(
-        course: courses[i],
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => CourseDetailScreen(course: courses[i]),
-          ),
+    // Watch enrolled IDs so grid rebuilds when enrollment changes
+    final enrolledIds = ref.watch(enrolledCoursesProvider);
+
+    return CustomRefreshIndicator(
+      onRefresh: () async {
+        await Future.wait([
+          ref.refresh(courseListProvider.future),
+          ref.refresh(enrollmentProvider.future),
+        ]);
+      },
+      child: GridView.builder(
+        padding: const EdgeInsets.all(16),
+        physics: const AlwaysScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 15,
+          childAspectRatio: 0.78,
         ),
+        itemCount: courses.length,
+        itemBuilder: (_, i) {
+          final course = courses[i];
+          final isEnrolled = enrolledIds.contains(course.id);
+          return _CourseCard(
+            course: course,
+            isEnrolled: isEnrolled,
+            onTap:
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CourseDetailScreen(course: course),
+                  ),
+                ),
+          );
+        },
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildEmpty() {
     return Center(
@@ -349,11 +356,18 @@ Widget _buildContent(List<CourseListModel> courses) {
   }
 }
 
+//  Course Card
+
 class _CourseCard extends StatelessWidget {
   final CourseListModel course;
+  final bool isEnrolled;
   final VoidCallback onTap;
 
-  const _CourseCard({required this.course, required this.onTap});
+  const _CourseCard({
+    required this.course,
+    required this.isEnrolled,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -397,26 +411,45 @@ class _CourseCard extends StatelessWidget {
                             : _ThumbnailPlaceholder(),
                   ),
                 ),
-                // Lock icon overlay
-                if (!course.isFree)
+
+                // Enrolled badge (top-left) — shown when enrolled
+                if (isEnrolled)
                   Positioned(
                     top: 8,
-                    right: 8,
+                    left: 8,
                     child: Container(
-                      padding: const EdgeInsets.all(5),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withAlpha(140),
-                        shape: BoxShape.circle,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
                       ),
-                      child: const Icon(
-                        Icons.lock,
-                        color: Colors.white,
-                        size: 12,
+                      decoration: BoxDecoration(
+                        color: Color.fromRGBO(244, 135, 6, 1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.check_circle,
+                            color: Colors.white,
+                            size: 10,
+                          ),
+                          SizedBox(width: 3),
+                          Text(
+                            'Enrolled',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                // Free badge
-                if (course.isFree)
+
+                // Free badge (top-left) — only when NOT enrolled
+                if (!isEnrolled && course.isFree)
                   Positioned(
                     top: 8,
                     left: 8,
@@ -436,6 +469,25 @@ class _CourseCard extends StatelessWidget {
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
+                      ),
+                    ),
+                  ),
+
+                // Lock icon (top-right) — only paid & not enrolled
+                if (!isEnrolled && !course.isFree)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withAlpha(140),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.lock,
+                        color: Colors.white,
+                        size: 12,
                       ),
                     ),
                   ),
@@ -471,7 +523,17 @@ class _CourseCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child:
-                              course.isFree
+                              isEnrolled
+                                  ? const Text(
+                                    'Continue',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
+                                  )
+                                  : course.isFree
+                                  //  Free & not enrolled
                                   ? const Text(
                                     'Free',
                                     style: TextStyle(
@@ -480,6 +542,7 @@ class _CourseCard extends StatelessWidget {
                                       color: Color(0xFF10B981),
                                     ),
                                   )
+                                  //  Paid & not enrolled
                                   : Text(
                                     'Rs. ${course.price.toStringAsFixed(0)}',
                                     style: const TextStyle(
@@ -490,9 +553,14 @@ class _CourseCard extends StatelessWidget {
                                   ),
                         ),
                         Icon(
-                          Icons.play_circle_outline,
+                          isEnrolled
+                              ? Icons.play_circle_filled
+                              : Icons.play_circle_outline,
                           size: 18,
-                          color: Colors.grey.shade400,
+                          color:
+                              isEnrolled
+                                  ? const Color(0xFF2563EB)
+                                  : Colors.grey.shade400,
                         ),
                       ],
                     ),
@@ -506,6 +574,8 @@ class _CourseCard extends StatelessWidget {
     );
   }
 }
+
+//  Thumbnail Placeholder
 
 class _ThumbnailPlaceholder extends StatelessWidget {
   @override
@@ -522,6 +592,8 @@ class _ThumbnailPlaceholder extends StatelessWidget {
     );
   }
 }
+
+//  Skeleton Card
 
 class _SkeletonCard extends StatelessWidget {
   @override
@@ -561,21 +633,4 @@ class _SkeletonCard extends StatelessWidget {
       ),
     );
   }
-}
-
-class _TabBarDelegate extends SliverPersistentHeaderDelegate {
-  final TabBar tabBar;
-  _TabBarDelegate(this.tabBar);
-
-  @override
-  Widget build(_, __, ___) => Container(color: Colors.white, child: tabBar);
-
-  @override
-  double get maxExtent => tabBar.preferredSize.height;
-
-  @override
-  double get minExtent => tabBar.preferredSize.height;
-
-  @override
-  bool shouldRebuild(_) => false;
 }

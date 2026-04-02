@@ -62,37 +62,4 @@ class AuthService extends BaseApiService {
     return await _tokenService.getRole();
   }
 
-  //   Future<Map<String, dynamic>> forgotPassword({required String email}) async {
-  //   return await post(ApiConstants.forgotPassword, data: {'email': email});
-  // }
-
-  // Future<Map<String, dynamic>> validateCode({
-  //   required String email,
-  //   required String resetCode,
-  //   required String newPassword,
-  // }) async {
-  //   return await post(
-  //     ApiConstants.validateResetCode,
-  //     data: {'email': email, 'resetCode': resetCode, 'newPassword': newPassword},
-  //   );
-  // }
-
-  // Future<Map<String, dynamic>> resentCode({required String email}) async {
-  //   return await post(ApiConstants.resendCode, data: {'email': email});
-  // }
-
-  // Future<Map<String, dynamic>> changePassword({
-  //   required String currentPassword,
-  //   required String newPassword,
-  //   required String confirmPassword,
-  // }) async {
-  //   return await post(
-  //     ApiConstants.changePassword,
-  //     data: {
-  //       'currentPassword': currentPassword,
-  //       'newPassword': newPassword,
-  //       'confirmPassword': confirmPassword,
-  //     },
-  //   );
-  // }
 }
