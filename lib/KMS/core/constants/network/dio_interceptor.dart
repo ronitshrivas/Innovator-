@@ -12,7 +12,7 @@ class AppInterceptor extends Interceptor {
   bool _isRefreshing = false;
   final List<_PendingRequest> _pendingRequests = [];
 
-  static const _authEndpoints = ['/auth/sso/login/', '/auth/register/'];
+  static const _authEndpoints = ['/auth/sso/login/', '/auth/register/', '/student/login/',];
 
   static const _refreshEndpoint = '/auth/token/refresh/';
 
@@ -50,7 +50,7 @@ class AppInterceptor extends Interceptor {
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) async {
     log(
-      ' RESPONSE[${response.statusCode}] => PATH: ${response.requestOptions.path}',
+      '✅ RESPONSE[${response.statusCode}] => PATH: ${response.requestOptions.path}',
     );
 
     await _autoSaveToken(response);
@@ -118,9 +118,10 @@ class AppInterceptor extends Interceptor {
         _refreshEndpoint,
         data: {'refresh': refreshToken},
       );
-
-      final newAccessToken = response.data['access_token'] as String?;
-      final newRefreshToken = response.data['refresh_token'] as String?;
+   final newAccessToken =
+          (response.data['access_token'] ?? response.data['access']) as String?;
+      final newRefreshToken =
+          (response.data['refresh_token'] ?? response.data['refresh']) as String?;
 
       if (newAccessToken == null || newAccessToken.isEmpty) {
         log('Refresh response did not include access_token — forcing logout');
@@ -209,9 +210,9 @@ class AppInterceptor extends Interceptor {
 
       final data = response.data;
       if (data is! Map<String, dynamic>) return;
-
-      final accessToken = data['access_token'] as String?;
-      final refreshToken = data['refresh_token'] as String?;
+      final accessToken = (data['access_token'] ?? data['access']) as String?;
+      final refreshToken =
+          (data['refresh_token'] ?? data['refresh']) as String?;
 
       if (accessToken != null && accessToken.isNotEmpty) {
         await _tokenService.saveTokens(
@@ -275,28 +276,6 @@ class AppInterceptor extends Interceptor {
     }
   }
 
-  // String? _extractMessage(dynamic data) {
-  //   if (data == null) return null;
-
-  //   if (data is Map) {
-  //     final flat =
-  //         data['message'] ?? data['detail'] ?? data['error'] ?? data['msg'];
-  //     if (flat != null) return flat.toString();
-
-  //     final nonField = data['non_field_errors'];
-  //     if (nonField is List && nonField.isNotEmpty) {
-  //       return nonField.first.toString();
-  //     }
-
-  //     for (final value in data.values) {
-  //       if (value is List && value.isNotEmpty) return value.first.toString();
-  //       if (value is String) return value;
-  //     }
-  //   }
-
-  //   if (data is String) return data;
-  //   return null;
-  // }
   String? _extractMessage(dynamic data) {
     if (data == null) return null;
 
@@ -345,18 +324,8 @@ class AppInterceptor extends Interceptor {
       (endpoint) => path.toLowerCase().contains(endpoint.toLowerCase()),
     );
   }
-
-  // bool _shouldShowSuccessToast(Response response) {
-  //   return [
-  //     'POST',
-  //     'PUT',
-  //     'DELETE',
-  //     'PATCH',
-  //   ].contains(response.requestOptions.method);
-  // }
 }
 
-// Holds a queued request that arrived while a token refresh was in progress
 class _PendingRequest {
   final DioException error;
   final ErrorInterceptorHandler handler;

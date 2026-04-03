@@ -14,9 +14,10 @@ import 'package:innovator/Innovator/Authorization/Login.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/controllers/user_controller.dart';
+import 'package:innovator/Innovator/provider/unread_count_provider.dart';
 import 'package:innovator/Innovator/screens/Feed/Optimize%20Media/OptimizeMediaScreen.dart';
 import 'package:innovator/Innovator/screens/Feed/Optimize%20Media/full_screen_image_viewer.dart';
-import 'package:innovator/Innovator/screens/Feed/facebook_video_widget.dart';
+import 'package:innovator/Innovator/screens/Feed/video_play_widget.dart';
 import 'package:innovator/Innovator/screens/chatrrom/screen/chatlistscreen.dart';
 import 'package:innovator/Innovator/widget/CustomizeFAB.dart';
 import 'package:innovator/Innovator/widget/repost_button.dart';
@@ -713,6 +714,8 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    // final realtimeUnread = ref.watch(perFriendUnreadProvider);
+    //final unreadCount = realtimeUnread.values.fold(0, (a, b) => a + b);
     final unreadCount = ref.watch(chatUnreadCountProvider);
     return Scaffold(
       backgroundColor: AppColors.whitecolor,
@@ -722,16 +725,17 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
         child: _buildContent(),
       ),
       floatingActionButton: CountBadgeFAB(
-        count: unreadCount, // ← drives the red badge
+        count: unreadCount, // ← real-time total
         gifAsset: 'animation/chaticon.gif',
         backgroundColor: Colors.transparent,
         onPressed: () {
+          ref.read(mutualFriendsProvider.notifier).refresh();
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const ChatListScreen()),
           ).then((_) {
-            // Re-read count when user returns from chat list
             ref.invalidate(mutualFriendsProvider);
+            //ref.read(mutualFriendsProvider.notifier).refresh();
           });
         },
       ),
@@ -1702,7 +1706,7 @@ class _FeedItemState extends State<FeedItem>
       final fileUrl = mediaUrls.first;
       if (FileTypeHelper.isImage(fileUrl)) return _buildSingleImage(fileUrl);
       if (FileTypeHelper.isVideo(fileUrl)) {
-        return FacebookVideoWidget(
+        return VideoplayWidget(
           url: fileUrl,
           thumbnailUrl: widget.content.thumbnailUrl,
         );

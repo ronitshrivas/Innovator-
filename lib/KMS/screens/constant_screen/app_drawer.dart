@@ -11,16 +11,13 @@ import 'package:innovator/KMS/screens/coordinator/coordinator_invoice_screen.dar
 import 'package:innovator/KMS/screens/coordinator/coordinator_teacher_notes_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/coordinator_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/teacher_dashboard_screen.dart';
-import 'package:innovator/KMS/screens/constant_screen/under_maintenance_page.dart';
-import 'package:innovator/KMS/screens/dashboard/student_dashboard_screen.dart';
+import 'package:innovator/KMS/screens/student/homework_screen.dart';
+import 'package:innovator/KMS/screens/student/student_attendance_screen.dart';
 import 'package:innovator/KMS/screens/teacher/kyc_upload_screen.dart';
-import 'package:innovator/KMS/screens/student/student_examination.dart';
 import 'package:innovator/KMS/screens/teacher/teacher_attendance_screen.dart';
 import 'package:innovator/KMS/screens/teacher/teacher_salary_screen.dart';
 import 'package:innovator/KMS/screens/teacher/teacher_salary_slips.dart';
 import 'package:innovator/KMS/screens/teacher/teacher_school_attendance.dart';
- 
-final drawerSelectedIndexProvider = StateProvider<int>((ref) => 0);
 
 class DrawerItemData {
   final String title;
@@ -92,23 +89,14 @@ final List<DrawerItemData> _coordinatorDrawerItems = [
 const List<DrawerItemData> _studentDrawerItems = [
   DrawerItemData(
     title: 'Dashboard',
-    image: 'assets/kms/drawer/tutor.png',
-    screen: StudentDashboardScreen(),
-  ),
-  DrawerItemData(
-    title: 'My Attendance',
     image: 'assets/kms/drawer/attendance.png',
-    screen: StudentDashboardScreen(),
+    screen: StudentAttendanceScreen(),
   ),
+
   DrawerItemData(
-    title: 'Examination',
-    image: 'assets/kms/drawer/examination.png',
-    screen: StudentExaminationScreen(),
-  ),
-  DrawerItemData(
-    title: 'Activities',
+    title: 'Homework',
     image: 'assets/kms/drawer/activities.png',
-    screen: UnderMaintenanceScreen(),
+    screen: HomeworkScreen(),
   ),
 ];
 

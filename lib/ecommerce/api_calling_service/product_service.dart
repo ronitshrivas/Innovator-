@@ -7,7 +7,7 @@ import 'package:innovator/ecommerce/model/cart_model.dart';
 import 'package:innovator/ecommerce/model/product_details_model.dart';
 import 'package:innovator/ecommerce/model/product_model.dart';
 
-class ProductListService extends BaseApiService {
+class ProductListService extends EcommerBaseApiService {
   ProductListService() : super(dio: DioClient.instance);
 
   Future<List<ProductModel>> getProductList() async {
@@ -41,13 +41,13 @@ class ProductListService extends BaseApiService {
     await delete(EcommerApi.itemUpdate(cartItemId));
   }
 
-Future<void> updateCartItemQuantity({
-  required String cartItemId,
-  required int quantity,
-}) async {
-  await patch(
-    EcommerApi.itemUpdate(cartItemId),
-    data: {'quantity': quantity},
-  );
-}
+  Future<void> updateCartItemQuantity({
+    required String cartItemId,
+    required int quantity,
+  }) async {
+    await patch(
+      EcommerApi.itemUpdate(cartItemId),
+      data: {'quantity': quantity},
+    );
+  }
 }

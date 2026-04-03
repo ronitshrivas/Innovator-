@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/models/Chat/mutual_friend_model.dart';
 import 'package:innovator/Innovator/provider/mutual_friend_state.dart';
+import 'package:innovator/Innovator/provider/unread_count_provider.dart';
 import 'package:innovator/Innovator/screens/chatrrom/screen/chatscreen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -32,15 +33,66 @@ const Color _orangeMid = Color.fromRGBO(244, 135, 6, 0.18);
 
 class MutualFriendsNotifier extends StateNotifier<MutualFriendsState> {
   final Ref _ref;
+  bool _mounted = true;
   MutualFriendsNotifier(this._ref) : super(const MutualFriendsState()) {
     // ← accept ref
+    Future.microtask(() => _initWhenReady());
     fetchMutualFriends();
+    _ref.listen<Map<String, int>>(perFriendUnreadProvider, (_, realtimeMap) {
+      if (!_mounted) return;
+      final total = state.friends.fold<int>(
+        0,
+        (sum, f) => sum + (realtimeMap[f.id] ?? f.unreadCount),
+      );
+      Future.microtask(() {
+        if (!_mounted) return;
+        _ref.read(chatUnreadCountProvider.notifier).state = total;
+      });
+    });
+  }
+
+  Future<void> _initWhenReady() async {
+    if (!_mounted) return;
+    int attempts = 0;
+    while (attempts < 10) {
+      final token = AppData().accessToken;
+      if (token != null && token.isNotEmpty) {
+        fetchMutualFriends();
+        return;
+      }
+      await Future.delayed(const Duration(milliseconds: 300));
+      attempts++;
+    }
+    // Token never arrived after 3s
+    if (_mounted) {
+      _setState(
+        state.copyWith(
+          isLoading: false,
+          error: 'Session expired. Please log in again.',
+        ),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _mounted = false;
+    super.dispose();
   }
 
   void _setState(MutualFriendsState newState) {
+    if (!_mounted) return; // ✅ guard
     state = newState;
-    // ← Always keep the FAB badge in sync, even when ChatListScreen is not mounted
-    _ref.read(chatUnreadCountProvider.notifier).state = newState.totalUnread;
+    // ✅ FIX: Defer cross-provider write to avoid Riverpod initialization error
+    Future.microtask(() {
+      if (!_mounted) return;
+      final realtimeMap = _ref.read(perFriendUnreadProvider);
+      final combinedTotal = newState.friends.fold<int>(
+        0,
+        (sum, f) => sum + (realtimeMap[f.id] ?? f.unreadCount),
+      );
+      _ref.read(chatUnreadCountProvider.notifier).state = combinedTotal;
+    });
   }
 
   String get _token => AppData().accessToken ?? '';
@@ -114,10 +166,16 @@ class MutualFriendsNotifier extends StateNotifier<MutualFriendsState> {
       friends.length,
       (i) => friends[i].copyWithUnread(results[i]),
     );
+
+    // Seed the real-time provider with REST counts
+    final seedMap = {
+      for (int i = 0; i < friends.length; i++) friends[i].id: results[i],
+    };
+    _ref
+        .read(perFriendUnreadProvider.notifier)
+        .seedFromHistory(seedMap); // ← ADD
+
     _setState(state.copyWith(friends: updated));
-    developer.log(
-      '[ChatList] Unread: ${updated.map((f) => '${f.username}=${f.unreadCount}').join(', ')}',
-    );
   }
 
   Future<int> _fetchUnreadCount(String senderId) async {
@@ -153,6 +211,7 @@ class MutualFriendsNotifier extends StateNotifier<MutualFriendsState> {
             .map((f) => f.id == friendId ? f.copyWithUnread(0) : f)
             .toList();
     _setState(state.copyWith(friends: updated));
+    _ref.read(perFriendUnreadProvider.notifier).reset(friendId); // ← ADD
   }
 
   Future<bool> deleteConversation(String friendId) async {
@@ -211,7 +270,7 @@ class ChatListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(mutualFriendsProvider);
-
+    final realtimeUnread = ref.watch(perFriendUnreadProvider);
     // // Keep global FAB badge in sync
     // ref.listen<MutualFriendsState>(mutualFriendsProvider, (_, next) {
     //   ref.read(chatUnreadCountProvider.notifier).state = next.totalUnread;
@@ -222,9 +281,9 @@ class ChatListScreen extends ConsumerWidget {
       body: NestedScrollView(
         headerSliverBuilder:
             (context, innerBoxIsScrolled) => [
-              _buildSliverAppBar(context, ref, state, innerBoxIsScrolled),
+              _buildSliverAppBar(context, ref, state, realtimeUnread), // ← pass
             ],
-        body: _buildBody(context, ref, state),
+        body: _buildBody(context, ref, state, realtimeUnread), // ← pass
       ),
     );
   }
@@ -235,8 +294,12 @@ class ChatListScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     MutualFriendsState state,
-    bool innerBoxIsScrolled,
+    Map<String, int> realtimeUnread,
   ) {
+    final totalUnread = state.friends.fold<int>(
+      0,
+      (sum, f) => sum + (realtimeUnread[f.id] ?? f.unreadCount),
+    );
     return SliverAppBar(
       // floating: false,
       // pinned: true,
@@ -284,12 +347,12 @@ class ChatListScreen extends ConsumerWidget {
                           label: '${state.onlineFriends.length} online',
                         ),
                       // Unread pill
-                      if (state.totalUnread > 0) ...[
+                      if (totalUnread > 0) ...[
                         const SizedBox(width: 10),
                         _Pill(
                           color: Colors.red,
                           dotColor: Colors.red,
-                          label: '${state.totalUnread} unread',
+                          label: '${totalUnread} unread',
                         ),
                       ],
                     ],
@@ -309,6 +372,7 @@ class ChatListScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     MutualFriendsState state,
+    Map<String, int> realtimeUnread,
   ) {
     if (state.isLoading && state.friends.isEmpty) return _buildSkeletonList();
     if (state.error != null && state.friends.isEmpty) {
@@ -330,6 +394,8 @@ class ChatListScreen extends ConsumerWidget {
                   (context, i) => _ChatCard(
                     friend: state.onlineFriends[i],
                     isOnline: true,
+                    realtimeUnreadCount:
+                        realtimeUnread[state.onlineFriends[i].id] ?? 0,
                     onTap:
                         () => _openChat(context, ref, state.onlineFriends[i]),
                     onDelete:
@@ -351,6 +417,8 @@ class ChatListScreen extends ConsumerWidget {
                   (context, i) => _ChatCard(
                     friend: state.offlineFriends[i],
                     isOnline: false,
+                    realtimeUnreadCount: // ← ADDED
+                        realtimeUnread[state.offlineFriends[i].id] ?? 0,
                     onTap:
                         () => _openChat(context, ref, state.offlineFriends[i]),
                     onDelete:
@@ -582,22 +650,27 @@ class _ChatCard extends StatelessWidget {
   final bool isOnline;
   final VoidCallback onTap;
   final Future<bool> Function() onDelete;
+  final int realtimeUnreadCount;
 
   const _ChatCard({
     required this.friend,
     required this.isOnline,
     required this.onTap,
     required this.onDelete,
+    this.realtimeUnreadCount = 0,
   });
 
   @override
   Widget build(BuildContext context) {
-    final hasUnread = friend.unreadCount > 0;
+    final displayUnread =
+        realtimeUnreadCount > friend.unreadCount
+            ? realtimeUnreadCount
+            : friend.unreadCount;
+    final hasUnread = displayUnread > 0;
 
     return Dismissible(
       key: ValueKey('chat_card_${friend.id}'),
       direction: DismissDirection.endToStart,
-      // Confirm before dismissing
       confirmDismiss: (_) async {
         return await _showDeleteDialog(context);
       },
@@ -617,7 +690,6 @@ class _ChatCard extends StatelessWidget {
           );
         }
       },
-      // Red background revealed on swipe
       background: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
         decoration: BoxDecoration(
@@ -626,16 +698,12 @@ class _ChatCard extends StatelessWidget {
         ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 24),
-        child: Column(
+        child: const Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.delete_outline_rounded,
-              color: Colors.white,
-              size: 26,
-            ),
-            const SizedBox(height: 4),
-            const Text(
+            Icon(Icons.delete_outline_rounded, color: Colors.white, size: 26),
+            SizedBox(height: 4),
+            Text(
               'Delete',
               style: TextStyle(
                 color: Colors.white,
@@ -646,7 +714,11 @@ class _ChatCard extends StatelessWidget {
           ],
         ),
       ),
-      child: _buildCard(context, hasUnread),
+      child: _buildCard(
+        context,
+        hasUnread,
+        displayUnread,
+      ), // ← pass displayUnread
     );
   }
 
@@ -720,7 +792,7 @@ class _ChatCard extends StatelessWidget {
         false;
   }
 
-  Widget _buildCard(BuildContext context, bool hasUnread) {
+  Widget _buildCard(BuildContext context, bool hasUnread, int displayUnread) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
@@ -856,7 +928,7 @@ class _ChatCard extends StatelessWidget {
 
                 // Right: unread badge OR "Active now"
                 if (hasUnread)
-                  _UnreadBadge(count: friend.unreadCount)
+                  _UnreadBadge(count: displayUnread)
                 else if (isOnline)
                   const Text(
                     'Active now',

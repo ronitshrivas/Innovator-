@@ -15,7 +15,6 @@ import 'package:innovator/Innovator/Authorization/Login.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/controllers/user_controller.dart';
-import 'package:innovator/Innovator/screens/Course/home.dart';
 import 'package:innovator/Innovator/screens/Eliza_ChatBot/Elizahomescreen.dart';
 import 'package:innovator/Innovator/screens/Events/Events.dart';
 import 'package:innovator/Innovator/screens/F&Q/F&Qscreen.dart';
@@ -428,11 +427,11 @@ class _TrueInstantDrawerState extends ConsumerState<TrueInstantDrawer> {
             title: 'Eliza ChatBot',
             onTap: _goToEliza,
           ),
-          _QuickMenuItem(
-            icon: Icons.menu_book_rounded,
-            title: 'E-Learning',
-            onTap: _goToElearning,
-          ),
+          // _QuickMenuItem(
+          //   icon: Icons.menu_book_rounded,
+          //   title: 'E-Learning',
+          //   onTap: _goToElearning,
+          // ),
           _QuickMenuItem(
             icon: Icons.shop,
             title: 'Shop',
@@ -498,7 +497,7 @@ class _TrueInstantDrawerState extends ConsumerState<TrueInstantDrawer> {
   );
   void _goToEliza() => _quickNavigate(() => ElizaChatScreen());
   void _goToEvents() => _quickNavigate(() => EventsHomePage());
-  void _goToElearning() => _quickNavigate(() => const HomeScreen());
+  //void _goToElearning() => _quickNavigate(() => const HomeScreen());
   void _goToEcommerce() => _quickNavigate(() => const ShopPage());
   void _goToPrivacy() =>
       _quickNavigate(() => const ProviderScope(child: PrivacyPolicy()));

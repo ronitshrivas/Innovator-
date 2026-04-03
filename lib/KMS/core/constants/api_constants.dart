@@ -7,6 +7,8 @@ class ApiConstants {
   //auth EndPoints
   static String get register => '$authBaseUrl/auth/register/';
   static String get login => '$authBaseUrl/auth/sso/login/';
+  static String get studentRegister => '$baseUrl/student/register/';
+  static String get studentLogin => '$baseUrl/student/login/';
   //profile data
   static String get myProfile => '$baseUrl/user/me';
 
@@ -48,7 +50,9 @@ class ApiConstants {
   static String get teacherNotes => '$baseUrl/coordinator/teaching-notes/';
 
   //student endpoints
-  static String get createStudents => '$baseUrl/api/create/';
+  static String get schoolList => '$baseUrl/public/registration-metadata/';
+  static String get homework => '$baseUrl/student/homework/';
+  static String get studentAttendance => '$baseUrl/student/attendance/';
   //attendace endpoints
   static String get getAttendance => '$baseUrl/attendance/';
   static String postAttendanceApprove(String attendanceId) =>

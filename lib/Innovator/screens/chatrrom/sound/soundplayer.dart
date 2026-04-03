@@ -11,7 +11,7 @@ class SoundPlayer {
     await _player.play(AssetSource('icon/LikeSound.wav'));
   }
 
-  Future<void> FollowSound()async{
+  Future<void> FollowSound() async {
     await _player.play(AssetSource('icon/Followsound.mp3'));
   }
 
@@ -19,14 +19,11 @@ class SoundPlayer {
     await _player.stop();
   }
 
-  Future<void> feedSound()async{
-    await _player.play(AssetSource('icon/zapsplat_multimedia_ui_refresh_load_new_content_rattle_91307.mp3'));
-  }
+  // Future<void> feedSound()async{
+  //   await _player.play(AssetSource('icon/zapsplat_multimedia_ui_refresh_load_new_content_rattle_91307.mp3'));
+  // }
 
-  Future<void> notificationsound()async{
+  Future<void> notificationsound() async {
     await _player.play(AssetSource('icon/notification_sound.mp3'));
   }
-
-  
 }
-

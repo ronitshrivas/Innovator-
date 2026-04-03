@@ -9,6 +9,8 @@ import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/models/Chat/chat_model.dart';
 import 'package:innovator/Innovator/provider/chat_state.dart';
+import 'package:innovator/Innovator/provider/global_chat_listener.dart';
+import 'package:innovator/Innovator/provider/unread_count_provider.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -37,8 +39,9 @@ const _kHttpBase = 'http://182.93.94.220:8005';
 
 class ChatNotifier extends StateNotifier<ChatState> {
   final String otherUserId;
+  final Ref _ref;
 
-  ChatNotifier(this.otherUserId) : super(const ChatState()) {
+  ChatNotifier(this.otherUserId, this._ref) : super(const ChatState()) {
     _init();
   }
 
@@ -103,6 +106,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     if (state.wsStatus != WsStatus.connected) return;
     try {
       _channel!.sink.add(json.encode({'type': 'mark_as_read'}));
+      _ref.read(perFriendUnreadProvider.notifier).reset(otherUserId);
       developer.log('[WS] Sent mark_as_read');
     } catch (e) {
       developer.log('[WS] markAsRead error: $e');
@@ -243,6 +247,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
         isTyping: false,
       );
 
+      if (!isMine) {
+        _markAsRead();
+      }
+
       // Mark as read immediately if it's from the other person
       // if (!isMine) _markAsRead();
     } catch (e) {
@@ -380,7 +388,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
 final chatProvider =
     AutoDisposeStateNotifierProviderFamily<ChatNotifier, ChatState, String>(
-      (ref, otherUserId) => ChatNotifier(otherUserId),
+      (ref, otherUserId) => ChatNotifier(otherUserId, ref),
     );
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -412,16 +420,26 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   final FocusNode _focusNode = FocusNode();
   bool _isComposing = false;
   Timer? _typingTimer;
+  late final GlobalChatListener _globalListener;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _inputCtrl.addListener(_onInputChanged);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // ✅ Store reference so dispose can use it safely
+      _globalListener = ref.read(globalChatListenerProvider);
+      _globalListener.activeChatUserId = widget.otherUserId;
+      ref.read(activeChatUserIdProvider.notifier).state = widget.otherUserId;
+    });
   }
 
   @override
   void dispose() {
+    _globalListener.activeChatUserId = null;
+
     WidgetsBinding.instance.removeObserver(this);
     _inputCtrl.removeListener(_onInputChanged);
     _inputCtrl.dispose();
@@ -453,19 +471,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     }
   }
 
-  void _scrollToBottom({bool animated = true}) {
+  void _scrollToBottom({bool animated = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollCtrl.hasClients) {
-        final max = _scrollCtrl.position.maxScrollExtent;
-        if (animated) {
-          _scrollCtrl.animateTo(
-            max,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        } else {
-          _scrollCtrl.jumpTo(max);
-        }
+      if (!mounted) return;
+      if (!_scrollCtrl.hasClients) return;
+      // ✅ Use jumpTo by default (not animated) for initial load
+      if (animated) {
+        _scrollCtrl.animateTo(
+          _scrollCtrl.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      } else {
+        _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
       }
     });
   }
@@ -487,12 +505,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     final state = ref.watch(chatProvider(widget.otherUserId));
 
     ref.listen<ChatState>(chatProvider(widget.otherUserId), (prev, next) {
+      // New message arrived — scroll with animation
       if ((prev?.messages.length ?? 0) < next.messages.length) {
-        _scrollToBottom();
+        _scrollToBottom(animated: true);
       }
-      // Scroll to bottom once history finishes loading
+
       if ((prev?.isLoadingHistory ?? false) && !next.isLoadingHistory) {
-        _scrollToBottom(animated: false);
+        // Double post-frame to ensure ListView is fully laid out
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            if (_scrollCtrl.hasClients) {
+              _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
+            }
+          });
+        });
       }
     });
 

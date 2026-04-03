@@ -9,14 +9,15 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
+import 'package:innovator/Innovator/provider/global_chat_listener.dart';
 import 'package:innovator/Innovator/provider/notification_provider.dart';
 import 'package:innovator/Innovator/screens/Splash_Screen/splash_screen.dart';
 import 'package:innovator/Innovator/services/fcm_services.dart';
 import 'package:innovator/Innovator/services/inappnotifcationoverlay.dart';
 import 'package:innovator/KMS/screens/auth/login_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/admin_dashboard_screen.dart';
-import 'package:innovator/KMS/screens/dashboard/student_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/teacher_dashboard_screen.dart';
+import 'package:innovator/KMS/screens/student/student_attendance_screen.dart';
 import 'dart:developer' as developer;
 import 'package:innovator/ecommerce/screens/Shop/Shop_Page.dart';
 
@@ -59,9 +60,6 @@ void main() async {
   );
 }
 
-final FlutterLocalNotificationsPlugin _localNotifications =
-    FlutterLocalNotificationsPlugin();
-
 class InnovatorHomePage extends ConsumerStatefulWidget {
   const InnovatorHomePage({super.key});
 
@@ -84,6 +82,9 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
       _setupFCM();
       ref.read(notificationProvider.notifier).startPolling(); // ← ADD
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(globalChatListenerProvider);
+    });
   }
 
   @override
@@ -91,9 +92,6 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
-
-  // ─── _setupFCM, _showForegroundNotification, _handleNotificationTap,
-  //     _handleNotificationData — ALL IDENTICAL, zero changes ───────────────
 
   Future<void> _setupFCM() async {
     try {
@@ -268,13 +266,12 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
           (context, child) =>
               InAppNotificationOverlay(child: child ?? const SizedBox.shrink()),
 
-      // ─────────────────────────────────────────────────────────────────────
       home: SplashScreen(),
       routes: {
         '/kms/login': (_) => KmsLoginScreen(),
         '/kms/adminDasboard': (_) => AdminDashboardScreen(),
         '/kms/partnerDashboard': (_) => TeacherDashboardScreen(),
-        '/kms/studentDashboard': (_) => StudentDashboardScreen(),
+        '/kms/studentDashboard': (_) => StudentAttendanceScreen(),
       },
       title: 'Innovator',
       theme: _buildAppTheme(),

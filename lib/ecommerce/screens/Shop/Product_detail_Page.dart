@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/ecommerce/model/product_details_model.dart';
 import 'package:innovator/ecommerce/provider/product_provider.dart';
-import 'package:innovator/ecommerce/screens/Shop/Cart_List/cart_screen.dart';
+import 'package:innovator/ecommerce/screens/Shop/cart_screen.dart';
 
 // ─ Constants ─
 const _kOrange = Color.fromRGBO(244, 135, 6, 1);
@@ -11,7 +11,7 @@ const _kOrange = Color.fromRGBO(244, 135, 6, 1);
 class ProductDetailPage extends ConsumerStatefulWidget {
   final String productId;
   const ProductDetailPage({Key? key, required this.productId})
-      : super(key: key);
+    : super(key: key);
 
   @override
   ConsumerState<ProductDetailPage> createState() => _ProductDetailPageState();
@@ -43,7 +43,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     try {
       await ref.read(productServiceProvider).addCartItem(product: product.id);
       setState(() => _cartProductIds.add(product.id));
-       ref.refresh(cartListProvider);
+      ref.refresh(cartListProvider);
       if (!mounted) return;
       _showSnackBar(
         message: '${product.name} added to cart!',
@@ -54,7 +54,8 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
       if (!mounted) return;
       final statusCode = e.response?.statusCode;
       final responseData = e.response?.data?.toString() ?? '';
-      final isHtml500 = statusCode == 500 &&
+      final isHtml500 =
+          statusCode == 500 &&
           responseData.contains('<h1>Server Error (500)</h1>');
 
       if (isHtml500) {
@@ -117,99 +118,17 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     );
   }
 
-  // ─ Category-details dialog 
-  void _showCategoryDetailsDialog(dynamic details) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: _kOrange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.category_outlined,
-                        color: _kOrange, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Category Details',
-                    style: TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 12),
-              if (details is Map)
-                ...details.entries.map(
-                  (e) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${_capitalize(e.key.toString())}: ',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 14),
-                        ),
-                        Expanded(
-                          child: Text(
-                            e.value?.toString() ?? '—',
-                            style: TextStyle(
-                                fontSize: 14, color: Colors.grey[700]),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              else
-                Text(details.toString(),
-                    style: TextStyle(fontSize: 14, color: Colors.grey[700])),
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: TextButton.styleFrom(foregroundColor: _kOrange),
-                  child: const Text('Close'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _capitalize(String s) =>
-      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
-
-  // ─ Build 
   @override
   Widget build(BuildContext context) {
-    final detailAsync =
-        ref.watch(productDetailProvider(widget.productId));
+    final detailAsync = ref.watch(productDetailProvider(widget.productId));
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
       floatingActionButton: _cartFab(),
       body: detailAsync.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: _kOrange),
-        ),
+        loading:
+            () =>
+                const Center(child: CircularProgressIndicator(color: _kOrange)),
         error: (e, _) => _errorView(),
         data: (product) => _buildContent(product),
       ),
@@ -225,18 +144,21 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
       child: FloatingActionButton(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const CartScreen()),
-        ),
+        onPressed:
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CartScreen()),
+            ),
         child: Consumer(
           builder: (context, ref, _) {
             final count = ref.watch(cartCountProvider);
             return Badge.count(
               count: count,
               isLabelVisible: count > 0,
-              child: const Icon(Icons.shopping_cart_outlined,
-                  color: Colors.white),
+              child: const Icon(
+                Icons.shopping_cart_outlined,
+                color: Colors.white,
+              ),
             );
           },
         ),
@@ -251,12 +173,14 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
         children: [
           Icon(Icons.error_outline, size: 60, color: Colors.red[300]),
           const SizedBox(height: 16),
-          Text('Failed to load product',
-              style: TextStyle(fontSize: 16, color: Colors.grey[700])),
+          Text(
+            'Failed to load product',
+            style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+          ),
           const SizedBox(height: 12),
           ElevatedButton.icon(
-            onPressed: () =>
-                ref.refresh(productDetailProvider(widget.productId)),
+            onPressed:
+                () => ref.refresh(productDetailProvider(widget.productId)),
             icon: const Icon(Icons.refresh),
             label: const Text('Retry'),
             style: ElevatedButton.styleFrom(backgroundColor: _kOrange),
@@ -273,27 +197,25 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
 
     return CustomScrollView(
       slivers: [
-        //  App Bar with image gallery 
+        //  App Bar with image gallery
         SliverAppBar(
+          leading: const Icon(Icons.arrow_back_ios, color: Colors.black87),
           expandedHeight: 340,
           pinned: true,
           backgroundColor: Colors.white,
-          foregroundColor: Colors.black87,
+          foregroundColor: Colors.black,
           elevation: 0,
-          flexibleSpace: FlexibleSpaceBar(
-            background: _imageGallery(imageUrls),
-          ),
+          flexibleSpace: FlexibleSpaceBar(background: _imageGallery(imageUrls)),
         ),
 
-        //  Product info 
+        //  Product info
         SliverToBoxAdapter(
           child: Container(
             decoration: const BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             ),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -337,8 +259,11 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                   const SizedBox(height: 6),
                   Text(
                     product.description!,
-                    style:
-                        TextStyle(fontSize: 14, color: Colors.grey[700], height: 1.6),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[700],
+                      height: 1.6,
+                    ),
                   ),
                   const SizedBox(height: 20),
                 ],
@@ -348,26 +273,102 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                   _sectionLabel('Category'),
                   const SizedBox(height: 8),
                   GestureDetector(
-                    onTap: product.categoryDetails != null
-                        ? () =>
-                            _showCategoryDetailsDialog(product.categoryDetails)
-                        : null,
+                    onTap:
+                        product.categoryDetails != null
+                            ? () => showDialog(
+                              context: context,
+                              builder:
+                                  (context) => Dialog(
+                                    backgroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(24),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.all(
+                                                  8,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: _kOrange.withAlpha(26),
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                ),
+                                                child: const Icon(
+                                                  Icons.category_outlined,
+                                                  color: _kOrange,
+                                                  size: 20,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              const Text(
+                                                'Category Details',
+                                                style: TextStyle(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 16),
+                                          const Divider(),
+                                          const SizedBox(height: 12),
+
+                                          Text(
+                                            'Name: ${product.categoryDetails!.name}',
+                                          ),
+                                          Text(
+                                            'Slug: ${product.categoryDetails!.slug}',
+                                          ),
+                                           Text(
+                                            'Description: ${product.categoryDetails!.description}',
+                                          ),
+                                          const SizedBox(height: 16),
+                                          Align(
+                                            alignment: Alignment.centerRight,
+                                            child: TextButton(
+                                              onPressed:
+                                                  () => Navigator.pop(context),
+                                              style: TextButton.styleFrom(
+                                                foregroundColor: _kOrange,
+                                              ),
+                                              child: const Text('Close'),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                            )
+                            : null,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 8),
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.blue,
                         borderRadius: BorderRadius.circular(10),
-                        border: product.categoryDetails != null
-                            ? Border.all(
-                                color: Colors.blue)
-                            : null,
+                        border:
+                            product.categoryDetails != null
+                                ? Border.all(color: Colors.blue)
+                                : null,
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.category_outlined,
-                              size: 16, color: Colors.blue),
+                          const Icon(
+                            Icons.category_outlined,
+                            size: 16,
+                            color: Colors.blue,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             product.category!,
@@ -379,9 +380,11 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                           ),
                           if (product.categoryDetails != null) ...[
                             const SizedBox(width: 4),
-                            Icon(Icons.info_outline,
-                                size: 14,
-                                color: Colors.blue.shade400),
+                            Icon(
+                              Icons.info_outline,
+                              size: 14,
+                              color: Colors.blue.shade400,
+                            ),
                           ],
                         ],
                       ),
@@ -395,9 +398,10 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                   icon: Icons.inventory_2_outlined,
                   label: 'Stock',
                   value: '${product.stock} items available',
-                  valueColor: product.stock > 0
-                      ? Colors.green.shade600
-                      : Colors.red.shade600,
+                  valueColor:
+                      product.stock > 0
+                          ? Colors.green.shade600
+                          : Colors.red.shade600,
                 ),
                 const SizedBox(height: 32),
 
@@ -406,36 +410,37 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                   width: double.infinity,
                   height: 52,
                   child: ElevatedButton.icon(
-                    onPressed: product.stock > 0 && !inCart
-                        ? () => _addToCart(product)
-                        : null,
+                    onPressed:
+                        product.stock > 0 && !inCart
+                            ? () => _addToCart(product)
+                            : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: inCart
-                          ? Colors.grey[300]
-                          : _kOrange,
+                      backgroundColor: inCart ? Colors.grey[300] : _kOrange,
                       disabledBackgroundColor: Colors.grey[300],
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                       elevation: 0,
                     ),
                     icon: Icon(
                       inCart
                           ? Icons.check
                           : product.stock > 0
-                              ? Icons.add_shopping_cart
-                              : Icons.remove_shopping_cart,
+                          ? Icons.add_shopping_cart
+                          : Icons.remove_shopping_cart,
                       color: Colors.white,
                     ),
                     label: Text(
                       inCart
                           ? 'Added to Cart'
                           : product.stock > 0
-                              ? 'Add to Cart'
-                              : 'Out of Stock',
+                          ? 'Add to Cart'
+                          : 'Out of Stock',
                       style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
@@ -482,9 +487,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                   width: _currentImageIndex == i ? 20 : 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: _currentImageIndex == i
-                        ? _kOrange
-                        : Colors.white,
+                    color: _currentImageIndex == i ? _kOrange : Colors.black87,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -504,22 +507,24 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
         fit: BoxFit.cover,
         width: double.infinity,
         height: double.infinity,
-        errorBuilder: (_, __, ___) => Container(
-          color: Colors.grey[200],
-          child: const Center(
-            child: Icon(Icons.broken_image, size: 60, color: Colors.grey),
-          ),
-        ),
+        errorBuilder:
+            (_, __, ___) => Container(
+              color: Colors.grey[200],
+              child: const Center(
+                child: Icon(Icons.broken_image, size: 60, color: Colors.grey),
+              ),
+            ),
         loadingBuilder: (_, child, loadingProgress) {
           if (loadingProgress == null) return child;
           return Container(
             color: Colors.grey[200],
             child: Center(
               child: CircularProgressIndicator(
-                value: loadingProgress.expectedTotalBytes != null
-                    ? loadingProgress.cumulativeBytesLoaded /
-                        loadingProgress.expectedTotalBytes!
-                    : null,
+                value:
+                    loadingProgress.expectedTotalBytes != null
+                        ? loadingProgress.cumulativeBytesLoaded /
+                            loadingProgress.expectedTotalBytes!
+                        : null,
                 color: _kOrange,
                 strokeWidth: 2,
               ),
@@ -530,15 +535,13 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     );
   }
 
-  // ─ Small helpers 
+  // ─ Small helpers
   Widget _stockBadge(int stock) {
     final inStock = stock > 0;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: inStock
-            ? Colors.green.withOpacity(0.12)
-            : Colors.red.withOpacity(0.12),
+        color: inStock ? Colors.green.withAlpha(26) : Colors.red.withAlpha(26),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
@@ -574,8 +577,10 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
       children: [
         Icon(icon, size: 18, color: Colors.grey[500]),
         const SizedBox(width: 8),
-        Text('$label: ',
-            style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+        Text(
+          '$label: ',
+          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+        ),
         Text(
           value,
           style: TextStyle(

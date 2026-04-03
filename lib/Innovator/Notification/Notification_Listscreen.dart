@@ -179,16 +179,15 @@ class _NotificationListScreenState extends State<NotificationListScreen>
       final token = AppData().accessToken;
       if (token == null) throw Exception('No authentication token found');
 
-      final response = await http.patch(
-        Uri.parse('$_kBaseUrl/api/notifications/$notificationId/'),
+      final response = await http.post(
+        Uri.parse('$_kBaseUrl/api/notifications/$notificationId/mark-as-read/'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({'is_read': true}),
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 204) {
         setState(() {
           final index = notifications.indexWhere((n) => n.id == notificationId);
           if (index != -1) {
@@ -214,12 +213,15 @@ class _NotificationListScreenState extends State<NotificationListScreen>
       final token = AppData().accessToken;
       if (token == null) throw Exception('No authentication token found');
 
-      final response = await http.patch(
-        Uri.parse('$_kBaseUrl/api/notifications/mark-all-read/'),
-        headers: {'Authorization': 'Bearer $token'},
+      final response = await http.post(
+        Uri.parse('$_kBaseUrl/api/notifications/mark-all-as-read/'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 204) {
         final unreadCount = notifications.where((n) => !n.isRead).length;
         if (unreadCount > 0) {
           setState(() {
@@ -231,9 +233,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
           _showInfoSnackbar('No unread notifications to mark');
         }
       } else {
-        throw Exception(
-          'Failed to mark all notifications as read: ${response.statusCode}',
-        );
+        throw Exception('Failed to mark all as read: ${response.statusCode}');
       }
     } catch (e) {
       _showErrorSnackbar('Error marking all notifications as read');
@@ -1031,16 +1031,16 @@ class _NotificationListScreenState extends State<NotificationListScreen>
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        // if (notifications.any((n) => !n.isRead))
-        //   ScaleTransition(
-        //     scale: _fabAnimation,
-        //     child: FloatingActionButton.small(
-        //       onPressed: markAllAsRead,
-        //       backgroundColor: Colors.green,
-        //       heroTag: 'markAllRead',
-        //       child: const Icon(Icons.done_all, color: Colors.white),
-        //     ),
-        //   ),
+        if (notifications.any((n) => !n.isRead))
+          ScaleTransition(
+            scale: _fabAnimation,
+            child: FloatingActionButton.small(
+              onPressed: markAllAsRead,
+              backgroundColor: Colors.green,
+              heroTag: 'markAllRead',
+              child: const Icon(Icons.done_all, color: Colors.white),
+            ),
+          ),
         const SizedBox(height: 12),
         ScaleTransition(
           scale: _fabAnimation,
