@@ -9,8 +9,7 @@ import 'package:innovator/KMS/provider/teacher_provider.dart';
 import 'package:innovator/KMS/provider/user_provider.dart';
 import 'package:innovator/KMS/screens/auth/forgot_password_screen.dart';
 import 'package:innovator/KMS/screens/auth/signup_screen.dart';
-import 'package:innovator/KMS/screens/auth/student_login_screen.dart';
-import 'package:innovator/KMS/screens/dashboard/admin_dashboard_screen.dart';
+import 'package:innovator/KMS/screens/auth/student_login_screen.dart'; 
 import 'package:innovator/KMS/screens/dashboard/coordinator_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/teacher_dashboard_screen.dart';
 

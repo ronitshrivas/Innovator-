@@ -8,7 +8,7 @@ class AuthService extends BaseApiService {
   AuthService() : super(dio: DioClient.authInstance);
 
   final TokenService _tokenService = TokenService();
-    Future<Map<String, dynamic>> login({
+  Future<Map<String, dynamic>> login({
     required String email,
     required String password,
   }) async {
@@ -17,7 +17,7 @@ class AuthService extends BaseApiService {
       data: {'email': email, 'password': password},
     );
 
-     final role = response['user']?['role'] as String?;
+    final role = response['user']?['role'] as String?;
     if (role != null && role.isNotEmpty) {
       await _tokenService.saveRole(role);
       log('Role saved: $role');
@@ -49,7 +49,7 @@ class AuthService extends BaseApiService {
   }
 
   Future<void> logout() async {
-    await _tokenService.clearTokens(); 
+    await _tokenService.clearTokens();
     log('Logged out — tokens and role cleared');
   }
 
@@ -69,16 +69,16 @@ class AuthService extends BaseApiService {
       ApiConstants.studentLogin,
       data: {'username': username, 'password': password},
     );
- 
-    final role = response['user']?['role'] as String?;
+
+    final role = response['user_data']?['role'] as String?;
     if (role != null && role.isNotEmpty) {
       await _tokenService.saveRole(role);
       log('Role saved: $role');
     }
- 
+
     return response;
   }
- 
+
   // Future<Map<String, dynamic>> studentRegister({
   //   required String userName,
   //   required String fullName,
@@ -103,14 +103,13 @@ class AuthService extends BaseApiService {
   //       'role': 'student',
   //     },
   //   );
- 
+
   //   await _tokenService.saveRole('student');
   //   log('Role saved on student register: student');
- 
+
   //   return response;
   // }
 
-  
   Future<Map<String, dynamic>> studentRegister({
     required String userName,
     required String fullName,
@@ -131,19 +130,19 @@ class AuthService extends BaseApiService {
       'school_id': schoolId,
       'role': 'student',
     };
- 
+
     if (classroomId != null && classroomId.isNotEmpty) {
       payload['classroom_id'] = classroomId;
     }
- 
+
     final response = await post<Map<String, dynamic>>(
       ApiConstants.studentRegister,
       data: payload,
     );
- 
+
     await _tokenService.saveRole('student');
     log('Role saved on student register: student');
- 
+
     return response;
   }
 }
