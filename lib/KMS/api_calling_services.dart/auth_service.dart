@@ -1,5 +1,4 @@
 import 'dart:developer';
-
 import 'package:innovator/KMS/core/constants/api_constants.dart';
 import 'package:innovator/KMS/core/constants/network/base_api_service.dart';
 import 'package:innovator/KMS/core/constants/network/dio_client.dart';
@@ -62,4 +61,89 @@ class AuthService extends BaseApiService {
     return await _tokenService.getRole();
   }
 
+  Future<Map<String, dynamic>> studentLogin({
+    required String username,
+    required String password,
+  }) async {
+    final response = await post<Map<String, dynamic>>(
+      ApiConstants.studentLogin,
+      data: {'username': username, 'password': password},
+    );
+ 
+    final role = response['user']?['role'] as String?;
+    if (role != null && role.isNotEmpty) {
+      await _tokenService.saveRole(role);
+      log('Role saved: $role');
+    }
+ 
+    return response;
+  }
+ 
+  // Future<Map<String, dynamic>> studentRegister({
+  //   required String userName,
+  //   required String fullName,
+  //   required String email,
+  //   required String password,
+  //   required String address,
+  //   required String phoneNumber,
+  //   required String schoolId,
+  //   required String classroomId,
+  // }) async {
+  //   final response = await post<Map<String, dynamic>>(
+  //     ApiConstants.studentRegister,
+  //     data: {
+  //       'username': userName,
+  //       'full_name': fullName,
+  //       'email': email,
+  //       'password': password,
+  //       'address': address,
+  //       'phone_number': phoneNumber,
+  //       'school_id': schoolId,
+  //       'classroom_id': classroomId,
+  //       'role': 'student',
+  //     },
+  //   );
+ 
+  //   await _tokenService.saveRole('student');
+  //   log('Role saved on student register: student');
+ 
+  //   return response;
+  // }
+
+  
+  Future<Map<String, dynamic>> studentRegister({
+    required String userName,
+    required String fullName,
+    required String email,
+    required String password,
+    required String address,
+    required String phoneNumber,
+    required String schoolId,
+    String? classroomId,
+  }) async {
+    final Map<String, dynamic> payload = {
+      'username': userName,
+      'full_name': fullName,
+      'email': email,
+      'password': password,
+      'address': address,
+      'phone_number': phoneNumber,
+      'school_id': schoolId,
+      'role': 'student',
+    };
+ 
+    if (classroomId != null && classroomId.isNotEmpty) {
+      payload['classroom_id'] = classroomId;
+    }
+ 
+    final response = await post<Map<String, dynamic>>(
+      ApiConstants.studentRegister,
+      data: payload,
+    );
+ 
+    await _tokenService.saveRole('student');
+    log('Role saved on student register: student');
+ 
+    return response;
+  }
 }

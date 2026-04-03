@@ -4,8 +4,8 @@ import 'package:innovator/KMS/api_calling_services.dart/auth_service.dart';
 import 'package:innovator/KMS/screens/auth/login_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/admin_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/coordinator_dashboard_screen.dart';
-import 'package:innovator/KMS/screens/dashboard/teacher_dashboard_screen.dart'; 
-import 'package:innovator/KMS/screens/dashboard/student_dashboard_screen.dart';
+import 'package:innovator/KMS/screens/dashboard/teacher_dashboard_screen.dart';
+import 'package:innovator/KMS/screens/student/student_attendance_screen.dart';
 
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
@@ -13,7 +13,8 @@ class AuthWrapper extends StatefulWidget {
   @override
   State<AuthWrapper> createState() => _AuthWrapperState();
 }
-class _AuthWrapperState extends State<AuthWrapper> { 
+
+class _AuthWrapperState extends State<AuthWrapper> {
   late final Future<Widget> _startScreenFuture;
 
   @override
@@ -44,7 +45,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
         case 'coordinator':
           return const CoordinatorDashboardScreen();
         case 'student':
-          return const StudentDashboardScreen();
+          return const StudentAttendanceScreen();
         default:
           log('Unknown role "$role" — falling back to LoginScreen');
           return const KmsLoginScreen();
@@ -58,14 +59,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<Widget>(
-      future: _startScreenFuture,  
+      future: _startScreenFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const Scaffold(
             backgroundColor: Colors.white,
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 

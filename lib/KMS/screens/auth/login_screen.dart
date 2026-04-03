@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/KMS/core/constants/app_style.dart';
@@ -7,10 +9,10 @@ import 'package:innovator/KMS/provider/teacher_provider.dart';
 import 'package:innovator/KMS/provider/user_provider.dart';
 import 'package:innovator/KMS/screens/auth/forgot_password_screen.dart';
 import 'package:innovator/KMS/screens/auth/signup_screen.dart';
+import 'package:innovator/KMS/screens/auth/student_login_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/admin_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/coordinator_dashboard_screen.dart';
-import 'package:innovator/KMS/screens/dashboard/teacher_dashboard_screen.dart'; 
-import 'package:innovator/KMS/screens/dashboard/student_dashboard_screen.dart';
+import 'package:innovator/KMS/screens/dashboard/teacher_dashboard_screen.dart';
 
 class KmsLoginScreen extends ConsumerStatefulWidget {
   const KmsLoginScreen({super.key});
@@ -49,34 +51,34 @@ class _KmsLoginScreenState extends ConsumerState<KmsLoginScreen> {
       if (!mounted) return;
 
       switch (role) {
-        case 'admin':
-        ref.invalidate(userDetailsProvider);
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => AdminDashboardScreen()),
-          );
-          break;
+        // case 'admin':
+        //   ref.invalidate(userDetailsProvider);
+        //   Navigator.pushReplacement(
+        //     context,
+        //     MaterialPageRoute(builder: (_) => AdminDashboardScreen()),
+        //   );
+        //   break;
         case 'coordinator':
-        ref.invalidate(userDetailsProvider);
+          ref.invalidate(userDetailsProvider);
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => CoordinatorDashboardScreen()),
           );
           break;
         case 'teacher':
-       ref.invalidate(userDetailsProvider);
-ref.invalidate(teacherProfileProvider);
-ref.invalidate(kycStatusProvider);
+          ref.invalidate(userDetailsProvider);
+          ref.invalidate(teacherProfileProvider);
+          ref.invalidate(kycStatusProvider);
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => TeacherDashboardScreen()),
           );
           break;
         case 'student':
-        ref.invalidate(userDetailsProvider);
+          ref.invalidate(userDetailsProvider);
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => StudentDashboardScreen()),
+            MaterialPageRoute(builder: (_) => StudentLoginScreen()),
           );
           break;
         default:
@@ -85,12 +87,6 @@ ref.invalidate(kycStatusProvider);
           ).showSnackBar(SnackBar(content: Text('Unknown role: $role')));
       }
     } catch (e) {
-      debugPrint('Login error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Login failed. Please try again.')),
-        );
-      }
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -202,6 +198,24 @@ ref.invalidate(kycStatusProvider);
                               SizedBox(height: context.screenHeight * 0.02),
                               Column(
                                 children: [
+                                  TextButton(
+                                    onPressed:
+                                        () => Navigator.pushReplacement(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder:
+                                                (_) => StudentLoginScreen(),
+                                          ),
+                                        ),
+                                    child: Text(
+                                      'Student Login',
+                                      style: TextStyle(
+                                        decoration: TextDecoration.underline,
+                                        color: Colors.black,
+                                        fontSize: AppStyle.mediumText,
+                                      ),
+                                    ),
+                                  ),
                                   TextButton(
                                     onPressed:
                                         () => Navigator.pushReplacement(

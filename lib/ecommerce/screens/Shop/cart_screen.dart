@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/ecommerce/model/cart_model.dart';
 import 'package:innovator/ecommerce/provider/product_provider.dart';
-import 'package:innovator/ecommerce/screens/Shop/checkout.dart';
+import 'package:innovator/ecommerce/screens/Shop/checkout.dart'; 
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({Key? key}) : super(key: key);

@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/KMS/core/constants/app_style.dart';
@@ -51,6 +53,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         );
       }
     } catch (e) {
+      log('Registration error: $e');
     } finally {
       if (mounted) setState(() => isLoading = false);
     }

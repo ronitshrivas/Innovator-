@@ -1,107 +1,116 @@
 import 'dart:async';
-import 'package:firebase_messaging/firebase_messaging.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart'; 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; 
-import 'package:get/get.dart'; 
+import 'package:flutter/services.dart'; 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
+import 'package:innovator/Innovator/App_data/App_data.dart';
+import 'package:innovator/KMS/screens/student/student_attendance_screen.dart';
 import 'package:innovator/ecommerce/screens/Shop/Shop_Page.dart';
 import 'package:innovator/Innovator/screens/Splash_Screen/splash_screen.dart';
 import 'package:innovator/KMS/screens/auth/login_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/admin_dashboard_screen.dart';
-import 'package:innovator/KMS/screens/dashboard/student_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/teacher_dashboard_screen.dart';
-import 'dart:developer' as developer; 
+import 'dart:developer' as developer;
 
 late Size mq;
-late FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
+//late FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
 GlobalKey<NavigatorState> get navigatorKey => Get.key;
 
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  print('Background notification: ${message.notification?.title}');
+}
+
 //: Track Firebase initialization state
-bool _isFirebaseInitialized = false;
+//bool _isFirebaseInitialized = false;
 
-void _showImmediateFeedback(RemoteMessage message) {
-  try {
-    final title =
-        message.notification?.title ??
-        message.data['senderName'] ??
-        'New Message';
-    final body =
-        message.notification?.body ?? message.data['message'] ?? 'New message';
+// void _showImmediateFeedback(RemoteMessage message) {
+//   try {
+//     final title =
+//         message.notification?.title ??
+//         message.data['senderName'] ??
+//         'New Message';
+//     final body =
+//         message.notification?.body ?? message.data['message'] ?? 'New message';
 
-    Get.snackbar(
-      title,
-      body,
-      snackPosition: SnackPosition.TOP,
-      backgroundColor: const Color.fromRGBO(244, 135, 6, 0.95),
-      colorText: Colors.white,
-      duration: const Duration(seconds: 3),
-      margin: const EdgeInsets.all(16),
-      borderRadius: 12,
-      isDismissible: true,
-      mainButton: TextButton(
-        onPressed: () {
-          Get.back();
-          _handleNotificationTapFromMessage(message);
-        },
-        child: const Text(
-          'View',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-      ),
-    );
-    HapticFeedback.lightImpact();
-  } catch (e) {
-    developer.log('Immediate feedback error: $e');
-  }
-}
+//     Get.snackbar(
+//       title,
+//       body,
+//       snackPosition: SnackPosition.TOP,
+//       backgroundColor: const Color.fromRGBO(244, 135, 6, 0.95),
+//       colorText: Colors.white,
+//       duration: const Duration(seconds: 3),
+//       margin: const EdgeInsets.all(16),
+//       borderRadius: 12,
+//       isDismissible: true,
+//       mainButton: TextButton(
+//         onPressed: () {
+//           Get.back();
+//           _handleNotificationTapFromMessage(message);
+//         },
+//         child: const Text(
+//           'View',
+//           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+//         ),
+//       ),
+//     );
+//     HapticFeedback.lightImpact();
+//   } catch (e) {
+//     developer.log('Immediate feedback error: $e');
+//   }
+// }
 
-void _handleNotificationTapFromMessage(RemoteMessage message) {
-  try {
-    final data = message.data;
-    final type = data['type']?.toString() ?? '';
+// void _handleNotificationTapFromMessage(RemoteMessage message) {
+//   try {
+//     final data = message.data;
+//     final type = data['type']?.toString() ?? '';
 
-    switch (type) {
-      case 'chat':
-      case 'message':
-        _navigateToChatFromNotification(data);
-        break;
-      default:
-        Get.offAllNamed('/home');
-        break;
-    }
-  } catch (e) {
-    developer.log('Notification tap error: $e');
-  }
-}
+//     switch (type) {
+//       case 'chat':
+//       case 'message':
+//         _navigateToChatFromNotification(data);
+//         break;
+//       default:
+//         Get.offAllNamed('/home');
+//         break;
+//     }
+//   } catch (e) {
+//     developer.log('Notification tap error: $e');
+//   }
+// }
 
-void _navigateToChatFromNotification(Map<String, dynamic> data) {
-  try {
-    final senderId = data['senderId']?.toString() ?? '';
-    final senderName = data['senderName']?.toString() ?? 'Unknown';
-    final chatId = data['chatId']?.toString() ?? '';
+// void _navigateToChatFromNotification(Map<String, dynamic> data) {
+//   try {
+//     final senderId = data['senderId']?.toString() ?? '';
+//     final senderName = data['senderName']?.toString() ?? 'Unknown';
+//     final chatId = data['chatId']?.toString() ?? '';
 
-    if (senderId.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Get.toNamed(
-          '/chat',
-          arguments: {
-            'receiverUser': {
-              'id': senderId,
-              'userId': senderId,
-              '_id': senderId,
-              'name': senderName,
-            },
-            'chatId': chatId,
-            'fromNotification': true,
-          },
-        );
-      });
-    }
-  } catch (e) {
-    developer.log('Chat navigation error: $e');
-  }
-}
+//     if (senderId.isNotEmpty) {
+//       WidgetsBinding.instance.addPostFrameCallback((_) {
+//         Get.toNamed(
+//           '/chat',
+//           arguments: {
+//             'receiverUser': {
+//               'id': senderId,
+//               'userId': senderId,
+//               '_id': senderId,
+//               'name': senderName,
+//             },
+//             'chatId': chatId,
+//             'fromNotification': true,
+//           },
+//         );
+//       });
+//     }
+//   } catch (e) {
+//     developer.log('Chat navigation error: $e');
+//   }
+// }
 
 void main() async {
   // Wrap in error handling zone
@@ -123,7 +132,11 @@ void main() async {
             statusBarIconBrightness: Brightness.dark,
           ),
         );
+        await Firebase.initializeApp();
 
+        FirebaseMessaging.onBackgroundMessage(
+          _firebaseMessagingBackgroundHandler,
+        );
         //  Initialize Firebase FIRST before anything else
         //developer.log('Pre-initializing Firebase in main()...');
         // if (Firebase.apps.isEmpty) {
@@ -178,37 +191,19 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // WidgetsBinding.instance.addObserver(this);
     developer.log('InnovatorHomePage initialized');
-
-    // Initialize deferred services after first frame
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   developer.log('First frame rendered, starting deferred services...');
-    //   //_initializeDeferredServices();
-
-    //   //  Wait longer before starting polling to ensure overlay is ready
-    //   Future.delayed(const Duration(seconds: 3), () {
-    //     if (mounted && InAppNotificationService().isReady) {
-    //       _pollingService.startPolling();
-    //       developer.log('Notification polling started from main');
-    //     } else {
-    //       // Retry after another delay if not ready
-    //       Future.delayed(const Duration(seconds: 2), () {
-    //         if (mounted) {
-    //           // Force start even if not "ready" - the service will handle it
-    //           _pollingService.startPolling();
-    //           developer.log(' Notification polling started (forced retry)');
-    //         }
-    //       });
-    //     }
-    //   });
-    // });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _setupFCM();
+    });
   }
 
   @override
   void dispose() {
     //WidgetsBinding.instance.removeObserver(this);
     // _pollingService.stopPolling();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -235,6 +230,140 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
 
   // Ronit
 
+  Future<void> _setupFCM() async {
+    try {
+      // Ask permission (required on iOS, good on Android too)
+      NotificationSettings settings = await FirebaseMessaging.instance
+          .requestPermission(alert: true, badge: true, sound: true);
+
+      developer.log('FCM permission: ${settings.authorizationStatus}');
+
+      if (settings.authorizationStatus == AuthorizationStatus.denied) {
+        developer.log('User denied notification permission');
+        return;
+      }
+
+      // Get this device's FCM token
+      String? token = await FirebaseMessaging.instance.getToken();
+      developer.log('FCM Token: $token');
+
+      // Send token to your Django backend
+      if (token != null) {
+        await _sendTokenToDjango(token);
+      }
+
+      // Listen for token refresh (token can change, keep Django updated)
+      FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+        developer.log('FCM Token refreshed: $newToken');
+        _sendTokenToDjango(newToken);
+      });
+
+      // App is OPEN — notification arrives
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        developer.log(
+          'Foreground notification: ${message.notification?.title}',
+        );
+        _showForegroundNotification(message);
+      });
+
+      // App was in BACKGROUND — user tapped the notification
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        developer.log('Notification tapped from background');
+        _handleNotificationTap(message);
+      });
+
+      // App was KILLED — user tapped the notification to open app
+      RemoteMessage? initialMessage =
+          await FirebaseMessaging.instance.getInitialMessage();
+      if (initialMessage != null) {
+        developer.log('App opened from killed state via notification');
+        _handleNotificationTap(initialMessage);
+      }
+    } catch (e) {
+      developer.log('FCM setup error: $e');
+    }
+  }
+
+  Future<void> _sendTokenToDjango(String token) async {
+    try {
+      final accessToken = AppData().accessToken;
+      if (accessToken == null || accessToken.isEmpty) return;
+
+      // Get real device name
+      final deviceInfo = DeviceInfoPlugin();
+      String deviceName = 'Unknown Device';
+
+      if (Platform.isAndroid) {
+        final androidInfo = await deviceInfo.androidInfo;
+        deviceName = '${androidInfo.manufacturer} ${androidInfo.model}';
+        // e.g. "Samsung Galaxy S24"
+      } else if (Platform.isIOS) {
+        final iosInfo = await deviceInfo.iosInfo;
+        deviceName = iosInfo.utsname.machine;
+        // e.g. "iPhone15,2"
+      }
+
+      final response = await http.post(
+        Uri.parse('http://182.93.94.220:8005/api/fcm-tokens/'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode({'token': token, 'device_name': deviceName}),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        developer.log('FCM token registered successfully');
+      } else {
+        developer.log(
+          'FCM registration failed: ${response.statusCode} ${response.body}',
+        );
+      }
+    } catch (e) {
+      developer.log('Failed to send FCM token: $e');
+    }
+  }
+
+  void _showForegroundNotification(RemoteMessage message) {
+    final title = message.notification?.title ?? 'New notification';
+    final body = message.notification?.body ?? '';
+
+    Get.snackbar(
+      title,
+      body,
+      snackPosition: SnackPosition.TOP,
+      backgroundColor: const Color.fromRGBO(244, 135, 6, 0.95),
+      colorText: Colors.white,
+      duration: const Duration(seconds: 4),
+      margin: const EdgeInsets.all(16),
+      borderRadius: 12,
+      isDismissible: true,
+    );
+  }
+
+  // ✅ ADD THIS — Navigate based on notification type
+  void _handleNotificationTap(RemoteMessage message) {
+    final data = message.data;
+    final type = data['type']?.toString() ?? '';
+
+    developer.log('Notification tapped — type: $type, data: $data');
+
+    switch (type) {
+      case 'follow':
+        // Navigate to profile
+        // Get.toNamed('/profile', arguments: {'user_id': data['user_id']});
+        break;
+      case 'reaction':
+      case 'comment':
+        // Navigate to post
+        // Get.toNamed('/post', arguments: {'post_id': data['post_id']});
+        break;
+      default:
+        // Go to home feed
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     mq = MediaQuery.of(context).size;
@@ -248,7 +377,7 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
         '/kms/login': (_) => KmsLoginScreen(),
         '/kms/adminDasboard': (_) => AdminDashboardScreen(),
         '/kms/partnerDashboard': (_) => TeacherDashboardScreen(),
-        '/kms/studentDashboard': (_) => StudentDashboardScreen(),
+        '/kms/studentDashboard': (_) => StudentAttendanceScreen(),
       },
       title: 'Innovator',
       theme: _buildAppTheme(),
@@ -258,12 +387,7 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
       // home: LoginScreen(),
       // use this authwrapper when in the production when the token things is solved
       // home:   AuthWrapper(),
-      getPages: [
-        GetPage(
-          name: '/shop',
-          page: () => const ShopPage(), 
-        ),
-      ],
+      getPages: [GetPage(name: '/shop', page: () => const ShopPage())],
 
       // GetPage(
       //   name: '/chat',
@@ -310,3 +434,5 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
     );
   }
 }
+
+class AppAppColors {}

@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:in_app_update/in_app_update.dart';
 import 'package:innovator/Innovator/screens/Feed/Inner_Homepage.dart';
 import 'package:innovator/Innovator/screens/Feed/Video_Feed.dart';
-import 'package:innovator/Innovator/services/notifcation_polling_services.dart';
-import 'package:innovator/Innovator/utils/Drawer/custom_drawer.dart';
 import 'package:innovator/Innovator/widget/FloatingMenuwidget.dart';
 
 class Homepage extends StatefulWidget {

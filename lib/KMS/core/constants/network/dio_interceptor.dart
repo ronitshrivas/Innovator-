@@ -8,15 +8,15 @@ import 'package:innovator/KMS/core/utils/toast_utils.dart';
 
 class AppInterceptor extends Interceptor {
   final TokenService _tokenService = TokenService();
-  final ConnectivityService _connectivityService = ConnectivityService(); 
+  final ConnectivityService _connectivityService = ConnectivityService();
   bool _isRefreshing = false;
   final List<_PendingRequest> _pendingRequests = [];
- 
-  static const _authEndpoints = ['/auth/sso/login/', '/auth/register/'];
- 
+
+  static const _authEndpoints = ['/auth/sso/login/', '/auth/register/', '/student/login/',];
+
   static const _refreshEndpoint = '/auth/token/refresh/';
 
-  //Request 
+  //Request
   @override
   void onRequest(
     RequestOptions options,
@@ -70,7 +70,7 @@ class AppInterceptor extends Interceptor {
     log(
       'ERROR[${err.response?.statusCode}] => PATH: ${err.requestOptions.path}',
     );
- 
+
     if (err.response?.statusCode == 401 &&
         !_isAuthEndpoint(err.requestOptions.path)) {
       final retried = await _handleTokenRefresh(err, handler);
@@ -90,11 +90,11 @@ class AppInterceptor extends Interceptor {
     );
   }
 
-  //Token Refresh 
+  //Token Refresh
   Future<bool> _handleTokenRefresh(
     DioException err,
     ErrorInterceptorHandler handler,
-  ) async { 
+  ) async {
     if (_isRefreshing) {
       _pendingRequests.add(_PendingRequest(err, handler));
       return true;
@@ -112,20 +112,19 @@ class AppInterceptor extends Interceptor {
         return false;
       }
 
-      log('Access token expired — refreshing...'); 
+      log('Access token expired — refreshing...');
       final refreshDio = Dio(BaseOptions(baseUrl: ApiConstants.baseUrl));
       final response = await refreshDio.post(
         _refreshEndpoint,
         data: {'refresh': refreshToken},
       );
-
-      final newAccessToken = response.data['access_token'] as String?;
-      final newRefreshToken = response.data['refresh_token'] as String?;
+   final newAccessToken =
+          (response.data['access_token'] ?? response.data['access']) as String?;
+      final newRefreshToken =
+          (response.data['refresh_token'] ?? response.data['refresh']) as String?;
 
       if (newAccessToken == null || newAccessToken.isEmpty) {
-        log(
-          'Refresh response did not include access_token — forcing logout',
-        );
+        log('Refresh response did not include access_token — forcing logout');
         await _forceLogout();
         _isRefreshing = false;
         return false;
@@ -137,10 +136,8 @@ class AppInterceptor extends Interceptor {
       );
       log(' Token refreshed and saved');
 
-     
       await _retryRequest(err.requestOptions, handler, newAccessToken);
 
-     
       for (final pending in _pendingRequests) {
         await _retryRequest(
           pending.error.requestOptions,
@@ -154,26 +151,26 @@ class AppInterceptor extends Interceptor {
       return true;
     } on DioException catch (e) {
       log('Token refresh failed: ${e.message}');
-     _rejectAllPending();
+      _rejectAllPending();
       await _forceLogout();
       return false;
-    }
-    finally{
+    } finally {
       _isRefreshing = false;
     }
   }
+
   void _rejectAllPending() {
-  for (final pending in _pendingRequests) {
-    pending.handler.reject(
-      DioException(
-        requestOptions: pending.error.requestOptions,
-        error: UnauthorizedException('Session expired'),
-        type: DioExceptionType.badResponse,
-      ),
-    );
+    for (final pending in _pendingRequests) {
+      pending.handler.reject(
+        DioException(
+          requestOptions: pending.error.requestOptions,
+          error: UnauthorizedException('Session expired'),
+          type: DioExceptionType.badResponse,
+        ),
+      );
+    }
+    _pendingRequests.clear();
   }
-  _pendingRequests.clear();
-}
 
   Future<void> _retryRequest(
     RequestOptions requestOptions,
@@ -213,9 +210,9 @@ class AppInterceptor extends Interceptor {
 
       final data = response.data;
       if (data is! Map<String, dynamic>) return;
-
-      final accessToken = data['access_token'] as String?;
-      final refreshToken = data['refresh_token'] as String?;
+      final accessToken = (data['access_token'] ?? data['access']) as String?;
+      final refreshToken =
+          (data['refresh_token'] ?? data['refresh']) as String?;
 
       if (accessToken != null && accessToken.isNotEmpty) {
         await _tokenService.saveTokens(
@@ -279,63 +276,56 @@ class AppInterceptor extends Interceptor {
     }
   }
 
- 
   String? _extractMessage(dynamic data) {
-  if (data == null) return null;
+    if (data == null) return null;
 
-  if (data is Map) {
-    final flat =
-        data['message'] ?? data['detail'] ?? data['error'] ?? data['msg'];
-    if (flat != null && flat.toString().isNotEmpty) {
-      return flat.toString();
+    if (data is Map) {
+      final flat =
+          data['message'] ?? data['detail'] ?? data['error'] ?? data['msg'];
+      if (flat != null && flat.toString().isNotEmpty) {
+        return flat.toString();
+      }
+
+      final nonField = data['non_field_errors'];
+      if (nonField is List && nonField.isNotEmpty) {
+        return nonField.first.toString();
+      }
     }
 
-    final nonField = data['non_field_errors'];
-    if (nonField is List && nonField.isNotEmpty) {
-      return nonField.first.toString();
-    }
+    if (data is String) return data;
+    return null;
   }
 
-  if (data is String) return data;
-  return null;
-}
+  bool _shouldShowSuccessToast(Response response) {
+    final path = response.requestOptions.path;
 
-bool _shouldShowSuccessToast(Response response) {
-  final path = response.requestOptions.path;
- 
-  final silentEndpoints = [
-    '/teacher/check-in/',
-    '/teacher/check-out/',
-    '/attendance/mark/',
-    '/teacher/kyc/',
-    '/student/create/',
-  ];
+    final silentEndpoints = [
+      '/teacher/check-in/',
+      '/teacher/check-out/',
+      '/attendance/mark/',
+      '/teacher/kyc/',
+      '/student/create/',
+    ];
 
-  if (silentEndpoints.any((e) => path.contains(e))) return false;
+    if (silentEndpoints.any((e) => path.contains(e))) return false;
 
-  return ['POST', 'PUT', 'DELETE', 'PATCH']
-      .contains(response.requestOptions.method);
-}
+    return [
+      'POST',
+      'PUT',
+      'DELETE',
+      'PATCH',
+    ].contains(response.requestOptions.method);
+  }
 
-  //Helpers 
+  //Helpers
 
   bool _isAuthEndpoint(String path) {
     return _authEndpoints.any(
       (endpoint) => path.toLowerCase().contains(endpoint.toLowerCase()),
     );
   }
-
-  // bool _shouldShowSuccessToast(Response response) {
-  //   return [
-  //     'POST',
-  //     'PUT',
-  //     'DELETE',
-  //     'PATCH',
-  //   ].contains(response.requestOptions.method);
-  // }
 }
 
-// Holds a queued request that arrived while a token refresh was in progress
 class _PendingRequest {
   final DioException error;
   final ErrorInterceptorHandler handler;
