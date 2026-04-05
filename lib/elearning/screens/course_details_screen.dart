@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/elearning/model/course_list_model.dart';
 import 'package:innovator/elearning/provider/course_provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 class CourseDetailScreen extends ConsumerStatefulWidget {
   final CourseListModel course;
@@ -17,7 +17,7 @@ class CourseDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
-    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   VideoPlayerController? _videoController;
 
@@ -27,8 +27,6 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
   int _selectedIndex = 0;
   bool _videoStarted = false;
 
-  // Payment verification state
-  bool _pendingPaymentCheck = false;
   bool _isVerifyingPayment = false;
 
   static const List<String> _tabs = ['Lessons', 'Docs', 'About'];
@@ -36,19 +34,8 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: _tabs.length, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _maybeStartVideo());
-  }
-
-  //App Lifecycle: auto-verify payment on resume
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _pendingPaymentCheck) {
-      _pendingPaymentCheck = false;
-      Future.delayed(const Duration(milliseconds: 400), _verifyAndUnlock);
-    }
   }
 
   /// Silently refreshes enrollment; if now enrolled → auto-play video.
@@ -57,9 +44,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
     setState(() => _isVerifyingPayment = true);
 
     try {
-      // Refresh enrollment list from server
       await ref.refresh(enrollmentProvider.future);
-
       if (!mounted) return;
 
       final isNowEnrolled = ref
@@ -85,7 +70,6 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
           );
         }
       } else {
-        // Not yet enrolled — payment may still be processing
         setState(() => _isVerifyingPayment = false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -120,14 +104,13 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     _videoController?.dispose();
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     super.dispose();
   }
 
-  //Video Init
+  // ─── Video Init ───────────────────────────────────────────────────────────
 
   void _initVideo(CourseContent content) {
     final oldController = _videoController;
@@ -182,7 +165,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
         });
   }
 
-  //Enroll
+  // ─── Enroll ───────────────────────────────────────────────────────────────
 
   Future<void> _enroll() async {
     final courseId = widget.course.id;
@@ -190,7 +173,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
 
     try {
       if (widget.course.isFree) {
-        //FREE: enroll directly
+        // FREE: enroll directly
         await ref.read(courseServiceProvider).enrollCourse(courseId);
         await ref.refresh(enrollmentProvider.future);
         ref.read(enrollLoadingProvider(courseId).notifier).setLoading(false);
@@ -212,27 +195,30 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
           );
         }
       } else {
-         final result = await ref
+        // PAID: open Khalti WebView inside the app
+        final result = await ref
             .read(courseServiceProvider)
             .initiatePayment(courseId);
         ref.read(enrollLoadingProvider(courseId).notifier).setLoading(false);
 
         final paymentUrl = result['payment_url'] as String?;
-
         if (paymentUrl == null) {
           _showErrorSnack('Could not initiate payment. Please try again.');
           return;
         }
 
-        final uri = Uri.parse(paymentUrl);
-        if (await canLaunchUrl(uri)) {
-          // Mark that we're waiting for the user to return from payment
-          _pendingPaymentCheck = true;
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-          // Verification happens automatically in didChangeAppLifecycleState
-        } else {
-          _showErrorSnack('Could not open payment page.');
-        }
+        if (!mounted) return;
+
+        // Open payment WebView and wait for user to return
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => KhaltiWebViewScreen(paymentUrl: paymentUrl),
+          ),
+        );
+
+        // Always verify enrollment when user returns (paid or cancelled)
+        if (mounted) _verifyAndUnlock();
       }
     } catch (e) {
       ref.read(enrollLoadingProvider(courseId).notifier).setLoading(false);
@@ -252,7 +238,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
     );
   }
 
-  //Build
+  // ─── Build ────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -289,7 +275,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
             ],
           ),
 
-          //Payment verification overlay
+          // Payment verification overlay
           if (_isVerifyingPayment)
             Container(
               color: Colors.black.withAlpha(160),
@@ -342,7 +328,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
     );
   }
 
-  //Title Bar
+  // ─── Title Bar ────────────────────────────────────────────────────────────
 
   Widget _buildTitleBar() {
     return Container(
@@ -393,7 +379,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
             tabs: _tabs.map((t) => Tab(text: t)).toList(),
             labelColor: Colors.black,
             unselectedLabelColor: const Color(0xFF94A3B8),
-            indicatorColor: Color.fromRGBO(244, 135, 6, 1),
+            indicatorColor: const Color.fromRGBO(244, 135, 6, 1),
             indicatorWeight: 2.5,
             labelStyle: const TextStyle(
               fontWeight: FontWeight.w600,
@@ -405,7 +391,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
     );
   }
 
-  //Video Section
+  // ─── Video Section ────────────────────────────────────────────────────────
 
   Widget _buildVideoSection(bool isEnrolled) {
     final isLoading = ref.watch(enrollLoadingProvider(widget.course.id));
@@ -504,7 +490,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
     ),
   );
 
-  //Lessons Tab
+  // ─── Lessons Tab ──────────────────────────────────────────────────────────
 
   Widget _buildLessonsTab(bool isEnrolled) {
     final contents = widget.course.contents;
@@ -530,12 +516,11 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              // color: active ? Colors.grey.shade200 : Colors.white,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color:
                     active
-                        ? Color.fromRGBO(244, 135, 6, 1)
+                        ? const Color.fromRGBO(244, 135, 6, 1)
                         : Colors.transparent,
                 width: 1.5,
               ),
@@ -646,20 +631,20 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
   }
 
   Widget _thumbPlaceholder(int order) => Container(
-      color: const Color(0xFFFEF3C7),
+    color: const Color(0xFFFEF3C7),
     child: Center(
       child: Text(
         '$order',
         style: const TextStyle(
           fontWeight: FontWeight.bold,
-         color: Color(0xFFF59E0B),
+          color: Color(0xFFF59E0B),
           fontSize: 16,
         ),
       ),
     ),
   );
 
-  //Docs Tab
+  // ─── Docs Tab ─────────────────────────────────────────────────────────────
 
   Widget _buildDocsTab(bool isEnrolled) {
     final docs =
@@ -678,7 +663,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
     );
   }
 
-  //About Tab
+  // ─── About Tab ────────────────────────────────────────────────────────────
 
   Widget _buildAboutTab(bool isEnrolled) {
     final course = widget.course;
@@ -768,7 +753,200 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
   );
 }
 
-//Video Player With Controls
+// ─── Khalti WebView Screen ────────────────────────────────────────────────────
+
+
+
+// ─── Khalti WebView Screen ────────────────────────────────────────────────────
+
+class KhaltiWebViewScreen extends StatefulWidget {
+  final String paymentUrl;
+
+  const KhaltiWebViewScreen({Key? key, required this.paymentUrl})
+      : super(key: key);
+
+  @override
+  State<KhaltiWebViewScreen> createState() => _KhaltiWebViewScreenState();
+}
+
+class _KhaltiWebViewScreenState extends State<KhaltiWebViewScreen> {
+  static const _khaltiPurple = Color(0xFF5C2D91);
+
+  late final WebViewController _controller;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(Colors.white)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageStarted: (_) => setState(() => _isLoading = true),
+          onPageFinished: (_) => setState(() => _isLoading = false),
+          onNavigationRequest: (request) {
+            final url = request.url;
+            if (url.contains('payment-success') ||
+                url.contains('payment-complete') ||
+                url.contains('payment/success') ||
+                url.contains('payment/failure') ||
+                url.contains('payment/cancel') ||
+                url.contains('khalti/callback') ||
+                url.startsWith('innovator://')) {
+              Navigator.pop(context);
+              return NavigationDecision.prevent;
+            }
+            return NavigationDecision.navigate;
+          },
+        ),
+      )
+      ..loadRequest(Uri.parse(widget.paymentUrl));
+  }
+
+  Future<bool> _onWillPop() async {
+    if (await _controller.canGoBack()) {
+      _controller.goBack();
+      return false;
+    }
+    final exit = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Cancel Payment?'),
+        content: const Text(
+          'Are you sure you want to leave? Your payment will not be completed.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Stay'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Leave', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    return exit ?? false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: _khaltiPurple,
+          foregroundColor: Colors.white,
+          automaticallyImplyLeading: false,
+          title: Row(
+            children: [
+              Image.asset(
+                'assets/icon/khalti_logo.png',
+                height: 22,
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.account_balance_wallet,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'Pay with Khalti',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+              ),
+            ],
+          ),
+          actions: [
+            if (_isLoading)
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                ),
+              )
+            else
+              GestureDetector(
+                onTap: () async {
+                  final exit = await showDialog<bool>(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      title: const Text('Cancel Payment?'),
+                      content: const Text(
+                        'Are you sure you want to leave? Your payment will not be completed.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('Stay'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red),
+                          child: const Text('Leave',
+                              style: TextStyle(color: Colors.white)),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (exit == true && context.mounted) Navigator.pop(context);
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(30),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.white.withAlpha(60)),
+                  ),
+                  child: const Icon(Icons.close, size: 16, color: Colors.white),
+                ),
+              ),
+          ],
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(1),
+            child: Container(height: 1, color: Colors.white.withAlpha(40)),
+          ),
+        ),
+        body: Stack(
+          children: [
+            WebViewWidget(controller: _controller),
+            if (_isLoading)
+              Container(
+                color: Colors.white.withAlpha(220),
+                child: const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(color: _khaltiPurple),
+                      SizedBox(height: 14),
+                      Text(
+                        'Loading Khalti...',
+                        style: TextStyle(color: _khaltiPurple),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Video Player With Controls ───────────────────────────────────────────────
 
 class _VideoPlayerWithControls extends StatefulWidget {
   final VideoPlayerController controller;
@@ -1211,7 +1389,7 @@ class _VideoPlayerWithControlsState extends State<_VideoPlayerWithControls> {
   }
 }
 
-//Fullscreen Video Screen
+// ─── Fullscreen Video Screen ──────────────────────────────────────────────────
 
 class _FullscreenVideoScreen extends StatefulWidget {
   final VideoPlayerController controller;
@@ -1254,7 +1432,7 @@ class _FullscreenVideoScreenState extends State<_FullscreenVideoScreen> {
   }
 }
 
-//Locked Overlay
+// ─── Locked Overlay ───────────────────────────────────────────────────────────
 
 class _LockedOverlay extends StatelessWidget {
   final CourseListModel course;
@@ -1310,7 +1488,7 @@ class _LockedOverlay extends StatelessWidget {
   }
 }
 
-//Enroll Button
+// ─── Enroll Button ────────────────────────────────────────────────────────────
 
 class _EnrollButton extends StatelessWidget {
   final bool isFree;
@@ -1384,7 +1562,7 @@ class _EnrollButton extends StatelessWidget {
   }
 }
 
-//Course Badge
+// ─── Course Badge ─────────────────────────────────────────────────────────────
 
 class _CourseBadge extends StatelessWidget {
   final bool isFree;
@@ -1394,12 +1572,12 @@ class _CourseBadge extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
     decoration: BoxDecoration(
-      color: Color.fromRGBO(244, 135, 6, 1),
+      color: const Color.fromRGBO(244, 135, 6, 1),
       borderRadius: BorderRadius.circular(20),
     ),
     child: Text(
       isFree ? 'Free' : 'Paid',
-      style: TextStyle(
+      style: const TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w600,
         color: Colors.white,
@@ -1408,7 +1586,7 @@ class _CourseBadge extends StatelessWidget {
   );
 }
 
-//Doc Item
+// ─── Doc Item ─────────────────────────────────────────────────────────────────
 
 class _DocItem extends StatelessWidget {
   final CourseContent content;
@@ -1514,7 +1692,7 @@ class _DocItem extends StatelessWidget {
   );
 }
 
-//PDF Viewer
+// ─── PDF Viewer ───────────────────────────────────────────────────────────────
 
 class _PdfViewScreen extends StatelessWidget {
   final String url;
@@ -1540,7 +1718,7 @@ class _PdfViewScreen extends StatelessWidget {
   );
 }
 
-//About Card
+// ─── About Card ───────────────────────────────────────────────────────────────
 
 class _AboutCard extends StatelessWidget {
   final IconData icon;
