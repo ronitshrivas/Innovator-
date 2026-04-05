@@ -951,6 +951,14 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                                 icon: Icons.person,
                               ),
                               ProfileInfoCard(
+                                title: 'Full Name',
+                                value:
+                                    profile.fullName.isNotEmpty
+                                        ? profile.fullName
+                                        : '(not set)',
+                                icon: Icons.badge,
+                              ),
+                              ProfileInfoCard(
                                 title: 'Email',
                                 value: profile.email,
                                 icon: Icons.email,
