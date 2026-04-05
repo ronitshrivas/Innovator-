@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
@@ -156,6 +157,7 @@ class EventsNotifier extends StateNotifier<EventsState> {
   }
 
   Future<void> _init() async {
+    await AppData().initialize();
     await _loadFavorites();
     await fetchEvents();
   }
@@ -167,6 +169,7 @@ class EventsNotifier extends StateNotifier<EventsState> {
   }
 
   Future<void> fetchEvents() async {
+    final token = AppData().accessToken ?? '';
     state = state.copyWith(isLoading: true, error: null);
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -179,7 +182,10 @@ class EventsNotifier extends StateNotifier<EventsState> {
         _applyFavorites(list);
         state = state.copyWith(events: list, isLoading: false);
       }
-      final res = await http.get(Uri.parse(_kBaseUrl));
+      final res = await http.get(
+        Uri.parse(_kBaseUrl),
+        headers: {if (token.isNotEmpty) 'Authorization': 'Bearer $token'},
+      );
       if (res.statusCode == 200) {
         final fresh =
             (json.decode(res.body) as List)
@@ -225,14 +231,14 @@ class EventsNotifier extends StateNotifier<EventsState> {
     required String description,
     required String location,
     required String date,
-    String authToken = '',
   }) async {
+    final token = AppData().accessToken ?? '';
     try {
       final res = await http.post(
         Uri.parse(_kBaseUrl),
         headers: {
           'Content-Type': 'application/json',
-          if (authToken.isNotEmpty) 'Authorization': 'Bearer $authToken',
+          if (token.isNotEmpty) 'Authorization': 'Bearer $token',
         },
         body: json.encode({
           'title': title,
@@ -246,8 +252,11 @@ class EventsNotifier extends StateNotifier<EventsState> {
         await fetchEvents();
         return true;
       }
+      // Log the actual error so you can see what the server says
+      print('createEvent failed: ${res.statusCode} ${res.body}');
       return false;
-    } catch (_) {
+    } catch (e) {
+      print('createEvent exception: $e');
       return false;
     }
   }

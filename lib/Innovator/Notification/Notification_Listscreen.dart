@@ -904,47 +904,48 @@ class _NotificationListScreenState extends State<NotificationListScreen>
             notification.title!,
             style: TextStyle(
               fontSize: 13,
-              fontWeight: FontWeight.w700,
+              fontWeight:
+                  notification.isRead ? FontWeight.w600 : FontWeight.w700,
               color: _getNotificationColor(notification.type),
             ),
           ),
-        const SizedBox(height: 2),
+        //const SizedBox(height: 2),
         // Message body (e.g. "ram reacted haha to your post.")
-        RichText(
-          text: TextSpan(
-            style: TextStyle(
-              fontSize: 15,
-              color: Colors.black87,
-              fontWeight:
-                  notification.isRead ? FontWeight.w400 : FontWeight.w600,
-              height: 1.3,
-            ),
-            children: [
-              if (notification.senderUsername != null)
-                TextSpan(
-                  text: '${notification.senderUsername} ',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: _getNotificationColor(notification.type),
-                  ),
-                ),
-              TextSpan(text: _stripUsername(notification)),
-            ],
-          ),
-        ),
+        // RichText(
+        //   text: TextSpan(
+        //     style: TextStyle(
+        //       fontSize: 15,
+        //       color: Colors.black87,
+        //       fontWeight:
+        //           notification.isRead ? FontWeight.w400 : FontWeight.w600,
+        //       height: 1.3,
+        //     ),
+        //     // children: [
+        //     //   if (notification.senderUsername != null)
+        //     //     TextSpan(
+        //     //       text: '${notification.senderUsername} ',
+        //     //       style: TextStyle(
+        //     //         fontWeight: FontWeight.bold,
+        //     //         color: _getNotificationColor(notification.type),
+        //     //       ),
+        //     //     ),
+        //     //   //TextSpan(text: _stripUsername(notification)),
+        //     // ],
+        //   ),
+        // ),
       ],
     );
   }
 
   /// Strips the leading username from the message since we render it separately.
-  String _stripUsername(NotificationModel n) {
-    final msg = n.message;
-    final username = n.senderUsername;
-    if (username != null && msg.startsWith(username)) {
-      return msg.substring(username.length).trimLeft();
-    }
-    return msg;
-  }
+  // String _stripUsername(NotificationModel n) {
+  //   final msg = n.message;
+  //   final username = n.senderUsername;
+  //   if (username != null && msg.startsWith(username)) {
+  //     return msg.substring(username.length).trimLeft();
+  //   }
+  //   return msg;
+  // }
 
   Widget _buildNotificationMeta(NotificationModel notification) {
     final date = DateTime.parse(notification.createdAt).toLocal();
