@@ -212,8 +212,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
           );
         }
       } else {
-        //PAID: open Khalti, auto-verify on return
-        final result = await ref
+         final result = await ref
             .read(courseServiceProvider)
             .initiatePayment(courseId);
         ref.read(enrollLoadingProvider(courseId).notifier).setLoading(false);
