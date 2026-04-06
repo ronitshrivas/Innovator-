@@ -139,8 +139,8 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
                     : 'Your payroll records',
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.8),
-                  fontSize: 13,
-                  fontFamily: 'Inter',
+                  fontSize: 15,
+                  fontFamily: 'InterThin',
                 ),
               ),
             ),

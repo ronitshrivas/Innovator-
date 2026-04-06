@@ -8,9 +8,7 @@ import 'package:innovator/KMS/model/teacher_model/teacher_salary_slips.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
-// Invoice List Screen
-
-// Skeleton
+ 
 
 class SkeletonSlipCard extends StatefulWidget {
   final int index;
@@ -106,117 +104,121 @@ class SlipCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap:
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.07),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${slip.monthName} ${slip.year}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                        fontFamily: 'Inter',
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+                _StatusBadge(status: slip.status),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1),
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                SlipStat(
+                  label: 'Base Salary',
+                  value: 'Rs. ${_fmt(slip.baseSalary)}',
+                  color: Colors.black87,
+                ),
+                SlipStat(
+                  label: 'Net Salary',
+                  value: 'Rs. ${_fmt(slip.netSalary)}',
+                  color: AppStyle.primaryColor,
+                  isBold: true,
+                ),
+                SlipStat(
+                  label: 'Classes',
+                  value: '${slip.totalClasses}',
+                  color: Colors.black87,
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Text(
+                  'Created: ${slip.createdAt.day}/${slip.createdAt.month}/${slip.createdAt.year}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontFamily: 'InterThin',
+                    color: Colors.black87.withAlpha(100),
+                  ),
+                ),
+                const Spacer(),
+                GestureDetector(
+                    onTap:
           () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => InvoiceDetailScreen(slip: slip)),
           ),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.07),
-              blurRadius: 14,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 14,
+                        color: Colors.black,
+                      ),
+                      const SizedBox(width: 4),
                       Text(
-                        '${slip.monthName} ${slip.year}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                          fontFamily: 'Inter',
-                          color: Colors.black87,
+                        'View invoice',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontFamily: 'InterThin',
+                          color: Colors.black,
                         ),
                       ),
                     ],
                   ),
-                  _StatusBadge(status: slip.status),
-                ],
-              ),
-              const SizedBox(height: 16),
-              const Divider(height: 1),
-              const SizedBox(height: 14),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _SlipStat(
-                    label: 'Base Salary',
-                    value: 'Rs. ${_fmt(slip.baseSalary)}',
-                    color: Colors.black87,
-                  ),
-                  _SlipStat(
-                    label: 'Net Salary',
-                    value: 'Rs. ${_fmt(slip.netSalary)}',
-                    color: AppStyle.primaryColor,
-                    isBold: true,
-                  ),
-                  _SlipStat(
-                    label: 'Classes',
-                    value: '${slip.totalClasses}',
-                    color: Colors.black87,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Text(
-                    'Created: ${slip.createdAt.day}/${slip.createdAt.month}/${slip.createdAt.year}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontFamily: 'Inter',
-                      color: Colors.grey.shade400,
-                    ),
-                  ),
-                  const Spacer(),
-                  Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 14,
-                    color: Colors.grey.shade400,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'View invoice',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontFamily: 'Inter',
-                      color: Colors.grey.shade400,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _SlipStat extends StatelessWidget {
+class SlipStat extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
   final bool isBold;
 
-  const _SlipStat({
+  const SlipStat({
     required this.label,
     required this.value,
     required this.color,

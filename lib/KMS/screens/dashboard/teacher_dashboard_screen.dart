@@ -527,66 +527,64 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                     style: AppStyle.heading2.copyWith(
                       fontWeight: FontWeight.bold,
                       fontFamily: AppStyle.fontFamilySecondary,
-                      fontSize: 15,
+                      fontSize: 13,
                     ),
                   ),
                 ),
-                Flexible(
-                  child: CustomPaint(
-                    painter: const ProfileStatusCircularPercentage(
-                      percentage: 75,
-                    ),
-                    size: Size(
-                      context.screenWidth * 0.2,
-                      context.screenHeight * 0.08,
-                    ),
-                  ),
-                ),
-                // KYC status line
-                Center(
-                  child: kycAsync.when(
-                    loading: () => const SizedBox.shrink(),
-                    error: (_, __) => const SizedBox.shrink(),
-                    data: (kyc) {
-                      final config = switch (kyc.status) {
-                        'approved' => (
-                          label: 'KYC Verified',
-                          color: Colors.green,
-                        ),
-                        'rejected' => (
-                          label: 'KYC Rejected',
-                          color: Colors.red,
-                        ),
-                        _ => (label: 'KYC Pending', color: Colors.blue),
-                      };
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 7,
-                              height: 7,
-                              decoration: BoxDecoration(
-                                color: config.color,
-                                shape: BoxShape.circle,
-                              ),
+                kycAsync.when(
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, __) => const SizedBox.shrink(),
+                  data: (kyc) {
+                    final config = switch (kyc.status) {
+                      'approved' => (
+                        label: 'KYC Verified',
+                        color: Colors.green,
+                      ),
+                      'rejected' => (label: 'KYC Rejected', color: Colors.red),
+                      _ => (label: 'KYC Pending', color: Colors.blue),
+                    };
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CustomPaint(
+                            painter: const ProfileStatusCircularPercentage(
+                              percentage: 75,
                             ),
-                            const SizedBox(width: 5),
-                            Text(
-                              config.label,
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w600,
-                                color: config.color,
-                              ),
+                            size: Size(
+                              context.screenWidth * 0.2,
+                              context.screenHeight * 0.08,
                             ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 7,
+                                height: 7,
+                                decoration: BoxDecoration(
+                                  color: config.color,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                config.label,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w600,
+                                  color: config.color,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -615,7 +613,7 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                     style: AppStyle.heading2.copyWith(
                       fontWeight: FontWeight.bold,
                       fontFamily: AppStyle.fontFamilySecondary,
-                      fontSize: 15,
+                      fontSize: 13,
                     ),
                   ),
                 ),
@@ -669,93 +667,6 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
           ),
         ),
 
-        // Task Overview
-        Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(25),
-          ),
-          color: Colors.white,
-          elevation: 5,
-          child: Padding(
-            padding: const EdgeInsets.only(right: 15, left: 15, top: 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                FittedBox(
-                  child: Text(
-                    'Task Overview',
-                    style: AppStyle.heading2.copyWith(
-                      fontWeight: FontWeight.bold,
-                      fontFamily: AppStyle.fontFamilySecondary,
-                      fontSize: 15,
-                    ),
-                  ),
-                ),
-                if (noData)
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        'No tasks yet',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey.shade400,
-                          fontFamily: 'Inter',
-                        ),
-                      ),
-                    ),
-                  )
-                else
-                  Padding(
-                    padding: const EdgeInsets.only(top: 5, right: 5, left: 5),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: const [
-                            Text('3', style: TextStyle(fontFamily: 'Inter')),
-                            SizedBox(width: 10),
-                            Text('Completed'),
-                          ],
-                        ),
-                        Row(
-                          children: const [
-                            Text('3', style: TextStyle(fontFamily: 'Inter')),
-                            SizedBox(width: 10),
-                            Text('Pending'),
-                          ],
-                        ),
-                        SizedBox(height: context.screenHeight * 0.01),
-                        Center(
-                          child: ClipRRect(
-                            borderRadius: BorderRadiusGeometry.circular(10),
-                            child: SizedBox(
-                              width: 100,
-                              height: 20,
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    flex: 500,
-                                    child: Container(
-                                      color: AppStyle.primaryColor,
-                                    ),
-                                  ),
-                                  Expanded(
-                                    flex: 500,
-                                    child: Container(color: Colors.grey),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-
         // Payment (flip card)
         GestureDetector(
           onTap: _togglePaymentCard,
@@ -793,56 +704,6 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
     );
   }
 
-  Widget _kycStatusBadge(String status) {
-    final config = switch (status) {
-      'approved' => (
-        icon: Icons.verified_rounded,
-        label: 'Verified',
-        color: Colors.green,
-        bg: Colors.green.shade50,
-      ),
-      'rejected' => (
-        icon: Icons.cancel_rounded,
-        label: 'Rejected',
-        color: Colors.red.shade400,
-        bg: Colors.red.shade50,
-      ),
-      'pending' => (
-        icon: Icons.hourglass_top_rounded,
-        label: 'Pending',
-        color: const Color(0xffF8BD00),
-        bg: const Color(0xFFFFF8E1),
-      ),
-      _ => (
-        icon: Icons.help_outline_rounded,
-        label: 'Not submitted',
-        color: Colors.grey.shade400,
-        bg: Colors.grey.shade100,
-      ),
-    };
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(color: config.bg, shape: BoxShape.circle),
-          child: Icon(config.icon, color: config.color, size: 24),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          config.label,
-          style: TextStyle(
-            fontSize: 12,
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w600,
-            color: config.color,
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _paymentFront(
     BuildContext context,
     double paidPct,
@@ -867,11 +728,11 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                     style: AppStyle.heading2.copyWith(
                       fontWeight: FontWeight.bold,
                       fontFamily: AppStyle.fontFamilySecondary,
-                      fontSize: 15,
+                      fontSize: 13,
                     ),
                   ),
                 ),
-                const Icon(Icons.touch_app, size: 14, color: Colors.grey),
+                const Icon(Icons.touch_app, size: 16, color: Colors.grey),
               ],
             ),
             if (noData)
@@ -946,11 +807,11 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                     style: AppStyle.heading2.copyWith(
                       fontWeight: FontWeight.bold,
                       fontFamily: AppStyle.fontFamilySecondary,
-                      fontSize: 15,
+                      fontSize: 13,
                     ),
                   ),
                 ),
-                const Icon(Icons.touch_app, size: 14, color: Colors.grey),
+                const Icon(Icons.touch_app, size: 16, color: Colors.grey),
               ],
             ),
             const SizedBox(height: 4),
