@@ -3,11 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/KMS/core/constants/app_style.dart';
 import 'package:innovator/KMS/core/constants/mediaquery.dart';
 import 'package:innovator/KMS/provider/auth_provider.dart';
+import 'package:innovator/KMS/provider/constant_provider.dart';
 import 'package:innovator/KMS/provider/teacher_provider.dart';
 import 'package:innovator/KMS/provider/user_provider.dart';
-import 'package:innovator/KMS/screens/auth/forgot_password_screen.dart';
 import 'package:innovator/KMS/screens/auth/signup_screen.dart';
 import 'package:innovator/KMS/screens/auth/student_login_screen.dart';
+import 'package:innovator/KMS/screens/auth/student_register_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/coordinator_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/teacher_dashboard_screen.dart';
 
@@ -195,42 +196,44 @@ class _KmsLoginScreenState extends ConsumerState<KmsLoginScreen> {
                               SizedBox(height: context.screenHeight * 0.02),
                               Column(
                                 children: [
-                                  TextButton(
-                                    onPressed:
-                                        () => Navigator.pushReplacement(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder:
-                                                (_) => StudentLoginScreen(),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton(
+                                      onPressed:
+                                          () => Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder:
+                                                  (_) => StudentLoginScreen(),
+                                            ),
+                                          ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppStyle.buttonColor,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 16,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
                                           ),
                                         ),
-                                    child: Text(
-                                      'Student Login',
-                                      style: TextStyle(
-                                        decoration: TextDecoration.underline,
-                                        color: Colors.black,
-                                        fontSize: AppStyle.mediumText,
                                       ),
+                                      child:
+                                          isLoading
+                                              ? const CircularProgressIndicator(
+                                                color: Colors.white,
+                                              )
+                                              : const Text(
+                                                'Login as Student',
+                                                style: TextStyle(
+                                                  fontSize: 18.0,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
                                     ),
                                   ),
-                                  TextButton(
-                                    onPressed:
-                                        () => Navigator.pushReplacement(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder:
-                                                (_) => ForgotPasswordScreen(),
-                                          ),
-                                        ),
-                                    child: Text(
-                                      'Forgot Password?',
-                                      style: TextStyle(
-                                        decoration: TextDecoration.underline,
-                                        color: Colors.black,
-                                        fontSize: AppStyle.mediumText,
-                                      ),
-                                    ),
-                                  ),
+
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
@@ -247,7 +250,8 @@ class _KmsLoginScreenState extends ConsumerState<KmsLoginScreen> {
                                               context,
                                               MaterialPageRoute(
                                                 builder:
-                                                    (_) => const SignupScreen(),
+                                                    (_) =>
+                                                        const StudentSignupScreen(),
                                               ),
                                             ),
                                         child: const Text(
