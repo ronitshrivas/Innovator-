@@ -199,7 +199,10 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
       slivers: [
         //  App Bar with image gallery
         SliverAppBar(
-          leading: const Icon(Icons.arrow_back_ios, color: Colors.black87),
+          leading:  IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),
+          ),
           expandedHeight: 340,
           pinned: true,
           backgroundColor: Colors.white,
