@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/KMS/core/constants/app_style.dart';
 import 'package:innovator/KMS/model/teacher_model/teacher_salary_slips.dart';
-import 'package:innovator/KMS/provider/teacher_provider.dart'; 
+import 'package:innovator/KMS/provider/teacher_provider.dart';
+import 'package:innovator/KMS/screens/teacher/teacher_invoice_screen.dart';
 import 'package:innovator/KMS/screens/teacher/teacher_salary_slips.dart';
 
 class TeacherSalaryScreen extends ConsumerStatefulWidget {
@@ -18,13 +19,22 @@ class _TeacherSalaryScreenState extends ConsumerState<TeacherSalaryScreen> {
   String? _selectedSchoolId;
 
   static const _months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
 
   List<SalarySlipModel> _filtered(List<SalarySlipModel> slips) {
-    var result = [...slips]
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    var result = [...slips]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     if (_selectedMonth != null) {
       result = result.where((s) => s.month == _selectedMonth).toList();
     }
@@ -38,50 +48,54 @@ class _TeacherSalaryScreenState extends ConsumerState<TeacherSalaryScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (_) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
-          ),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
+      builder:
+          (_) => Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(24),
+                topRight: Radius.circular(24),
               ),
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'Filter by Month',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                fontFamily: 'Inter',
-              ),
-            ),
-            const SizedBox(height: 8),
-            Flexible(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    _monthTile('All Months', null),
-                    const Divider(height: 1),
-                    ...List.generate(12, (i) => _monthTile(_months[i], i + 1)),
-                  ],
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Filter by Month',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        _monthTile('All Months', null),
+                        const Divider(height: 1),
+                        ...List.generate(
+                          12,
+                          (i) => _monthTile(_months[i], i + 1),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
@@ -101,14 +115,16 @@ class _TeacherSalaryScreenState extends ConsumerState<TeacherSalaryScreen> {
           color: isSelected ? AppStyle.primaryColor : Colors.black87,
         ),
       ),
-      trailing: isSelected
-          ? Icon(Icons.check_rounded, color: AppStyle.primaryColor)
-          : null,
+      trailing:
+          isSelected
+              ? Icon(Icons.check_rounded, color: AppStyle.primaryColor)
+              : null,
     );
   }
 
-  String _fmt(double v) => v.toStringAsFixed(2).replaceAllMapped(
-      RegExp(r'(\d)(?=(\d{3})+\.)'), (m) => '${m[1]},');
+  String _fmt(double v) => v
+      .toStringAsFixed(2)
+      .replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+\.)'), (m) => '${m[1]},');
 
   @override
   Widget build(BuildContext context) {
@@ -140,12 +156,15 @@ class _TeacherSalaryScreenState extends ConsumerState<TeacherSalaryScreen> {
             child: GestureDetector(
               onTap: _showMonthPicker,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
                 decoration: BoxDecoration(
-                  color: _selectedMonth != null
-                      ? Colors.white
-                      : Colors.white.withValues(alpha: 0.2),
+                  color:
+                      _selectedMonth != null
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -153,9 +172,10 @@ class _TeacherSalaryScreenState extends ConsumerState<TeacherSalaryScreen> {
                     Icon(
                       Icons.calendar_month_rounded,
                       size: 13,
-                      color: _selectedMonth != null
-                          ? AppStyle.primaryColor
-                          : Colors.white,
+                      color:
+                          _selectedMonth != null
+                              ? AppStyle.primaryColor
+                              : Colors.white,
                     ),
                     const SizedBox(width: 6),
                     Text(
@@ -166,17 +186,21 @@ class _TeacherSalaryScreenState extends ConsumerState<TeacherSalaryScreen> {
                         fontSize: 12,
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.w600,
-                        color: _selectedMonth != null
-                            ? AppStyle.primaryColor
-                            : Colors.white,
+                        color:
+                            _selectedMonth != null
+                                ? AppStyle.primaryColor
+                                : Colors.white,
                       ),
                     ),
                     if (_selectedMonth != null) ...[
                       const SizedBox(width: 4),
                       GestureDetector(
                         onTap: () => setState(() => _selectedMonth = null),
-                        child: Icon(Icons.close_rounded,
-                            size: 13, color: AppStyle.primaryColor),
+                        child: Icon(
+                          Icons.close_rounded,
+                          size: 13,
+                          color: AppStyle.primaryColor,
+                        ),
                       ),
                     ],
                   ],
@@ -188,21 +212,27 @@ class _TeacherSalaryScreenState extends ConsumerState<TeacherSalaryScreen> {
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const InvoiceScreen()),
-              ),
+              onTap:
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const InvoiceScreen()),
+                  ),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.receipt_long_rounded,
-                        size: 13, color: Colors.white),
+                    Icon(
+                      Icons.receipt_long_rounded,
+                      size: 13,
+                      color: Colors.white,
+                    ),
                     SizedBox(width: 6),
                     Text(
                       'Invoices',
@@ -221,20 +251,24 @@ class _TeacherSalaryScreenState extends ConsumerState<TeacherSalaryScreen> {
         ],
       ),
       body: slipsAsync.when(
-        loading: () => Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFFF5F7FA),
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(28),
-              topRight: Radius.circular(28),
+        loading:
+            () => Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFFF5F7FA),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(28),
+                  topRight: Radius.circular(28),
+                ),
+              ),
+              child: const Center(child: CircularProgressIndicator()),
             ),
-          ),
-          child: const Center(child: CircularProgressIndicator()),
-        ),
-        error: (e, _) => Center(
-          child: Text('Error: $e',
-              style: const TextStyle(color: Colors.white)),
-        ),
+        error:
+            (e, _) => Center(
+              child: Text(
+                'Error: $e',
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
         data: (response) {
           final allSlips = response.slips;
           final filtered = _filtered(allSlips);
@@ -366,8 +400,10 @@ class _TeacherSalaryScreenState extends ConsumerState<TeacherSalaryScreen> {
                             ),
                             if (_selectedSchoolId != null)
                               GestureDetector(
-                                onTap: () =>
-                                    setState(() => _selectedSchoolId = null),
+                                onTap:
+                                    () => setState(
+                                      () => _selectedSchoolId = null,
+                                    ),
                                 child: Text(
                                   'Clear',
                                   style: TextStyle(
@@ -380,43 +416,46 @@ class _TeacherSalaryScreenState extends ConsumerState<TeacherSalaryScreen> {
                               ),
                           ],
                         ),
-                        const SizedBox(height: 12), 
+                        const SizedBox(height: 12),
                         SizedBox(
                           height: 120,
                           child: ListView.separated(
                             scrollDirection: Axis.horizontal,
                             itemCount: schools.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(width: 10),
+                            separatorBuilder:
+                                (_, __) => const SizedBox(width: 10),
                             itemBuilder: (context, i) {
                               final school = schools[i];
                               final isSelected =
                                   _selectedSchoolId == school.schoolId;
                               return GestureDetector(
-                                onTap: () => setState(() {
-                                  _selectedSchoolId = isSelected
-                                      ? null
-                                      : school.schoolId;
-                                }),
+                                onTap:
+                                    () => setState(() {
+                                      _selectedSchoolId =
+                                          isSelected ? null : school.schoolId;
+                                    }),
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 200),
                                   width: 160,
                                   padding: const EdgeInsets.all(14),
                                   decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? AppStyle.primaryColor
-                                        : Colors.white,
+                                    color:
+                                        isSelected
+                                            ? AppStyle.primaryColor
+                                            : Colors.white,
                                     borderRadius: BorderRadius.circular(16),
                                     border: Border.all(
-                                      color: isSelected
-                                          ? AppStyle.primaryColor
-                                          : Colors.grey.shade200,
+                                      color:
+                                          isSelected
+                                              ? AppStyle.primaryColor
+                                              : Colors.grey.shade200,
                                       width: 1.5,
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black
-                                            .withValues(alpha: 0.05),
+                                        color: Colors.black.withValues(
+                                          alpha: 0.05,
+                                        ),
                                         blurRadius: 8,
                                         offset: const Offset(0, 3),
                                       ),
@@ -433,9 +472,10 @@ class _TeacherSalaryScreenState extends ConsumerState<TeacherSalaryScreen> {
                                           fontSize: 11,
                                           fontFamily: 'Inter',
                                           fontWeight: FontWeight.w700,
-                                          color: isSelected
-                                              ? Colors.white
-                                              : Colors.black87,
+                                          color:
+                                              isSelected
+                                                  ? Colors.white
+                                                  : Colors.black87,
                                         ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
@@ -447,9 +487,10 @@ class _TeacherSalaryScreenState extends ConsumerState<TeacherSalaryScreen> {
                                           fontSize: 13,
                                           fontFamily: 'Inter',
                                           fontWeight: FontWeight.bold,
-                                          color: isSelected
-                                              ? Colors.white
-                                              : AppStyle.primaryColor,
+                                          color:
+                                              isSelected
+                                                  ? Colors.white
+                                                  : AppStyle.primaryColor,
                                         ),
                                       ),
                                       Text(
@@ -457,9 +498,10 @@ class _TeacherSalaryScreenState extends ConsumerState<TeacherSalaryScreen> {
                                         style: TextStyle(
                                           fontSize: 10,
                                           fontFamily: 'Inter',
-                                          color: isSelected
-                                              ? Colors.white70
-                                              : Colors.grey.shade400,
+                                          color:
+                                              isSelected
+                                                  ? Colors.white70
+                                                  : Colors.grey.shade400,
                                         ),
                                       ),
                                     ],
@@ -510,8 +552,11 @@ class _TeacherSalaryScreenState extends ConsumerState<TeacherSalaryScreen> {
                     ),
                     child: Column(
                       children: [
-                        Icon(Icons.receipt_long_rounded,
-                            size: 40, color: Colors.grey.shade300),
+                        Icon(
+                          Icons.receipt_long_rounded,
+                          size: 40,
+                          color: Colors.grey.shade300,
+                        ),
                         const SizedBox(height: 10),
                         Text(
                           'No slips found',
@@ -525,7 +570,7 @@ class _TeacherSalaryScreenState extends ConsumerState<TeacherSalaryScreen> {
                     ),
                   )
                 else
-                  ...filtered.map((slip) => _SalarySlipCard(slip: slip)),
+                  ...filtered.map((slip) => SalarySlipCard(slip: slip)),
               ],
             ),
           );
@@ -570,22 +615,24 @@ class _TeacherSalaryScreenState extends ConsumerState<TeacherSalaryScreen> {
 
 // Slip Card
 
-class _SalarySlipCard extends StatelessWidget {
+class SalarySlipCard extends StatelessWidget {
   final SalarySlipModel slip;
-  const _SalarySlipCard({required this.slip});
+  const SalarySlipCard({required this.slip});
 
-  String _fmt(double v) => v.toStringAsFixed(2).replaceAllMapped(
-      RegExp(r'(\d)(?=(\d{3})+\.)'), (m) => '${m[1]},');
+  String _fmt(double v) => v
+      .toStringAsFixed(2)
+      .replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+\.)'), (m) => '${m[1]},');
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (_) => _SalarySlipDetail(slip: slip),
-      ),
+      onTap:
+          () => showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (_) => SalarySlipDetail(slip: slip),
+          ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
@@ -607,18 +654,20 @@ class _SalarySlipCard extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: slip.isPaid
-                      ? Colors.green.withValues(alpha: 0.1)
-                      : const Color(0xffF8BD00).withValues(alpha: 0.15),
+                  color:
+                      slip.isPaid
+                          ? Colors.green.withValues(alpha: 0.1)
+                          : const Color(0xffF8BD00).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
                   slip.isPaid
                       ? Icons.receipt_long_rounded
                       : Icons.pending_actions_rounded,
-                  color: slip.isPaid
-                      ? Colors.green.shade600
-                      : const Color(0xffF8BD00),
+                  color:
+                      slip.isPaid
+                          ? Colors.green.shade600
+                          : const Color(0xffF8BD00),
                   size: 24,
                 ),
               ),
@@ -650,9 +699,10 @@ class _SalarySlipCard extends StatelessWidget {
                       slip.isPaid ? 'Paid' : 'Payment Pending',
                       style: TextStyle(
                         fontSize: 12,
-                        color: slip.isPaid
-                            ? Colors.green.shade600
-                            : Colors.orange.shade700,
+                        color:
+                            slip.isPaid
+                                ? Colors.green.shade600
+                                : Colors.orange.shade700,
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.w500,
                       ),
@@ -675,20 +725,24 @@ class _SalarySlipCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
-                      color: slip.isPaid
-                          ? Colors.green.withValues(alpha: 0.1)
-                          : const Color(0xffF8BD00).withValues(alpha: 0.15),
+                      color:
+                          slip.isPaid
+                              ? Colors.green.withValues(alpha: 0.1)
+                              : const Color(0xffF8BD00).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       slip.status,
                       style: TextStyle(
                         fontSize: 11,
-                        color: slip.isPaid
-                            ? Colors.green.shade700
-                            : Colors.orange.shade800,
+                        color:
+                            slip.isPaid
+                                ? Colors.green.shade700
+                                : Colors.orange.shade800,
                         fontWeight: FontWeight.w600,
                         fontFamily: 'Inter',
                       ),
@@ -696,12 +750,13 @@ class _SalarySlipCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   GestureDetector(
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => InvoiceDetailScreen(slip: slip),
-                      ),
-                    ),
+                    onTap:
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => InvoiceDetailScreen(slip: slip),
+                          ),
+                        ),
                     child: Text(
                       'View Invoice →',
                       style: TextStyle(
@@ -724,12 +779,13 @@ class _SalarySlipCard extends StatelessWidget {
 
 // Slip Detail Bottom Sheet
 
-class _SalarySlipDetail extends StatelessWidget {
+class SalarySlipDetail extends StatelessWidget {
   final SalarySlipModel slip;
-  const _SalarySlipDetail({required this.slip});
+  const SalarySlipDetail({required this.slip});
 
-  String _fmt(double v) => v.toStringAsFixed(2).replaceAllMapped(
-      RegExp(r'(\d)(?=(\d{3})+\.)'), (m) => '${m[1]},');
+  String _fmt(double v) => v
+      .toStringAsFixed(2)
+      .replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+\.)'), (m) => '${m[1]},');
 
   @override
   Widget build(BuildContext context) {
@@ -782,20 +838,24 @@ class _SalarySlipDetail extends StatelessWidget {
                 ],
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
-                  color: slip.isPaid
-                      ? Colors.green.withValues(alpha: 0.1)
-                      : const Color(0xffF8BD00).withValues(alpha: 0.15),
+                  color:
+                      slip.isPaid
+                          ? Colors.green.withValues(alpha: 0.1)
+                          : const Color(0xffF8BD00).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   slip.status,
                   style: TextStyle(
-                    color: slip.isPaid
-                        ? Colors.green.shade700
-                        : Colors.orange.shade800,
+                    color:
+                        slip.isPaid
+                            ? Colors.green.shade700
+                            : Colors.orange.shade800,
                     fontWeight: FontWeight.w600,
                     fontFamily: 'Inter',
                   ),
@@ -805,17 +865,29 @@ class _SalarySlipDetail extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           _row('Base Salary', 'Rs. ${_fmt(slip.baseSalary)}', Colors.black87),
-          _row('Commission', '+ Rs. ${_fmt(slip.commission)}',
-              Colors.green.shade600),
-          _row('Adjustments', 'Rs. ${_fmt(slip.adjustments)}',
-              const Color(0xffF8BD00)),
+          _row(
+            'Commission',
+            '+ Rs. ${_fmt(slip.commission)}',
+            Colors.green.shade600,
+          ),
+          _row(
+            'Adjustments',
+            'Rs. ${_fmt(slip.adjustments)}',
+            const Color(0xffF8BD00),
+          ),
           _row('Total Classes', '${slip.totalClasses}', Colors.black54),
-          _row('Total Hours', '${slip.totalHours.toStringAsFixed(1)}h',
-              Colors.black54),
+          _row(
+            'Total Hours',
+            '${slip.totalHours.toStringAsFixed(1)}h',
+            Colors.black54,
+          ),
           const Divider(height: 28),
-          _row('Net Salary', 'Rs. ${_fmt(slip.netSalary)}',
-              AppStyle.primaryColor,
-              isBold: true),
+          _row(
+            'Net Salary',
+            'Rs. ${_fmt(slip.netSalary)}',
+            AppStyle.primaryColor,
+            isBold: true,
+          ),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
@@ -824,7 +896,8 @@ class _SalarySlipDetail extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppStyle.primaryColor,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
+                  borderRadius: BorderRadius.circular(14),
+                ),
                 elevation: 0,
               ),
               onPressed: () {
@@ -836,8 +909,11 @@ class _SalarySlipDetail extends StatelessWidget {
                   ),
                 );
               },
-              icon: const Icon(Icons.receipt_long_rounded,
-                  color: Colors.white, size: 18),
+              icon: const Icon(
+                Icons.receipt_long_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
               label: const Text(
                 'View Full Invoice',
                 style: TextStyle(
@@ -854,25 +930,34 @@ class _SalarySlipDetail extends StatelessWidget {
     );
   }
 
-  Widget _row(String label, String value, Color valueColor,
-      {bool isBold = false}) {
+  Widget _row(
+    String label,
+    String value,
+    Color valueColor, {
+    bool isBold = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 7),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label,
-              style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
-                  fontFamily: 'Inter')),
-          Text(value,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-                color: valueColor,
-                fontFamily: 'Inter',
-              )),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade600,
+              fontFamily: 'Inter',
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+              color: valueColor,
+              fontFamily: 'Inter',
+            ),
+          ),
         ],
       ),
     );

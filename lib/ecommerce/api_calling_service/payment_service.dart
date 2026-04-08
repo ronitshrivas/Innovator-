@@ -2,6 +2,7 @@ import 'dart:developer';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:innovator/ecommerce/model/check_out_summary_model.dart';
+import 'package:innovator/ecommerce/model/khalti_payment_model.dart';
 import 'package:innovator/ecommerce/model/payment_model.dart';
 import 'package:path/path.dart' as path;
 import 'package:innovator/ecommerce/core/constants/api_constants.dart';
@@ -54,5 +55,18 @@ class PaymentService extends EcommerBaseApiService {
     });
     await DioClient.instance.post(EcommerApi.orders(orderId), data: formData);
     log('Payment confirmed for order: $orderId');
+  }
+
+  Future<KhaltiPaymentResponse> initiateKhaltiPayment({
+    required String orderId,
+  }) async {
+    log('Initiating Khalti payment for order: $orderId');
+    final data = await post<Map<String, dynamic>>(
+      EcommerApi.khaltiPayment,
+      data: {'order_id': orderId},
+    );
+    final response = KhaltiPaymentResponse.fromJson(data);
+    log('Khalti pidx: ${response.pidx}  url: ${response.paymentUrl}');
+    return response;
   }
 }
