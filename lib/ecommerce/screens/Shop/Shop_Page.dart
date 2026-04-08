@@ -78,7 +78,6 @@ class _ShopPageState extends ConsumerState<ShopPage> {
       );
     } catch (e) {
       if (!mounted) return;
-     
     }
   }
 
@@ -424,7 +423,7 @@ class _ShopPageState extends ConsumerState<ShopPage> {
         crossAxisSpacing: 10,
         crossAxisCount: 2,
         mainAxisSpacing: 10,
-        childAspectRatio: 0.66,
+        childAspectRatio: 0.6,
       ),
       itemCount: products.length,
       itemBuilder: (context, index) => _buildProductCard(products[index]),
@@ -498,7 +497,7 @@ class _ShopPageState extends ConsumerState<ShopPage> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      if (product.category != null)
+                      if (product.categoryDetails != null)
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
@@ -509,7 +508,7 @@ class _ShopPageState extends ConsumerState<ShopPage> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            product.category!,
+                            product.categoryDetails?.name ?? '',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(

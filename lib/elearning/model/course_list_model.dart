@@ -26,7 +26,6 @@ class CourseListModel {
     required this.isPublished,
     required this.isEnrolled,
     required this.createdAt,
-
     required this.contents,
   });
 
@@ -34,22 +33,22 @@ class CourseListModel {
 
   factory CourseListModel.fromJson(Map<String, dynamic> json) {
     return CourseListModel(
-      id: json['id'],
-      vendor: json['vendor'],
-      vendorName: json['vendor_name'],
-      category: json['category'],
-      categoryName: json['category_name'],
-      title: json['title'],
-      description: json['description'],
-      price: double.parse(json['price']),
-      courseType: json['course_type'],
-      isPublished: json['is_published'],
+      id: json['id'] ?? '',
+      vendor: json['vendor'] ?? '',
+      vendorName: json['vendor_name'] ?? '',
+      category: json['category'] ?? '',
+      categoryName: json['category_name'] ?? '',
+      title: json['title'] ?? '',
+      description: json['description'] ?? '',
+      price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
+      courseType: json['course_type'] ?? '',
+      isPublished: json['is_published'] ?? false,
       isEnrolled: json['is_enrolled'] ?? false,
-      createdAt: DateTime.parse(json['created_at']),
-      contents:
-          (json['contents'] as List)
-              .map((e) => CourseContent.fromJson(e))
-              .toList(),
+      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
+      contents: (json['contents'] as List?)
+              ?.map((e) => CourseContent.fromJson(e))
+              .toList() ??
+          [],
     );
   }
 
@@ -105,19 +104,19 @@ class CourseContent {
 
   factory CourseContent.fromJson(Map<String, dynamic> json) {
     return CourseContent(
-      id: json['id'],
-      course: json['course'],
-      title: json['title'],
-      instructorName: json['instructor_name'],
+      id: json['id'] ?? '',
+      course: json['course'] ?? '',
+      title: json['title'] ?? '',
+      instructorName: json['instructor_name'] ?? '',
       videoUrl: json['video_url'],
       videoFile: json['video_file'],
       thumbnail: json['thumbnail'],
-      duration: (json['duration'] as num).toDouble(),
+      duration: (json['duration'] as num?)?.toDouble() ?? 0.0,
       documentUrl: json['document_url'],
       documentFile: json['document_file'],
-      courseLevel: json['course_level'],
-      order: json['order'],
-      createdAt: DateTime.parse(json['created_at']),
+      courseLevel: json['course_level'] ?? '',
+      order: json['order'] ?? 0,
+      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
     );
   }
 
