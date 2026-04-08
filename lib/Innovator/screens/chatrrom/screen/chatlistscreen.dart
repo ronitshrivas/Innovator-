@@ -10,6 +10,8 @@ import 'package:innovator/Innovator/provider/mutual_friend_state.dart';
 import 'package:innovator/Innovator/provider/unread_count_provider.dart';
 import 'package:innovator/Innovator/screens/chatrrom/screen/chatscreen.dart';
 
+import '../../Feed/Optimize Media/full_screen_image_viewer.dart';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
@@ -843,17 +845,32 @@ class _ChatCard extends StatelessWidget {
                         color: isOnline ? null : Colors.grey.shade200,
                       ),
                       padding: const EdgeInsets.all(2),
-                      child: ClipOval(
-                        child:
-                            friend.avatar.isNotEmpty
-                                ? CachedNetworkImage(
-                                  imageUrl: friend.avatar,
-                                  fit: BoxFit.cover,
-                                  placeholder: (_, __) => _avatarPlaceholder(),
-                                  errorWidget:
-                                      (_, __, ___) => _avatarPlaceholder(),
-                                )
-                                : _avatarPlaceholder(),
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => FullScreenImageViewer(
+                                    imageUrl: friend.avatar,
+                                    tag: 'friend_avatar',
+                                  ),
+                            ),
+                          );
+                        },
+                        child: ClipOval(
+                          child:
+                              friend.avatar.isNotEmpty
+                                  ? CachedNetworkImage(
+                                    imageUrl: friend.avatar,
+                                    fit: BoxFit.cover,
+                                    placeholder:
+                                        (_, __) => _avatarPlaceholder(),
+                                    errorWidget:
+                                        (_, __, ___) => _avatarPlaceholder(),
+                                  )
+                                  : _avatarPlaceholder(),
+                        ),
                       ),
                     ),
                     if (isOnline)

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/screens/Search/search_provider.dart';
+import 'package:innovator/Innovator/screens/chatrrom/screen/chatlistscreen.dart';
 import 'package:innovator/Innovator/screens/show_Specific_Profile/Show_Specific_Profile.dart';
+import 'package:innovator/Innovator/widget/CustomizeFAB.dart';
 
 class SearchPage extends ConsumerStatefulWidget {
   const SearchPage({Key? key}) : super(key: key);
@@ -25,7 +27,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   Widget build(BuildContext context) {
     final searchState = ref.watch(searchProvider);
     final notifier = ref.read(searchProvider.notifier);
-
+    final unreadCount = ref.watch(chatUnreadCountProvider);
     return Scaffold(
       backgroundColor: AppColors.whitecolor,
       body: SafeArea(
@@ -39,6 +41,21 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             ],
           ),
         ),
+      ),
+      floatingActionButton: CountBadgeFAB(
+        count: unreadCount, // ← real-time total
+        gifAsset: 'animation/chaticon.gif',
+        backgroundColor: Colors.transparent,
+        onPressed: () {
+          ref.read(mutualFriendsProvider.notifier).refresh();
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ChatListScreen()),
+          ).then((_) {
+            ref.invalidate(mutualFriendsProvider);
+            //ref.read(mutualFriendsProvider.notifier).refresh();
+          });
+        },
       ),
     );
   }

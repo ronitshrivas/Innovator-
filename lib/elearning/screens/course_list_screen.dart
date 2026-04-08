@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:innovator/Innovator/screens/chatrrom/screen/chatlistscreen.dart';
 import 'package:innovator/Innovator/widget/Custom_refresh_Indicator.dart';
+import 'package:innovator/Innovator/widget/CustomizeFAB.dart';
 import 'package:innovator/elearning/model/course_list_model.dart';
 import 'package:innovator/elearning/provider/course_provider.dart';
 import 'package:innovator/elearning/screens/course_details_screen.dart';
@@ -72,13 +74,28 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
   @override
   Widget build(BuildContext context) {
     final asyncCourses = ref.watch(courseListProvider);
-
+    final unreadCount = ref.watch(chatUnreadCountProvider);
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       body: asyncCourses.when(
         loading: () => _buildSkeleton(),
         error: (e, _) => _buildError(e),
         data: (courses) => _buildContent(courses),
+      ),
+      floatingActionButton: CountBadgeFAB(
+        count: unreadCount, // ← real-time total
+        gifAsset: 'animation/chaticon.gif',
+        backgroundColor: Colors.transparent,
+        onPressed: () {
+          ref.read(mutualFriendsProvider.notifier).refresh();
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ChatListScreen()),
+          ).then((_) {
+            ref.invalidate(mutualFriendsProvider);
+            //ref.read(mutualFriendsProvider.notifier).refresh();
+          });
+        },
       ),
     );
   }

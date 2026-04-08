@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/ecommerce/api_calling_service/payment_service.dart';
 import 'package:innovator/ecommerce/model/check_out_summary_model.dart';
+import 'package:innovator/ecommerce/model/khalti_payment_model.dart';
 import 'package:innovator/ecommerce/model/payment_model.dart';
 
 final paymentServiceProvider = Provider<PaymentService>(
@@ -43,4 +44,9 @@ final confirmPaymentProvider = FutureProvider.family<void, ConfirmPaymentArgs>(
   (ref, args) => ref
       .read(paymentServiceProvider)
       .confirmPayment(orderId: args.orderId, screenshot: args.screenshot),
+);
+final khaltiPaymentProvider =
+    FutureProvider.family<KhaltiPaymentResponse, String>(
+  (ref, orderId) =>
+      ref.read(paymentServiceProvider).initiateKhaltiPayment(orderId: orderId),
 );
