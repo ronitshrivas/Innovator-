@@ -15,8 +15,7 @@ import 'package:innovator/KMS/screens/student/homework_screen.dart';
 import 'package:innovator/KMS/screens/student/student_attendance_screen.dart';
 import 'package:innovator/KMS/screens/teacher/kyc_upload_screen.dart';
 import 'package:innovator/KMS/screens/teacher/teacher_attendance_screen.dart';
-import 'package:innovator/KMS/screens/teacher/teacher_salary_screen.dart';
-import 'package:innovator/KMS/screens/teacher/teacher_salary_slips.dart';
+import 'package:innovator/KMS/screens/teacher/teacher_invoice_screen.dart';
 import 'package:innovator/KMS/screens/teacher/teacher_school_attendance.dart';
 
 class DrawerItemData {
@@ -41,11 +40,7 @@ const List<DrawerItemData> _teacherDrawerItems = [
     image: 'assets/kms/drawer/attendance.png',
     screen: TeacherSchoolAttendanceScreen(),
   ),
-  DrawerItemData(
-    title: 'Salary Slips',
-    image: 'assets/kms/drawer/salary.png',
-    screen: TeacherSalaryScreen(),
-  ),
+
   DrawerItemData(
     title: 'KYC Verification',
     image: 'assets/kms/drawer/teacher.png',
@@ -53,7 +48,7 @@ const List<DrawerItemData> _teacherDrawerItems = [
   ),
   DrawerItemData(
     title: 'Invoice',
-    image: 'assets/kms/drawer/invoice.png',
+    image: 'assets/kms/drawer/salary.png',
     screen: InvoiceScreen(),
   ),
   DrawerItemData(

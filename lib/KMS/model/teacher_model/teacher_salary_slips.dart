@@ -7,15 +7,16 @@ class SalarySlipResponse {
   factory SalarySlipResponse.fromJson(Map<String, dynamic> json) =>
       SalarySlipResponse(
         total: json['total'] as int,
-        slips: (json['slips'] as List)
-            .map((e) => SalarySlipModel.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        slips:
+            (json['slips'] as List)
+                .map((e) => SalarySlipModel.fromJson(e as Map<String, dynamic>))
+                .toList(),
       );
 }
 
 class SalarySlipModel {
   final String id;
-  final String teacher;
+  final String teacherId;
   final String teacherName;
   final String school;
   final String schoolName;
@@ -34,7 +35,7 @@ class SalarySlipModel {
 
   SalarySlipModel({
     required this.id,
-    required this.teacher,
+    required this.teacherId,
     required this.teacherName,
     required this.school,
     required this.schoolName,
@@ -55,7 +56,7 @@ class SalarySlipModel {
   factory SalarySlipModel.fromJson(Map<String, dynamic> json) =>
       SalarySlipModel(
         id: json['id'] as String,
-        teacher: json['teacher'] as String,
+        teacherId: json['teacher'] as String,
         teacherName: json['teacher_name'] as String,
         school: json['school'] as String,
         schoolName: json['school_name'] as String,
@@ -76,8 +77,19 @@ class SalarySlipModel {
   bool get isPaid => status == 'PAID';
   bool get isPending => status == 'PENDING';
 
-  String get monthName => [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
+  String get monthName =>
+      [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December',
       ][month - 1];
 }

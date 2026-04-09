@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
@@ -9,15 +10,18 @@ import 'package:innovator/Innovator/Authorization/Login.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/screens/Feed/Inner_Homepage.dart';
+import 'package:innovator/Innovator/screens/Feed/Optimize%20Media/full_screen_image_viewer.dart';
 import 'package:innovator/Innovator/screens/Follow/follow_Button.dart';
+import 'package:innovator/Innovator/screens/chatrrom/screen/chatlistscreen.dart';
 import 'package:innovator/Innovator/screens/comment/comment_screen.dart';
 import 'package:innovator/Innovator/screens/show_Specific_Profile/show_Specific_followers.dart';
 import 'package:innovator/Innovator/controllers/user_controller.dart';
+import 'package:innovator/Innovator/widget/CustomizeFAB.dart';
 import 'dart:developer' as developer;
 
 import '../../models/Feed_Content_Model.dart';
 
-class SpecificUserProfilePage extends StatefulWidget {
+class SpecificUserProfilePage extends ConsumerStatefulWidget {
   final String userId;
   final String? scrollToPostId;
   final bool? openComments;
@@ -36,7 +40,8 @@ class SpecificUserProfilePage extends StatefulWidget {
       _SpecificUserProfilePageState();
 }
 
-class _SpecificUserProfilePageState extends State<SpecificUserProfilePage>
+class _SpecificUserProfilePageState
+    extends ConsumerState<SpecificUserProfilePage>
     with TickerProviderStateMixin {
   final AppData _appData = AppData();
   late Future<Map<String, dynamic>> _profileFuture;
@@ -242,11 +247,15 @@ class _SpecificUserProfilePageState extends State<SpecificUserProfilePage>
       widget.userId == _appData.currentUserId ||
       d['email']?.toString() == _appData.currentUserEmail;
 
+  bool isFollowing(Map<String, dynamic> d) =>
+      d['is_followed'] as bool? ?? false;
+
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final unreadCount = ref.watch(chatUnreadCountProvider);
 
     return Scaffold(
       backgroundColor:
@@ -397,6 +406,21 @@ class _SpecificUserProfilePageState extends State<SpecificUserProfilePage>
           },
         ),
       ),
+      floatingActionButton: CountBadgeFAB(
+        count: unreadCount, // ← real-time total
+        gifAsset: 'animation/chaticon.gif',
+        backgroundColor: Colors.transparent,
+        onPressed: () {
+          ref.read(mutualFriendsProvider.notifier).refresh();
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ChatListScreen()),
+          ).then((_) {
+            ref.invalidate(mutualFriendsProvider);
+            //ref.read(mutualFriendsProvider.notifier).refresh();
+          });
+        },
+      ),
     );
   }
 
@@ -409,6 +433,7 @@ class _SpecificUserProfilePageState extends State<SpecificUserProfilePage>
     final name = _name(profileData);
     final avatarUrl = _avatar(profileData);
     final bio = _bio(profileData);
+    final isFollowing = profileData['is_following'] as bool? ?? false;
 
     return SafeArea(
       child: Padding(
@@ -432,7 +457,21 @@ class _SpecificUserProfilePageState extends State<SpecificUserProfilePage>
                 ],
               ),
               padding: const EdgeInsets.all(4),
-              child: _buildAvatar(avatarUrl, name, radius: 70),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (_) => FullScreenImageViewer(
+                            imageUrl: '$avatarUrl',
+                            tag: name,
+                          ),
+                    ),
+                  );
+                },
+                child: _buildAvatar(avatarUrl, name, radius: 70),
+              ),
             ),
 
             const SizedBox(height: 12),
@@ -457,7 +496,8 @@ class _SpecificUserProfilePageState extends State<SpecificUserProfilePage>
                   FollowButton(
                     targetUserId:
                         profileData['id']?.toString() ?? widget.userId,
-                    initialFollowStatus: false,
+                    initialFollowStatus:
+                        profileData['is_followed'] as bool? ?? false,
                     onFollowSuccess: () => _refreshProfile(),
                     onUnfollowSuccess: () => _refreshProfile(),
                   ),
@@ -511,7 +551,7 @@ class _SpecificUserProfilePageState extends State<SpecificUserProfilePage>
                   style: TextStyle(
                     fontSize: 15,
                     color: isDarkMode ? AppColors.whitecolor : Colors.black87,
-                    fontStyle: FontStyle.italic,
+                    //fontStyle: FontStyle.italic,
                   ),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,

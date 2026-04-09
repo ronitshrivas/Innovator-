@@ -8,6 +8,13 @@ final perFriendUnreadProvider =
       (ref) => PerFriendUnreadNotifier(),
     );
 
+final lastActiveFriendProvider = StateProvider<String?>((ref) => null);
+
+final friendActivityProvider =
+    StateNotifierProvider<FriendActivityNotifier, Map<String, DateTime>>(
+      (ref) => FriendActivityNotifier(),
+    );
+
 class PerFriendUnreadNotifier extends StateNotifier<Map<String, int>> {
   PerFriendUnreadNotifier() : super({});
 
@@ -32,4 +39,14 @@ class PerFriendUnreadNotifier extends StateNotifier<Map<String, int>> {
   int get total => state.values.fold(0, (a, b) => a + b);
 
   int countFor(String friendId) => state[friendId] ?? 0;
+}
+
+class FriendActivityNotifier extends StateNotifier<Map<String, DateTime>> {
+  FriendActivityNotifier() : super({});
+
+  void markActivity(String friendId) {
+    state = {...state, friendId: DateTime.now()};
+  }
+
+  //DateTime? lastActivityFor(String friendId) => state[friendId];
 }

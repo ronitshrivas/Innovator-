@@ -6,8 +6,8 @@ class ProductModel {
   final int stock;
   final bool isActive;
   final String? category;
-  final dynamic categoryDetails;
-  final String? image; 
+  final CategoryDetails? categoryDetails;
+  final String? image;
 
   ProductModel({
     required this.id,
@@ -30,7 +30,12 @@ class ProductModel {
       stock: json['stock'] as int,
       isActive: json['is_active'] as bool? ?? true,
       category: json['category'] as String?,
-      categoryDetails: json['category_details'],
+      categoryDetails:
+          json['category_details'] != null
+              ? CategoryDetails.fromJson(
+                json['category_details'] as Map<String, dynamic>,
+              )
+              : null,
       image: json['image'] as String?,
     );
   }
@@ -58,5 +63,31 @@ class ProductModel {
   @override
   String toString() {
     return 'ProductModel(id: $id, name: $name, price: $price, stock: $stock)';
+  }
+}
+
+class CategoryDetails {
+  final String id;
+  final String name;
+  final String slug;
+  final String? description;
+  final String createdAt;
+
+  CategoryDetails({
+    required this.id,
+    required this.name,
+    required this.slug,
+    this.description,
+    required this.createdAt,
+  });
+
+  factory CategoryDetails.fromJson(Map<String, dynamic> json) {
+    return CategoryDetails(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      slug: json['slug'] as String,
+      description: json['description'] as String?,
+      createdAt: json['created_at'] as String,
+    );
   }
 }

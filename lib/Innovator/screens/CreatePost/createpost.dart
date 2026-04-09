@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/screens/Profile/profile_page.dart';
+import 'package:innovator/Innovator/screens/chatrrom/screen/chatlistscreen.dart';
 import 'package:innovator/Innovator/utils/Drawer/custom_drawer.dart';
+import 'package:innovator/Innovator/widget/CustomizeFAB.dart';
 import 'package:innovator/innovator_home.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -484,9 +487,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
         _descriptionController.text = processed;
         _isProcessingAI = false;
       });
-      _showSuccess(
-        'Post enhanced by ELIZA! (${processed.trim().split(RegExp(r"\s+")).length} words)',
-      );
+      _showSuccess('Post enhanced by ELIZA AI)');
       _updateButtonState();
     } catch (e) {
       _showError('ELIZA enhancement failed: $e');
@@ -603,25 +604,27 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
         message,
         style: const TextStyle(fontWeight: FontWeight.w600),
       ),
+      duration: Duration(seconds: 1),
       backgroundColor: Colors.red.shade700,
-      behavior: SnackBarBehavior.floating,
+      behavior: SnackBarBehavior.fixed,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ),
   );
 
-  void _showSuccess(String message) => ScaffoldMessenger.of(
-    context,
-  ).showSnackBar(
-    SnackBar(
-      content: Text(
-        message,
-        style: const TextStyle(fontWeight: FontWeight.w600),
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        duration: Duration(seconds: 1),
+        backgroundColor: Colors.green.shade600,
+        behavior: SnackBarBehavior.fixed,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
-      backgroundColor: Colors.green.shade600,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-    ),
-  );
+    );
+  }
 
   // ── Build ─────────────────────────────────────────────────────────────────
 
@@ -653,6 +656,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
                 userData?['username']?.toString() ??
                 userData?['name']?.toString() ??
                 'User';
+    final unreadCount = ref.watch(chatUnreadCountProvider);
 
     return Scaffold(
       key: _scaffoldKey,
@@ -1030,15 +1034,20 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
                     ],
                   ),
                 ),
-
-                const SizedBox(height: 80),
               ],
             ),
           ),
         ],
       ),
-      bottomSheet: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      // CHANGE: bottomSheet → bottomNavigationBar
+      bottomNavigationBar: Container(
+        padding: EdgeInsets.only(
+          top: 12,
+          left: 16,
+          right: 16,
+          // KEY FIX: Add system navigation bar height
+          bottom: MediaQuery.of(context).padding.bottom + 12,
+        ),
         decoration: BoxDecoration(
           color: AppColors.whitecolor,
           boxShadow: [
@@ -1049,58 +1058,62 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
             ),
           ],
         ),
-        child: SafeArea(
-          child: Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _isPostButtonEnabled ? _createPost : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _facebookBlue,
-                    foregroundColor: AppColors.whitecolor,
-                    disabledBackgroundColor: Colors.grey.shade300,
-                    disabledForegroundColor: Colors.grey.shade500,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child:
-                      _isCreatingPost
-                          ? const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  color: AppColors.whitecolor,
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Publishing...',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-                          )
-                          : const Text(
-                            'Publish',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                ),
-              ),
-            ],
+        child: ElevatedButton(
+          onPressed: _isPostButtonEnabled ? _createPost : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _facebookBlue,
+            foregroundColor: AppColors.whitecolor,
+            disabledBackgroundColor: Colors.grey.shade300,
+            disabledForegroundColor: Colors.grey.shade500,
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
+          child:
+              _isCreatingPost
+                  ? const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          color: AppColors.whitecolor,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'Publishing...',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  )
+                  : const Text(
+                    'Publish',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
         ),
+      ),
+      floatingActionButton: CountBadgeFAB(
+        count: unreadCount, // ← real-time total
+        gifAsset: 'animation/chaticon.gif',
+        backgroundColor: Colors.transparent,
+        onPressed: () {
+          ref.read(mutualFriendsProvider.notifier).refresh();
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ChatListScreen()),
+          ).then((_) {
+            ref.invalidate(mutualFriendsProvider);
+            //ref.read(mutualFriendsProvider.notifier).refresh();
+          });
+        },
       ),
     );
   }
