@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:io'; 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:innovator/Innovator/App_data/App_data.dart';
@@ -15,7 +16,9 @@ import 'package:innovator/Innovator/screens/Feed/Video_Feed.dart'
 import 'package:innovator/Innovator/screens/Follow/follow_Button.dart';
 import 'package:innovator/Innovator/screens/Profile/Edit_Profile.dart';
 import 'package:innovator/Innovator/screens/SHow_Specific_Profile/Show_Specific_Profile.dart';
+import 'package:innovator/Innovator/screens/chatrrom/screen/chatlistscreen.dart';
 import 'package:innovator/Innovator/utils/Drawer/custom_drawer.dart';
+import 'package:innovator/Innovator/widget/CustomizeFAB.dart';
 import 'package:path/path.dart' as path;
 import 'package:http_parser/http_parser.dart';
 import 'package:get/get.dart';
@@ -314,7 +317,7 @@ class UserProfileService {
 // Screen
 // ─────────────────────────────────────────────────────────────────────────────
 
-class UserProfileScreen extends StatefulWidget {
+class UserProfileScreen extends ConsumerStatefulWidget {
   final String userId;
 
   const UserProfileScreen({Key? key, required this.userId}) : super(key: key);
@@ -323,7 +326,7 @@ class UserProfileScreen extends StatefulWidget {
   _UserProfileScreenState createState() => _UserProfileScreenState();
 }
 
-class _UserProfileScreenState extends State<UserProfileScreen>
+class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     with SingleTickerProviderStateMixin {
   late Future<UserProfileData> _profileFuture;
   bool _isUploading = false;
@@ -337,6 +340,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   bool _isLoading = false;
   bool _hasError = false;
   bool _hasMoreData = true;
+  bool _isPickingImage = false; // Add this field
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
@@ -384,6 +388,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
   Future<void> _pickAndUploadImage() async {
+    if (_isPickingImage || _isUploading) return; // ← guard
+
+    setState(() => _isPickingImage = true);
     try {
       final XFile? image = await ImagePicker().pickImage(
         source: ImageSource.gallery,
@@ -391,6 +398,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         maxHeight: 800,
         imageQuality: 80,
       );
+
+      setState(() => _isPickingImage = false);
       if (image == null) return;
 
       setState(() {
@@ -428,6 +437,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       });
     } catch (e) {
       setState(() {
+        _isPickingImage = false;
         _isUploading = false;
         _errorMessage = e.toString();
       });
@@ -627,7 +637,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                         right: 0,
                         bottom: 0,
                         child: GestureDetector(
-                          onTap: _isUploading ? null : _pickAndUploadImage,
+                          onTap:
+                              (_isUploading || _isPickingImage)
+                                  ? null
+                                  : _pickAndUploadImage,
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: const BoxDecoration(
@@ -949,6 +962,14 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                                 icon: Icons.person,
                               ),
                               ProfileInfoCard(
+                                title: 'Full Name',
+                                value:
+                                    profile.fullName.isNotEmpty
+                                        ? profile.fullName
+                                        : '(not set)',
+                                icon: Icons.badge,
+                              ),
+                              ProfileInfoCard(
                                 title: 'Email',
                                 value: profile.email,
                                 icon: Icons.email,
@@ -1036,6 +1057,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
   @override
   Widget build(BuildContext context) {
+    final unreadCount = ref.watch(chatUnreadCountProvider);
+
     return Scaffold(
       backgroundColor: AppColors.whitecolor,
 
@@ -1163,6 +1186,21 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               ),
           ],
         ),
+      ),
+      floatingActionButton: CountBadgeFAB(
+        count: unreadCount, // ← real-time total
+        gifAsset: 'animation/chaticon.gif',
+        backgroundColor: Colors.transparent,
+        onPressed: () {
+          ref.read(mutualFriendsProvider.notifier).refresh();
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ChatListScreen()),
+          ).then((_) {
+            ref.invalidate(mutualFriendsProvider);
+            //ref.read(mutualFriendsProvider.notifier).refresh();
+          });
+        },
       ),
     );
   }

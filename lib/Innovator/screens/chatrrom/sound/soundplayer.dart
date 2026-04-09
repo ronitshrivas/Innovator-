@@ -3,8 +3,12 @@ import 'package:audioplayers/audioplayers.dart';
 class SoundPlayer {
   final AudioPlayer _player = AudioPlayer();
 
-  Future<void> playSound() async {
-    await _player.play(AssetSource('icon/multi-pop-5-188168.mp3'));
+  // Future<void> playSound() async {
+  //   await _player.play(AssetSource('icon/multi-pop-5-188168.mp3'));
+  // }
+
+  Future<void> playsendreceivesound() async {
+    await _player.play(AssetSource('icon/send_receive_message.mp3'));
   }
 
   Future<void> playlikeSound() async {

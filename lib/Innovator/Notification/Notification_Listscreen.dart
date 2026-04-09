@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
+import 'package:innovator/Innovator/screens/chatrrom/screen/chatscreen.dart';
 import 'package:innovator/ecommerce/screens/Shop/Shop_Page.dart';
 import 'package:innovator/innovator_home.dart';
 import 'package:innovator/Innovator/screens/show_Specific_Profile/Show_Specific_Profile.dart';
@@ -309,10 +310,8 @@ class _NotificationListScreenState extends State<NotificationListScreen>
   //  Falls back to type-based routing otherwise.
   // ─────────────────────────────────────────────
   void _navigateToNotificationDetails(NotificationModel notification) async {
-    // Optimistically mark as read in the UI
     if (!notification.isRead) markAsRead(notification.id);
 
-    // Navigate based on type using available fields
     switch (notification.type.toLowerCase()) {
       case 'like':
       case 'comment':
@@ -332,7 +331,10 @@ class _NotificationListScreenState extends State<NotificationListScreen>
         }
         break;
 
+      // ← FIX 1: add 'chat_message' alongside 'message'
       case 'message':
+      case 'chat_message':
+      case 'new_message':
         _navigateToChat(notification);
         break;
 
@@ -348,11 +350,8 @@ class _NotificationListScreenState extends State<NotificationListScreen>
         break;
 
       default:
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => Homepage()),
-          (route) => false,
-        );
+        // ← FIX 2: silent return, no snackbar — avoids off-screen SnackBar crash
+        break;
     }
   }
 
@@ -370,14 +369,26 @@ class _NotificationListScreenState extends State<NotificationListScreen>
   }
 
   void _navigateToChat(NotificationModel notification) {
-    // Uncomment and fill in when ChatScreen is available:
-    // if (notification.senderId != null) {
-    //   Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(
-    //     receiverId: notification.senderId!,
-    //     receiverName: notification.senderUsername ?? 'Unknown',
-    //     receiverPicture: notification.senderAvatar ?? '',
-    //   )));
-    // }
+    debugPrint('senderId: ${notification.senderId}');
+    debugPrint('senderUsername: ${notification.senderUsername}');
+
+    if (notification.senderId == null || notification.senderId!.isEmpty) {
+      _showErrorSnackbar('Unable to open chat: sender not found');
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (_) => ChatScreen(
+              otherUserId: notification.senderId!,
+              otherUserName: notification.senderUsername ?? 'Unknown',
+              otherUserAvatar: notification.senderAvatar ?? '',
+              isOnline: false,
+            ),
+      ),
+    );
   }
 
   void _navigateToProfile(String userId) {
@@ -893,47 +904,48 @@ class _NotificationListScreenState extends State<NotificationListScreen>
             notification.title!,
             style: TextStyle(
               fontSize: 13,
-              fontWeight: FontWeight.w700,
+              fontWeight:
+                  notification.isRead ? FontWeight.w600 : FontWeight.w700,
               color: _getNotificationColor(notification.type),
             ),
           ),
-        const SizedBox(height: 2),
+        //const SizedBox(height: 2),
         // Message body (e.g. "ram reacted haha to your post.")
-        RichText(
-          text: TextSpan(
-            style: TextStyle(
-              fontSize: 15,
-              color: Colors.black87,
-              fontWeight:
-                  notification.isRead ? FontWeight.w400 : FontWeight.w600,
-              height: 1.3,
-            ),
-            children: [
-              if (notification.senderUsername != null)
-                TextSpan(
-                  text: '${notification.senderUsername} ',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: _getNotificationColor(notification.type),
-                  ),
-                ),
-              TextSpan(text: _stripUsername(notification)),
-            ],
-          ),
-        ),
+        // RichText(
+        //   text: TextSpan(
+        //     style: TextStyle(
+        //       fontSize: 15,
+        //       color: Colors.black87,
+        //       fontWeight:
+        //           notification.isRead ? FontWeight.w400 : FontWeight.w600,
+        //       height: 1.3,
+        //     ),
+        //     // children: [
+        //     //   if (notification.senderUsername != null)
+        //     //     TextSpan(
+        //     //       text: '${notification.senderUsername} ',
+        //     //       style: TextStyle(
+        //     //         fontWeight: FontWeight.bold,
+        //     //         color: _getNotificationColor(notification.type),
+        //     //       ),
+        //     //     ),
+        //     //   //TextSpan(text: _stripUsername(notification)),
+        //     // ],
+        //   ),
+        // ),
       ],
     );
   }
 
   /// Strips the leading username from the message since we render it separately.
-  String _stripUsername(NotificationModel n) {
-    final msg = n.message;
-    final username = n.senderUsername;
-    if (username != null && msg.startsWith(username)) {
-      return msg.substring(username.length).trimLeft();
-    }
-    return msg;
-  }
+  // String _stripUsername(NotificationModel n) {
+  //   final msg = n.message;
+  //   final username = n.senderUsername;
+  //   if (username != null && msg.startsWith(username)) {
+  //     return msg.substring(username.length).trimLeft();
+  //   }
+  //   return msg;
+  // }
 
   Widget _buildNotificationMeta(NotificationModel notification) {
     final date = DateTime.parse(notification.createdAt).toLocal();
@@ -1245,30 +1257,10 @@ class _NotificationListScreenState extends State<NotificationListScreen>
   // ─────────────────────────────────────────────
   //  Helpers
   // ─────────────────────────────────────────────
-  String _getNotificationTypeLabel(String type) {
-    switch (type.toLowerCase()) {
-      case 'message':
-        return 'Message';
-      case 'comment':
-        return 'Comment';
-      case 'like':
-        return 'Like';
-      case 'friend_request':
-        return 'Friend Request';
-      case 'mention':
-        return 'Mention';
-      case 'share':
-        return 'Share';
-      case 'follow':
-        return 'Follow';
-      default:
-        return type.toUpperCase();
-    }
-  }
-
   IconData _getNotificationIcon(String type) {
     switch (type.toLowerCase()) {
       case 'message':
+      case 'chat_message': // ← ADD
         return Icons.chat_bubble_outline;
       case 'comment':
         return Icons.mode_comment_outlined;
@@ -1290,6 +1282,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
   Color _getNotificationColor(String type) {
     switch (type.toLowerCase()) {
       case 'message':
+      case 'chat_message': // ← ADD
         return Colors.blue;
       case 'comment':
         return Colors.green;
@@ -1305,6 +1298,28 @@ class _NotificationListScreenState extends State<NotificationListScreen>
         return Colors.indigo;
       default:
         return const Color(0xFFF48706);
+    }
+  }
+
+  String _getNotificationTypeLabel(String type) {
+    switch (type.toLowerCase()) {
+      case 'message':
+      case 'chat_message': // ← ADD
+        return 'Message';
+      case 'comment':
+        return 'Comment';
+      case 'like':
+        return 'Like';
+      case 'friend_request':
+        return 'Friend Request';
+      case 'mention':
+        return 'Mention';
+      case 'share':
+        return 'Share';
+      case 'follow':
+        return 'Follow';
+      default:
+        return type;
     }
   }
 }

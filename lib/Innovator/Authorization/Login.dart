@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
+import 'package:hive_flutter/adapters.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Forget_PWD.dart';
@@ -16,6 +17,7 @@ import 'package:innovator/Innovator/helper/dialogs.dart';
 import 'package:innovator/Innovator/services/fcm_services.dart';
 import 'package:innovator/elearning/provider/notificationProvider.dart';
 import 'package:innovator/innovator_home.dart';
+import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -32,6 +34,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   bool _isPasswordVisible = false;
   bool _isLoading = false;
   bool _rememberMe = false;
+  bool _isGoogleLoading = false;
 
   final FocusNode _emailFocus = FocusNode();
   final FocusNode _passwordFocus = FocusNode();
@@ -491,6 +494,50 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 ),
                               ],
                             ),
+                            SizedBox(height: mq.height * 0.03),
+                            // ElevatedButton.icon(
+                            //   style: ElevatedButton.styleFrom(
+                            //     backgroundColor: Color.fromRGBO(244, 135, 6, 1),
+                            //     shape: StadiumBorder(),
+                            //     elevation: 1,
+                            //   ),
+                            //   onPressed: () {},
+                            //   //onPressed: _isGoogleLoading ? null : _showAccountPicker,
+                            //   icon:
+                            //       _isGoogleLoading
+                            //           ? SizedBox(
+                            //             width: 20,
+                            //             height: 20,
+                            //             child: CircularProgressIndicator(
+                            //               color: Colors.white,
+                            //               strokeWidth: 2,
+                            //             ),
+                            //           )
+                            //           : Lottie.asset(
+                            //             'animation/Googlesignup.json',
+                            //             height: mq.height * .05,
+                            //           ),
+                            //   label: RichText(
+                            //     text: const TextSpan(
+                            //       style: TextStyle(
+                            //         color: Colors.black,
+                            //         fontSize: 19,
+                            //       ),
+                            //       children: [
+                            //         TextSpan(
+                            //           text: 'Sign In with ',
+                            //           style: TextStyle(color: Colors.white),
+                            //         ),
+                            //         TextSpan(
+                            //           text: 'Google',
+                            //           style: TextStyle(
+                            //             fontWeight: FontWeight.w500,
+                            //           ),
+                            //         ),
+                            //       ],
+                            //     ),
+                            //   ),
+                            // ),
                           ],
                         ),
                       ),

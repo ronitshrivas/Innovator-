@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/screens/Blocked/BlockedUser.dart';
 import 'package:innovator/Innovator/screens/Profile/Edit_Profile.dart';
+import 'package:innovator/Innovator/screens/chatrrom/screen/chatlistscreen.dart';
+import 'package:innovator/Innovator/widget/CustomizeFAB.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:innovator/Innovator/Authorization/change_pwd.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  _SettingsScreenState createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   // App theme color
   final Color primaryColor = const Color.fromRGBO(244, 135, 6, 1);
 
@@ -150,6 +153,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final unreadCount = ref.watch(chatUnreadCountProvider);
+
     if (_isLoading) {
       return Scaffold(
         backgroundColor: Colors.grey[50],
@@ -491,6 +496,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 16),
           ],
         ),
+      ),
+      floatingActionButton: CountBadgeFAB(
+        count: unreadCount, // ← real-time total
+        gifAsset: 'animation/chaticon.gif',
+        backgroundColor: Colors.transparent,
+        onPressed: () {
+          ref.read(mutualFriendsProvider.notifier).refresh();
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ChatListScreen()),
+          ).then((_) {
+            ref.invalidate(mutualFriendsProvider);
+            //ref.read(mutualFriendsProvider.notifier).refresh();
+          });
+        },
       ),
     );
   }
