@@ -6,8 +6,8 @@ class ProductModel {
   final int stock;
   final bool isActive;
   final String? category;
-   final CategoryDetails? categoryDetails;
-  final String? image; 
+  final CategoryDetails? categoryDetails;
+  final String? image;
 
   ProductModel({
     required this.id,
@@ -30,9 +30,12 @@ class ProductModel {
       stock: json['stock'] as int,
       isActive: json['is_active'] as bool? ?? true,
       category: json['category'] as String?,
-          categoryDetails: json['category_details'] != null
-          ? CategoryDetails.fromJson(json['category_details'] as Map<String, dynamic>)
-          : null,
+      categoryDetails:
+          json['category_details'] != null
+              ? CategoryDetails.fromJson(
+                json['category_details'] as Map<String, dynamic>,
+              )
+              : null,
       image: json['image'] as String?,
     );
   }
@@ -63,7 +66,6 @@ class ProductModel {
   }
 }
 
-
 class CategoryDetails {
   final String id;
   final String name;
@@ -88,8 +90,4 @@ class CategoryDetails {
       createdAt: json['created_at'] as String,
     );
   }
-<<<<<<< prashantmerger
 }
-=======
-}
->>>>>>> Ronit
