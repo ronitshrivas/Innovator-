@@ -28,6 +28,7 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
   @override
   void initState() {
     super.initState();
+    ref.refresh(courseListProvider);
     _tabController = TabController(length: _tabs.length, vsync: this);
     _searchController.addListener(() {
       setState(
@@ -220,7 +221,7 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
                 child: Consumer(
                   builder: (context, ref, _) {
                     final unreadAsync = ref.watch(unreadCountProvider);
-                    final count = unreadAsync.valueOrNull ?? 0;
+                    final count = unreadAsync;
                     return count > 0
                         ? Badge.count(
                           count: count,

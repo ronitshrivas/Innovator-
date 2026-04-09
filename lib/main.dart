@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart'; 
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -13,14 +13,13 @@ import 'package:innovator/Innovator/provider/global_chat_listener.dart';
 import 'package:innovator/Innovator/provider/notification_provider.dart';
 import 'package:innovator/Innovator/screens/Splash_Screen/splash_screen.dart';
 import 'package:innovator/Innovator/services/fcm_services.dart';
-import 'package:innovator/Innovator/services/inappnotifcationoverlay.dart';
-import 'package:innovator/KMS/screens/auth/login_screen.dart';
+ import 'package:innovator/KMS/screens/auth/login_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/admin_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/teacher_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/student/student_attendance_screen.dart';
 import 'dart:developer' as developer;
 import 'package:innovator/ecommerce/screens/Shop/Shop_Page.dart';
-import 'package:innovator/elearning/provider/notificationProvider.dart';
+ import 'package:innovator/elearning/provider/notificationProvider.dart';
 
 // ─── everything above main() is IDENTICAL to your original ───────────────────
 
@@ -191,6 +190,7 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
 
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         _showForegroundNotification(message);
+       
       });
 
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
@@ -294,10 +294,9 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
       // Wraps the entire app in a Stack. The overlay sits above all screens.
       // Only the banner widget rebuilds when a notification arrives.
       // Your feed, profile, and every other screen are completely unaffected.
-      builder:
-          (context, child) =>
-              InAppNotificationOverlay(child: child ?? const SizedBox.shrink()),
-
+      // builder:
+      //     (context, child) =>
+      //         InAppNotificationOverlay(child: child ?? const SizedBox.shrink()),
       home: SplashScreen(),
       routes: {
         '/kms/login': (_) => KmsLoginScreen(),

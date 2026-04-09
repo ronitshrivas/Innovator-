@@ -222,7 +222,6 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
       }
     } catch (e) {
       ref.read(enrollLoadingProvider(courseId).notifier).setLoading(false);
-      _showErrorSnack('Something went wrong. Please try again.');
     }
   }
 
@@ -755,15 +754,13 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
 
 // ─── Khalti WebView Screen ────────────────────────────────────────────────────
 
-
-
 // ─── Khalti WebView Screen ────────────────────────────────────────────────────
 
 class KhaltiWebViewScreen extends StatefulWidget {
   final String paymentUrl;
 
   const KhaltiWebViewScreen({Key? key, required this.paymentUrl})
-      : super(key: key);
+    : super(key: key);
 
   @override
   State<KhaltiWebViewScreen> createState() => _KhaltiWebViewScreenState();
@@ -778,30 +775,31 @@ class _KhaltiWebViewScreenState extends State<KhaltiWebViewScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Colors.white)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageStarted: (_) => setState(() => _isLoading = true),
-          onPageFinished: (_) => setState(() => _isLoading = false),
-          onNavigationRequest: (request) {
-            final url = request.url;
-            if (url.contains('payment-success') ||
-                url.contains('payment-complete') ||
-                url.contains('payment/success') ||
-                url.contains('payment/failure') ||
-                url.contains('payment/cancel') ||
-                url.contains('khalti/callback') ||
-                url.startsWith('innovator://')) {
-              Navigator.pop(context);
-              return NavigationDecision.prevent;
-            }
-            return NavigationDecision.navigate;
-          },
-        ),
-      )
-      ..loadRequest(Uri.parse(widget.paymentUrl));
+    _controller =
+        WebViewController()
+          ..setJavaScriptMode(JavaScriptMode.unrestricted)
+          ..setBackgroundColor(Colors.white)
+          ..setNavigationDelegate(
+            NavigationDelegate(
+              onPageStarted: (_) => setState(() => _isLoading = true),
+              onPageFinished: (_) => setState(() => _isLoading = false),
+              onNavigationRequest: (request) {
+                final url = request.url;
+                if (url.contains('payment-success') ||
+                    url.contains('payment-complete') ||
+                    url.contains('payment/success') ||
+                    url.contains('payment/failure') ||
+                    url.contains('payment/cancel') ||
+                    url.contains('khalti/callback') ||
+                    url.startsWith('innovator://')) {
+                  Navigator.pop(context);
+                  return NavigationDecision.prevent;
+                }
+                return NavigationDecision.navigate;
+              },
+            ),
+          )
+          ..loadRequest(Uri.parse(widget.paymentUrl));
   }
 
   Future<bool> _onWillPop() async {
@@ -811,24 +809,30 @@ class _KhaltiWebViewScreenState extends State<KhaltiWebViewScreen> {
     }
     final exit = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Cancel Payment?'),
-        content: const Text(
-          'Are you sure you want to leave? Your payment will not be completed.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Stay'),
+      builder:
+          (_) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: const Text('Cancel Payment?'),
+            content: const Text(
+              'Are you sure you want to leave? Your payment will not be completed.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Stay'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                child: const Text(
+                  'Leave',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Leave', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
     );
     return exit ?? false;
   }
@@ -847,11 +851,12 @@ class _KhaltiWebViewScreenState extends State<KhaltiWebViewScreen> {
               Image.asset(
                 'assets/icon/khalti_logo.png',
                 height: 22,
-                errorBuilder: (_, __, ___) => const Icon(
-                  Icons.account_balance_wallet,
-                  color: Colors.white,
-                  size: 22,
-                ),
+                errorBuilder:
+                    (_, __, ___) => const Icon(
+                      Icons.account_balance_wallet,
+                      color: Colors.white,
+                      size: 22,
+                    ),
               ),
               const SizedBox(width: 10),
               const Text(
@@ -878,27 +883,32 @@ class _KhaltiWebViewScreenState extends State<KhaltiWebViewScreen> {
                 onTap: () async {
                   final exit = await showDialog<bool>(
                     context: context,
-                    builder: (_) => AlertDialog(
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)),
-                      title: const Text('Cancel Payment?'),
-                      content: const Text(
-                        'Are you sure you want to leave? Your payment will not be completed.',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, false),
-                          child: const Text('Stay'),
+                    builder:
+                        (_) => AlertDialog(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          title: const Text('Cancel Payment?'),
+                          content: const Text(
+                            'Are you sure you want to leave? Your payment will not be completed.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('Stay'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                              ),
+                              child: const Text(
+                                'Leave',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ],
                         ),
-                        ElevatedButton(
-                          onPressed: () => Navigator.pop(context, true),
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red),
-                          child: const Text('Leave',
-                              style: TextStyle(color: Colors.white)),
-                        ),
-                      ],
-                    ),
                   );
                   if (exit == true && context.mounted) Navigator.pop(context);
                 },

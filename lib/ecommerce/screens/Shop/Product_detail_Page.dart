@@ -194,11 +194,9 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     final imageUrls = product.allImageUrls;
     final price = double.tryParse(product.price) ?? 0.0;
     final inCart = _cartProductIds.contains(product.id);
-
-    return CustomScrollView(
+     return CustomScrollView(
       slivers: [
-        //  App Bar with image gallery
-        SliverAppBar(
+         SliverAppBar(
           leading:  IconButton(
             onPressed: () => Navigator.pop(context),
             icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),

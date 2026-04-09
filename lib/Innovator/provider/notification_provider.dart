@@ -4,15 +4,10 @@ import 'dart:convert';
 import 'dart:isolate';
 import 'dart:developer' as developer;
 
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MODEL — matches your exact API fields
-// API returns flat array: [{id, sender_username, sender_avatar, type,
-//                           title, message, related_post_id, is_read, created_at}]
-// ─────────────────────────────────────────────────────────────────────────────
 
 class AppNotification {
   final String id;
@@ -64,10 +59,6 @@ class AppNotification {
   int get hashCode => id.hashCode;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ISOLATE MESSAGES
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _PollRequest {
   final SendPort replyPort;
   final String authToken;
@@ -81,14 +72,9 @@ class _PollResult {
   _PollResult({this.notifications = const [], this.error});
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ISOLATE ENTRY POINT — runs on a background thread
-// No Flutter SDK here. Pure Dart + http only.
-// ─────────────────────────────────────────────────────────────────────────────
-
 Future<void> _pollIsolateEntry(SendPort mainPort) async {
   final receivePort = ReceivePort();
-  mainPort.send(receivePort.sendPort); // handshake
+  mainPort.send(receivePort.sendPort);
 
   await for (final msg in receivePort) {
     if (msg is _PollRequest) {
@@ -101,7 +87,6 @@ Future<void> _pollIsolateEntry(SendPort mainPort) async {
             .timeout(const Duration(seconds: 10));
 
         if (response.statusCode == 200) {
-          // Your API returns a flat JSON array
           final decoded = jsonDecode(response.body);
           final List<dynamic> list =
               decoded is List
@@ -126,14 +111,13 @@ Future<void> _pollIsolateEntry(SendPort mainPort) async {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// STATE
-// ─────────────────────────────────────────────────────────────────────────────
+final FlutterLocalNotificationsPlugin _plugin =
+    FlutterLocalNotificationsPlugin();
 
 class NotificationState {
-  final Queue<AppNotification> displayQueue; // waiting to be shown
-  final AppNotification? current; // currently showing banner
-  final int unreadCount; // badge number
+  final Queue<AppNotification> displayQueue;
+  final AppNotification? current;
+  final int unreadCount;
 
   NotificationState({
     Queue<AppNotification>? displayQueue,
@@ -155,10 +139,6 @@ class NotificationState {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// NOTIFIER
-// ─────────────────────────────────────────────────────────────────────────────
-
 class NotificationNotifier extends Notifier<NotificationState> {
   static const String _apiUrl = 'http://182.93.94.220:8005/api/notifications/';
   static const Duration _foregroundInterval = Duration(seconds: 8);
@@ -169,7 +149,6 @@ class NotificationNotifier extends Notifier<NotificationState> {
   ReceivePort? _mainReceivePort;
   Timer? _pollingTimer;
 
-  // O(1) lookup, bounded to 200 IDs — prevents showing same notification twice
   final LinkedHashSet<String> _seenIds = LinkedHashSet();
 
   @override
@@ -178,28 +157,19 @@ class NotificationNotifier extends Notifier<NotificationState> {
     return NotificationState();
   }
 
-  // ── PUBLIC API ─────────────────────────────────────────────────────────────
-
-  /// Call after login. Spawns isolate and starts 8-second polling.
   Future<void> startPolling() async {
     await _spawnIsolate();
     _startTimer(_foregroundInterval);
-    _triggerPoll(); // immediate check, don't wait
+    _triggerPoll();
   }
 
-  /// Call from homepage.dart didChangeAppLifecycleState:
-  ///   resumed → setAppActive(true)  → 8s polling
-  ///   paused  → setAppActive(false) → 30s polling
   void setAppActive(bool isActive) {
     _startTimer(isActive ? _foregroundInterval : _backgroundInterval);
-    if (isActive) _triggerPoll(); // check immediately when user opens app
+    if (isActive) _triggerPoll();
   }
 
-  /// Call on logout.
   void stopPolling() => _teardown();
 
-  /// Called by the banner widget when it times out or user swipes it away.
-  /// Shows the next queued notification (if any).
   void dismissCurrent() {
     final queue = Queue<AppNotification>.from(state.displayQueue);
     if (queue.isEmpty) {
@@ -210,15 +180,12 @@ class NotificationNotifier extends Notifier<NotificationState> {
     state = state.copyWith(current: next, displayQueue: queue);
   }
 
-  /// Call when user taps the banner — decrements badge count.
   void markRead(String id) {
     if (state.unreadCount > 0) {
       state = state.copyWith(unreadCount: state.unreadCount - 1);
     }
   }
 
-  /// Inject a notification directly (used for FCM foreground messages).
-  /// Skips the HTTP poll — shows immediately.
   void injectNotification(AppNotification notification) {
     if (_seenIds.contains(notification.id)) return;
     _seenIds.add(notification.id);
@@ -240,13 +207,10 @@ class NotificationNotifier extends Notifier<NotificationState> {
     );
   }
 
-  /// Call on logout — clears all state and history.
   void clearAll() {
     _seenIds.clear();
     state = NotificationState();
   }
-
-  // ── ISOLATE LIFECYCLE ──────────────────────────────────────────────────────
 
   Future<void> _spawnIsolate() async {
     if (_isolate != null) return;
@@ -316,8 +280,13 @@ class NotificationNotifier extends Notifier<NotificationState> {
     for (final n in newOnes) {
       _seenIds.add(n.id);
     }
+
     while (_seenIds.length > 200) {
       _seenIds.remove(_seenIds.first);
+    }
+
+    for (final n in newOnes) {
+      _showSystemNotification(n);
     }
 
     final queue = Queue<AppNotification>.from(state.displayQueue);
@@ -354,24 +323,89 @@ class NotificationNotifier extends Notifier<NotificationState> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PROVIDERS — use the most specific one to avoid unnecessary rebuilds
-// ─────────────────────────────────────────────────────────────────────────────
-
-/// Main provider. Use notificationProvider.notifier to call methods.
 final notificationProvider =
     NotifierProvider<NotificationNotifier, NotificationState>(
       NotificationNotifier.new,
     );
 
-/// Use ONLY in InAppNotificationOverlay.
-/// Rebuilds ONLY when the banner changes — all other screens unaffected.
 final currentNotificationProvider = Provider<AppNotification?>((ref) {
   return ref.watch(notificationProvider.select((s) => s.current));
 });
 
-/// Use wherever you show a badge (bottom nav, app bar icon).
-/// Rebuilds ONLY when the number changes.
 final notificationBadgeProvider = Provider<int>((ref) {
   return ref.watch(notificationProvider.select((s) => s.unreadCount));
 });
+
+final Map<String, List<String>> _groupedMessages = {};
+
+Future<void> _showSystemNotification(AppNotification n) async {
+  try {
+    const groupKey = 'chat_messages';
+
+    final sender = n.senderUsername ?? 'User';
+
+    _groupedMessages.putIfAbsent(sender, () => []);
+    _groupedMessages[sender]!.add(n.body);
+
+    final messages = _groupedMessages[sender]!;
+
+    final inboxStyle = InboxStyleInformation(
+      messages,
+      contentTitle: sender,
+      summaryText: '${messages.length} messages',
+    );
+
+    final androidDetails = AndroidNotificationDetails(
+      'high_importance_channel',
+      'High Importance Notifications',
+      importance: Importance.max,
+      priority: Priority.max,
+
+      styleInformation: inboxStyle,
+      groupKey: groupKey,
+      setAsGroupSummary: false,
+
+      largeIcon:
+          n.imageUrl != null
+              ? await _getBitmapFromUrl(n.imageUrl!)
+              : const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
+
+      icon: '@mipmap/ic_launcher',
+    );
+
+    await _plugin.show(
+      sender.hashCode, // SAME ID → prevents duplicate notifications
+      sender,
+      n.body,
+      NotificationDetails(android: androidDetails),
+      payload: jsonEncode({'id': n.id, 'type': n.type}),
+    );
+
+    // ✅ GROUP SUMMARY (like Facebook header)
+    final summaryDetails = AndroidNotificationDetails(
+      'high_importance_channel',
+      'High Importance Notifications',
+      importance: Importance.max,
+      priority: Priority.max,
+      groupKey: groupKey,
+      setAsGroupSummary: true,
+      styleInformation: const InboxStyleInformation([]),
+    );
+
+    await _plugin.show(
+      0,
+      'Messages',
+      'You have ${_groupedMessages.length} conversations',
+      NotificationDetails(android: summaryDetails),
+    );
+  } catch (e) {
+    developer.log('Notification error: $e');
+  }
+}
+
+Future<AndroidBitmap<Object>> _getBitmapFromUrl(String url) async {
+  final response = await http.get(Uri.parse(url));
+  return ByteArrayAndroidBitmap.fromBase64String(
+    base64Encode(response.bodyBytes),
+  );
+}
