@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:innovator/Innovator/screens/chatrrom/screen/chatlistscreen.dart';
-import 'package:innovator/Innovator/widget/CustomizeFAB.dart';
 import 'package:innovator/elearning/model/course_list_model.dart';
 import 'package:innovator/elearning/provider/course_provider.dart';
 import 'package:video_player/video_player.dart';
@@ -224,7 +222,6 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
       }
     } catch (e) {
       ref.read(enrollLoadingProvider(courseId).notifier).setLoading(false);
-      _showErrorSnack('Something went wrong. Please try again.');
     }
   }
 

@@ -25,6 +25,7 @@ import 'package:innovator/Innovator/services/fcm_services.dart';
 import 'package:innovator/Innovator/utils/Drawer/drawer_cache_manager.dart';
 import 'package:innovator/KMS/core/constants/service/auth_wrapper.dart';
 import 'package:innovator/ecommerce/screens/Shop/Shop_Page.dart';
+import 'package:innovator/elearning/provider/notificationProvider.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -526,9 +527,11 @@ class _TrueInstantDrawerState extends ConsumerState<TrueInstantDrawer> {
                 onPressed: () => Navigator.pop(dialogContext),
                 child: const Text('Cancel'),
               ),
+
               ElevatedButton(
                 onPressed: () async {
                   await FCMService().clearToken();
+                  await ref.read(notificationServiceProvider).clearToken();
                   AppData().clearAuthToken();
                   ref.read(drawerProfileProvider.notifier).clear();
                   AppData().logout();

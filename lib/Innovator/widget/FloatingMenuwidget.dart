@@ -4,8 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
-import 'package:innovator/Innovator/constant/app_colors.dart';
-import 'package:innovator/Innovator/screens/CreatePost/createpost.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart'; 
 import 'package:innovator/Innovator/screens/Events/Events.dart';
 import 'package:innovator/Innovator/utils/Drawer/custom_drawer.dart';
 import 'package:innovator/Innovator/Notification/Notification_Listscreen.dart';
@@ -232,9 +231,9 @@ class _FloatingMenuWidgetState extends ConsumerState<FloatingMenuWidget>
       case 'open_course':
         _nav.push(MaterialPageRoute(builder: (_) => CourseListScreen()));
         break;
-      case 'add_photo':
-        _nav.push(MaterialPageRoute(builder: (_) => const CreatePostScreen()));
-        break;
+      // case 'add_photo':
+      //   _nav.push(MaterialPageRoute(builder: (_) => const CreatePostScreen()));
+      //   break;
       case 'show_events':
         _nav.push(MaterialPageRoute(builder: (_) => EventsHomePage()));
         break;

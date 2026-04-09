@@ -472,8 +472,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       }
     } catch (e) {
       setState(() => _isProcessing = false);
-      final msg = e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
-      _showSnackBar('Error: $msg', Colors.red);
+ 
     }
   }
 
@@ -500,8 +499,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       );
     } catch (e) {
       setState(() => _isProcessing = false);
-      final msg = e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
-      _showSnackBar('Khalti error: $msg', Colors.red);
+      
     }
   }
 
@@ -1148,7 +1146,7 @@ class _PaymentOptionCard extends StatelessWidget {
                 ],
               ),
             ),
-            _RadioDot(isSelected: isSelected, color: iconColor),
+            RadioDot(isSelected: isSelected, color: iconColor),
           ],
         ),
       ),
@@ -1272,7 +1270,7 @@ class _KhaltiPaymentCard extends StatelessWidget {
               ),
             ),
 
-            _RadioDot(isSelected: isSelected, color: _khaltiPurple),
+            RadioDot(isSelected: isSelected, color: _khaltiPurple),
           ],
         ),
       ),
@@ -1282,11 +1280,19 @@ class _KhaltiPaymentCard extends StatelessWidget {
 
 //Reusable animated radio dot
 
+<<<<<<< prashantmerger
+class RadioDot extends StatelessWidget {
+  final bool isSelected;
+  final Color color;
+
+  const RadioDot({required this.isSelected, required this.color});
+=======
 class _RadioDot extends StatelessWidget {
   final bool isSelected;
   final Color color;
 
   const _RadioDot({required this.isSelected, required this.color});
+>>>>>>> Ronit
 
   @override
   Widget build(BuildContext context) {
