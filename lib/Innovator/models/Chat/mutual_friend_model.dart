@@ -5,15 +5,17 @@ class MutualFriend {
   final String avatar;
   final bool onlineStatus;
   final int unreadCount;
+  final DateTime lastMessageAt; // ← ADD
 
-  const MutualFriend({
+  MutualFriend({
     required this.id,
     required this.username,
     required this.fullName,
     required this.avatar,
     required this.onlineStatus,
     this.unreadCount = 0,
-  });
+    DateTime? lastMessageAt, // ← ADD
+  }) : lastMessageAt = lastMessageAt ?? DateTime(2000); // ← ADD
 
   factory MutualFriend.fromJson(Map<String, dynamic> json) => MutualFriend(
     id: json['id']?.toString() ?? '',
@@ -21,6 +23,9 @@ class MutualFriend {
     fullName: json['full_name']?.toString() ?? '',
     avatar: json['avatar']?.toString() ?? '',
     onlineStatus: json['online_status'] == true,
+    lastMessageAt:
+        DateTime.tryParse(json['last_message_at']?.toString() ?? '') ??
+        DateTime(2000), // ← ADD
   );
 
   MutualFriend copyWithUnread(int count) => MutualFriend(
@@ -30,6 +35,18 @@ class MutualFriend {
     avatar: avatar,
     onlineStatus: onlineStatus,
     unreadCount: count,
+    lastMessageAt: lastMessageAt, // ← ADD
+  );
+
+  // ← ADD THIS METHOD
+  MutualFriend copyWithLastMessageAt(DateTime t) => MutualFriend(
+    id: id,
+    username: username,
+    fullName: fullName,
+    avatar: avatar,
+    onlineStatus: onlineStatus,
+    unreadCount: unreadCount,
+    lastMessageAt: t,
   );
 
   String get displayName => fullName.isNotEmpty ? fullName : username;

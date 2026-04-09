@@ -252,6 +252,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
         }
       });
     }
+    final unreadCount = ref.watch(chatUnreadCountProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
@@ -323,6 +324,21 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
               ),
             ),
         ],
+      ),
+      floatingActionButton: CountBadgeFAB(
+        count: unreadCount, // ← real-time total
+        gifAsset: 'animation/chaticon.gif',
+        backgroundColor: Colors.transparent,
+        onPressed: () {
+          ref.read(mutualFriendsProvider.notifier).refresh();
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ChatListScreen()),
+          ).then((_) {
+            ref.invalidate(mutualFriendsProvider);
+            //ref.read(mutualFriendsProvider.notifier).refresh();
+          });
+        },
       ),
     );
   }

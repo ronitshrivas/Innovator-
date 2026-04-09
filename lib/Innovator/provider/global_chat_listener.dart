@@ -101,15 +101,15 @@ class GlobalChatListener {
 
       final myId = AppData().currentUserId ?? '';
 
-      // ✅ FIX: Only count if sender is actually this friend
       if (senderId.isEmpty || senderId == myId) return;
 
-      // ✅ FIX: The senderId must match the friendId for this WS channel
       if (senderId != friendId) return;
 
       if (activeChatUserId == friendId) return;
 
       _ref.read(perFriendUnreadProvider.notifier).increment(friendId);
+      _ref.read(friendActivityProvider.notifier).markActivity(friendId);
+      _ref.read(mutualFriendsProvider.notifier).bumpToTop(friendId);
       developer.log('[GlobalWS] New msg from $friendId — badge incremented');
     } catch (e) {
       developer.log('[GlobalWS] Parse error: $e');
