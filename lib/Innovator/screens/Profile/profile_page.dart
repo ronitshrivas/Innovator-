@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:developer';
-import 'dart:io';
-import 'package:flutter/cupertino.dart';
+import 'dart:io'; 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -10,8 +9,7 @@ import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Login.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
-import 'package:innovator/Innovator/models/Feed_Content_Model.dart';
-import 'package:innovator/Innovator/screens/CreatePost/createpost.dart';
+import 'package:innovator/Innovator/models/Feed_Content_Model.dart'; 
 import 'package:innovator/Innovator/screens/Feed/Inner_Homepage.dart';
 import 'package:innovator/Innovator/screens/Feed/Video_Feed.dart'
     show VideoFeedPage;
@@ -821,45 +819,45 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
         const SizedBox(height: 24),
 
         // ── Create Post ─────────────────────────────────────────────────────
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Create New Post',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-            const SizedBox(height: 10),
-            InkWell(
-              onTap:
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => CreatePostScreen()),
-                  ),
-              child: Container(
-                height: 150,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Center(
-                  child: Text(
-                    'Write Something...',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black45,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+        // Column(
+        //   crossAxisAlignment: CrossAxisAlignment.start,
+        //   children: [
+        //     const Text(
+        //       'Create New Post',
+        //       style: TextStyle(
+        //         fontSize: 18,
+        //         fontWeight: FontWeight.bold,
+        //         color: Colors.black,
+        //       ),
+        //     ),
+        //     const SizedBox(height: 10),
+        //     InkWell(
+        //       onTap:
+        //           () => Navigator.push(
+        //             context,
+        //             MaterialPageRoute(builder: (_) => CreatePostScreen()),
+        //           ),
+        //       child: Container(
+        //         height: 150,
+        //         width: double.infinity,
+        //         decoration: BoxDecoration(
+        //           color: Colors.grey.shade300,
+        //           borderRadius: BorderRadius.circular(8),
+        //         ),
+        //         child: const Center(
+        //           child: Text(
+        //             'Write Something...',
+        //             style: TextStyle(
+        //               fontSize: 16,
+        //               fontWeight: FontWeight.bold,
+        //               color: Colors.black45,
+        //             ),
+        //           ),
+        //         ),
+        //       ),
+        //     ),
+        //   ],
+        // ),
 
         const SizedBox(height: 30),
 

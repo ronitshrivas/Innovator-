@@ -5,7 +5,9 @@ import 'package:innovator/Innovator/widget/Custom_refresh_Indicator.dart';
 import 'package:innovator/Innovator/widget/CustomizeFAB.dart';
 import 'package:innovator/elearning/model/course_list_model.dart';
 import 'package:innovator/elearning/provider/course_provider.dart';
+import 'package:innovator/elearning/provider/notificationProvider.dart';
 import 'package:innovator/elearning/screens/course_details_screen.dart';
+import 'package:innovator/elearning/screens/notifications_screen.dart';
 import 'package:shimmer/shimmer.dart';
 
 class CourseListScreen extends ConsumerStatefulWidget {
@@ -28,6 +30,7 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
   @override
   void initState() {
     super.initState();
+    ref.refresh(courseListProvider);
     _tabController = TabController(length: _tabs.length, vsync: this);
     _searchController.addListener(() {
       setState(
@@ -77,10 +80,13 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
     final unreadCount = ref.watch(chatUnreadCountProvider);
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      body: asyncCourses.when(
-        loading: () => _buildSkeleton(),
-        error: (e, _) => _buildError(e),
-        data: (courses) => _buildContent(courses),
+      body: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: asyncCourses.when(
+          loading: () => _buildSkeleton(),
+          error: (e, _) => _buildError(e),
+          data: (courses) => _buildContent(courses),
+        ),
       ),
       floatingActionButton: CountBadgeFAB(
         count: unreadCount, // ← real-time total
@@ -221,11 +227,30 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
                 ),
               ),
               const Spacer(),
-              if (courses != null)
-                Text(
-                  '${courses.length} courses',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+              InkWell(
+                onTap:
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationScreen(),
+                      ),
+                    ),
+                child: Consumer(
+                  builder: (context, ref, _) {
+                    final unreadAsync = ref.watch(unreadCountProvider);
+                    final count = unreadAsync;
+                    return count > 0
+                        ? Badge.count(
+                          count: count,
+                          child: const Icon(
+                            Icons.notifications_outlined,
+                            size: 25,
+                          ),
+                        )
+                        : const Icon(Icons.notifications_outlined, size: 25);
+                  },
                 ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
