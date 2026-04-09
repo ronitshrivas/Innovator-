@@ -224,7 +224,6 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
       }
     } catch (e) {
       ref.read(enrollLoadingProvider(courseId).notifier).setLoading(false);
-      _showErrorSnack('Something went wrong. Please try again.');
     }
   }
 

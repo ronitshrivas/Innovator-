@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/adapters.dart';
 import 'package:http/http.dart' as http;
@@ -13,19 +14,21 @@ import 'package:innovator/Innovator/Authorization/signup.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/helper/dialogs.dart';
+import 'package:innovator/Innovator/services/fcm_services.dart';
+import 'package:innovator/elearning/provider/notificationProvider.dart';
 import 'package:innovator/innovator_home.dart';
 import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class LoginPage extends StatefulWidget {
+class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key, this.clearFields = false});
   final bool clearFields;
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends ConsumerState<LoginPage> {
   final Color _orange = const Color.fromRGBO(244, 135, 6, 1);
 
   bool _isPasswordVisible = false;
@@ -146,32 +149,43 @@ class _LoginPageState extends State<LoginPage> {
 
         await _saveCredentials();
         _navigateAfterLogin(user);
+        // WidgetsBinding.instance.addPostFrameCallback((_) async {
+        //   try {
+        //     String? fcmToken = await FirebaseMessaging.instance.getToken();
+        //     if (fcmToken != null) {
+        //       final accessToken = AppData().accessToken;
+        //       if (accessToken == null || accessToken.isEmpty) return;
+
+        //       String deviceName =
+        //           Platform.isAndroid ? 'Android Device' : 'iPhone';
+
+        //       await http.post(
+        //         Uri.parse('http://182.93.94.220:8005/api/fcm-tokens/'),
+        //         headers: {
+        //           'Content-Type': 'application/json',
+        //           'Authorization': 'Bearer $accessToken',
+        //         },
+        //         body: jsonEncode({
+        //           'token': fcmToken,
+        //           'device_name': deviceName,
+        //         }),
+        //       );
+        //       developer.log('FCM token sent after login');
+        //     }
+        //   } catch (e) {
+        //     developer.log('FCM post-login error: $e');
+        //   }
+        // });
+
         WidgetsBinding.instance.addPostFrameCallback((_) async {
-          try {
-            String? fcmToken = await FirebaseMessaging.instance.getToken();
-            if (fcmToken != null) {
-              final accessToken = AppData().accessToken;
-              if (accessToken == null || accessToken.isEmpty) return;
+          final fcmToken = await FirebaseMessaging.instance.getToken();
+          developer.log('FCM TOKEN IS: $fcmToken');
+          if (fcmToken == null) return;
 
-              String deviceName =
-                  Platform.isAndroid ? 'Android Device' : 'iPhone';
-
-              await http.post(
-                Uri.parse('http://182.93.94.220:8005/api/fcm-tokens/'),
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': 'Bearer $accessToken',
-                },
-                body: jsonEncode({
-                  'token': fcmToken,
-                  'device_name': deviceName,
-                }),
-              );
-              developer.log('FCM token sent after login');
-            }
-          } catch (e) {
-            developer.log('FCM post-login error: $e');
-          }
+          await Future.wait([
+            FCMService().registerToken(),
+            ref.read(notificationServiceProvider).registerFcmToken(fcmToken),
+          ]);
         });
       } else {
         final data = jsonDecode(response.body) as Map<String, dynamic>?;

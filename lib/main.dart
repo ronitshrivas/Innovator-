@@ -2,24 +2,24 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
+import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/provider/global_chat_listener.dart';
 import 'package:innovator/Innovator/provider/notification_provider.dart';
 import 'package:innovator/Innovator/screens/Splash_Screen/splash_screen.dart';
 import 'package:innovator/Innovator/services/fcm_services.dart';
-import 'package:innovator/Innovator/services/inappnotifcationoverlay.dart';
-import 'package:innovator/KMS/screens/auth/login_screen.dart';
+ import 'package:innovator/KMS/screens/auth/login_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/admin_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/teacher_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/student/student_attendance_screen.dart';
 import 'dart:developer' as developer;
 import 'package:innovator/ecommerce/screens/Shop/Shop_Page.dart';
+ import 'package:innovator/elearning/provider/notificationProvider.dart';
 
 // ─── everything above main() is IDENTICAL to your original ───────────────────
 
@@ -27,7 +27,8 @@ late Size mq;
 GlobalKey<NavigatorState> get navigatorKey => Get.key;
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  print('Background notification: ${message.notification?.title}');
+  await Firebase.initializeApp();
+  developer.log('Background notification: ${message.notification?.title}');
 }
 
 void main() async {
@@ -78,9 +79,11 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     developer.log('InnovatorHomePage initialized');
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       _setupFCM();
-      ref.read(notificationProvider.notifier).startPolling(); // ← ADD
+      ref.read(notificationProvider.notifier).startPolling();
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      ref.read(notificationServiceProvider).registerFcmToken(fcmToken ?? '');
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(globalChatListenerProvider);
@@ -151,14 +154,43 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
             badge: true,
             sound: true,
           );
-      await FCMService().registerToken();
+      // await FCMService().registerToken();
+      // FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
+      //   developer.log('FCM Token refreshed: $newToken');
+      //   await FCMService().registerToken();
+      // });
+
+      // final fcmToken = await FirebaseMessaging.instance.getToken();
+      // developer.log('FCM Token: $fcmToken');
+      // if (fcmToken != null) {
+      //   await Future.wait([
+      //     FCMService().registerToken(),
+      //     ref.read(notificationServiceProvider).registerFcmToken(fcmToken),
+      //   ]);
+      // }
+      final accessToken = AppData().accessToken;
+      if (accessToken != null && accessToken.isNotEmpty) {
+        final fcmToken = await FirebaseMessaging.instance.getToken();
+        if (fcmToken != null) {
+          await Future.wait([
+            FCMService().registerToken(),
+            ref.read(notificationServiceProvider).registerFcmToken(fcmToken),
+          ]);
+        }
+      } else {
+        developer.log('FCM: Skipping — user not logged in');
+      }
       FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
         developer.log('FCM Token refreshed: $newToken');
-        await FCMService().registerToken();
+        await Future.wait([
+          FCMService().registerToken(),
+          ref.read(notificationServiceProvider).registerFcmToken(newToken),
+        ]);
       });
 
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         _showForegroundNotification(message);
+       
       });
 
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
@@ -262,10 +294,9 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
       // Wraps the entire app in a Stack. The overlay sits above all screens.
       // Only the banner widget rebuilds when a notification arrives.
       // Your feed, profile, and every other screen are completely unaffected.
-      builder:
-          (context, child) =>
-              InAppNotificationOverlay(child: child ?? const SizedBox.shrink()),
-
+      // builder:
+      //     (context, child) =>
+      //         InAppNotificationOverlay(child: child ?? const SizedBox.shrink()),
       home: SplashScreen(),
       routes: {
         '/kms/login': (_) => KmsLoginScreen(),
