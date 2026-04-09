@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
+import 'package:innovator/Innovator/screens/chatrrom/screen/chatlistscreen.dart';
+import 'package:innovator/Innovator/widget/CustomizeFAB.dart';
 import 'package:innovator/innovator_home.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -16,14 +19,14 @@ import 'package:http_parser/http_parser.dart';
 
 // ── API constants ─────────────────────────────────────────────────────────────
 
-class EditProfileScreen extends StatefulWidget {
+class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({Key? key}) : super(key: key);
 
   @override
   _EditProfileScreenState createState() => _EditProfileScreenState();
 }
 
-class _EditProfileScreenState extends State<EditProfileScreen>
+class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
     with SingleTickerProviderStateMixin {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
   late AnimationController _animCtrl;
@@ -403,6 +406,8 @@ class _EditProfileScreenState extends State<EditProfileScreen>
 
   @override
   Widget build(BuildContext context) {
+    final unreadCount = ref.watch(chatUnreadCountProvider);
+
     return WillPopScope(
       onWillPop: () async => true,
       child: Scaffold(
@@ -566,6 +571,21 @@ class _EditProfileScreenState extends State<EditProfileScreen>
                 ),
               ),
           ],
+        ),
+        floatingActionButton: CountBadgeFAB(
+          count: unreadCount, // ← real-time total
+          gifAsset: 'animation/chaticon.gif',
+          backgroundColor: Colors.transparent,
+          onPressed: () {
+            ref.read(mutualFriendsProvider.notifier).refresh();
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ChatListScreen()),
+            ).then((_) {
+              ref.invalidate(mutualFriendsProvider);
+              //ref.read(mutualFriendsProvider.notifier).refresh();
+            });
+          },
         ),
       ),
     );

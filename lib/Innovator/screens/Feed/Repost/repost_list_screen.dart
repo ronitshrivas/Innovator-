@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer' as developer;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Login.dart';
@@ -10,8 +11,10 @@ import 'package:innovator/Innovator/models/repost_model.dart';
 import 'package:innovator/Innovator/screens/Feed/Repost/sharedrepostcard.dart';
 import 'package:innovator/Innovator/screens/Likes/Content-Like-Service.dart';
 import 'package:innovator/Innovator/screens/Likes/content-Like-Button.dart';
+import 'package:innovator/Innovator/screens/chatrrom/screen/chatlistscreen.dart';
 import 'package:innovator/Innovator/screens/comment/comment_section.dart';
 import 'package:innovator/Innovator/widget/Custom_refresh_Indicator.dart';
+import 'package:innovator/Innovator/widget/CustomizeFAB.dart';
 
 // ── App colour constants ──────────────────────────────────────────────────────
 const _kOrange = Color.fromRGBO(244, 135, 6, 1);
@@ -81,7 +84,7 @@ class _RepostsApiService {
   }
 }
 
-class RepostsListScreen extends StatefulWidget {
+class RepostsListScreen extends ConsumerStatefulWidget {
   final String postId;
 
   /// Shown in the app bar subtitle — pass original post author name if known.
@@ -94,10 +97,10 @@ class RepostsListScreen extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<RepostsListScreen> createState() => _RepostsListScreenState();
+  _RepostsListScreenState createState() => _RepostsListScreenState();
 }
 
-class _RepostsListScreenState extends State<RepostsListScreen>
+class _RepostsListScreenState extends ConsumerState<RepostsListScreen>
     with SingleTickerProviderStateMixin {
   final List<RepostEntry> _entries = [];
   bool _isLoading = true;
@@ -169,6 +172,7 @@ class _RepostsListScreenState extends State<RepostsListScreen>
 
   @override
   Widget build(BuildContext context) {
+    final unreadCount = ref.watch(chatUnreadCountProvider);
     return Scaffold(
       body: CustomRefreshIndicator(
         onRefresh: _load,
@@ -201,6 +205,21 @@ class _RepostsListScreenState extends State<RepostsListScreen>
               ),
           ],
         ),
+      ),
+      floatingActionButton: CountBadgeFAB(
+        count: unreadCount, // ← real-time total
+        gifAsset: 'animation/chaticon.gif',
+        backgroundColor: Colors.transparent,
+        onPressed: () {
+          ref.read(mutualFriendsProvider.notifier).refresh();
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ChatListScreen()),
+          ).then((_) {
+            ref.invalidate(mutualFriendsProvider);
+            //ref.read(mutualFriendsProvider.notifier).refresh();
+          });
+        },
       ),
     );
   }

@@ -3,6 +3,8 @@ class ElearningApi {
   static const String courseList = '$baseUrl/student/courses';
   static const String studentEnrollment = '$baseUrl/student/enrollments/';
   static const String payment = '$baseUrl/payments/initiate/';
+  //  notifications
+  static const String fcmTokens = '$baseUrl/fcm-tokens/';
   // time out
   static const Duration defaultTimeout = Duration(seconds: 30);
   static const Duration uploadTimeout = Duration(seconds: 120);

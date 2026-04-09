@@ -1,5 +1,4 @@
 import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/KMS/core/constants/app_style.dart';
@@ -7,6 +6,7 @@ import 'package:innovator/KMS/core/constants/mediaquery.dart';
 import 'package:innovator/KMS/model/student_model/school_list_model.dart';
 import 'package:innovator/KMS/provider/auth_provider.dart';
 import 'package:innovator/KMS/provider/student_provider/school_provider.dart';
+import 'package:innovator/KMS/screens/auth/login_screen.dart';
 import 'package:innovator/KMS/screens/auth/student_login_screen.dart';
 
 final _studentSignupObscureProvider = StateProvider.family<bool, String>(
@@ -353,8 +353,7 @@ class _StudentSignupScreenState extends ConsumerState<StudentSignupScreen> {
                                           context,
                                           MaterialPageRoute(
                                             builder:
-                                                (_) =>
-                                                    const StudentLoginScreen(),
+                                                (_) => const KmsLoginScreen(),
                                           ),
                                         ),
                                     child: const Text(

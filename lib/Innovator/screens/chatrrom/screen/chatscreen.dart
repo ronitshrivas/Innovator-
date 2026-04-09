@@ -11,6 +11,9 @@ import 'package:innovator/Innovator/models/Chat/chat_model.dart';
 import 'package:innovator/Innovator/provider/chat_state.dart';
 import 'package:innovator/Innovator/provider/global_chat_listener.dart';
 import 'package:innovator/Innovator/provider/unread_count_provider.dart';
+import 'package:innovator/Innovator/screens/SHow_Specific_Profile/Show_Specific_Profile.dart';
+import 'package:innovator/Innovator/screens/chatrrom/screen/chatlistscreen.dart';
+import 'package:innovator/Innovator/screens/chatrrom/sound/soundplayer.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -248,7 +251,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
       );
 
       if (!isMine) {
+        SoundPlayer().playsendreceivesound();
+        _ref.read(friendActivityProvider.notifier).markActivity(otherUserId);
         _markAsRead();
+        _ref.read(mutualFriendsProvider.notifier).bumpToTop(otherUserId);
       }
 
       // Mark as read immediately if it's from the other person
@@ -311,6 +317,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
     try {
       _channel!.sink.add(json.encode({'message': text.trim()}));
+      _ref
+          .read(friendActivityProvider.notifier)
+          .markActivity(otherUserId); // ← ADD
+      _ref.read(lastActiveFriendProvider.notifier).state = otherUserId;
+      _ref.read(mutualFriendsProvider.notifier).bumpToTop(otherUserId);
       final updated =
           state.messages.map((m) {
             if (m.id == tempId) m.status = MessageStatus.sent;
@@ -429,7 +440,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     _inputCtrl.addListener(_onInputChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // ✅ Store reference so dispose can use it safely
+      //  Store reference so dispose can use it safely
       _globalListener = ref.read(globalChatListenerProvider);
       _globalListener.activeChatUserId = widget.otherUserId;
       ref.read(activeChatUserIdProvider.notifier).state = widget.otherUserId;
@@ -475,7 +486,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (!_scrollCtrl.hasClients) return;
-      // ✅ Use jumpTo by default (not animated) for initial load
+      // Use jumpTo by default (not animated) for initial load
       if (animated) {
         _scrollCtrl.animateTo(
           _scrollCtrl.position.maxScrollExtent,
@@ -489,6 +500,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   void _sendMessage() {
+    SoundPlayer().playsendreceivesound();
     final text = _inputCtrl.text.trim();
     if (text.isEmpty) return;
     HapticFeedback.lightImpact();
@@ -554,66 +566,78 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         onPressed: () => Navigator.of(context).pop(),
       ),
       titleSpacing: 0,
-      title: Row(
-        children: [
-          Stack(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [_kOrange, Color(0xFFFFCC00)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                padding: const EdgeInsets.all(2),
-                child: ClipOval(
-                  child:
-                      widget.otherUserAvatar.isNotEmpty
-                          ? CachedNetworkImage(
-                            imageUrl: widget.otherUserAvatar,
-                            fit: BoxFit.cover,
-                            errorWidget: (_, __, ___) => _avatarFallback(),
-                          )
-                          : _avatarFallback(),
-                ),
-              ),
-              if (widget.isOnline)
-                Positioned(
-                  bottom: 1,
-                  right: 1,
-                  child: Container(
-                    width: 11,
-                    height: 11,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2ECC71),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
+      title: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) =>
+                      SpecificUserProfilePage(userId: widget.otherUserId),
+            ),
+          );
+        },
+        child: Row(
+          children: [
+            Stack(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [_kOrange, Color(0xFFFFCC00)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
                   ),
+                  padding: const EdgeInsets.all(2),
+                  child: ClipOval(
+                    child:
+                        widget.otherUserAvatar.isNotEmpty
+                            ? CachedNetworkImage(
+                              imageUrl: widget.otherUserAvatar,
+                              fit: BoxFit.cover,
+                              errorWidget: (_, __, ___) => _avatarFallback(),
+                            )
+                            : _avatarFallback(),
+                  ),
                 ),
-            ],
-          ),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.otherUserName,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
-                  letterSpacing: -0.2,
+                if (widget.isOnline)
+                  Positioned(
+                    bottom: 1,
+                    right: 1,
+                    child: Container(
+                      width: 11,
+                      height: 11,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2ECC71),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.otherUserName,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                    letterSpacing: -0.2,
+                  ),
                 ),
-              ),
-              _buildConnectionStatus(state),
-            ],
-          ),
-        ],
+                _buildConnectionStatus(state),
+              ],
+            ),
+          ],
+        ),
       ),
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(1),
@@ -1470,7 +1494,7 @@ class _MessageBubble extends StatelessWidget {
                 Text(
                   _timeLabel(),
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.75),
+                    color: Colors.white.withAlpha(75),
                     fontSize: 10,
                     fontWeight: FontWeight.w500,
                   ),
@@ -1500,7 +1524,7 @@ class _MessageBubble extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withAlpha(6),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
