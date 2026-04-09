@@ -1,60 +1,7 @@
-// import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-// import 'package:flutter_riverpod/flutter_riverpod.dart';
-// import 'package:innovator/elearning/api_calling_service/notification_service.dart';
-// import 'package:innovator/elearning/model/notification_model.dart';
+ 
 
-// final notificationServiceProvider = Provider<NotificationService>(
-//   (ref) => NotificationService(),
-// );
 
-// // final notificationListProvider = FutureProvider<List<NotificationModel>>((
-// //   ref,
-// // ) async {
-// //   final service = ref.watch(notificationServiceProvider);
-// //   return await service.getNotifications();
-// // });
-
-// final notificationListProvider = FutureProvider<List<NotificationModel>>((ref) async {
-//   final service = ref.watch(notificationServiceProvider);
-
-//   final newList = await service.getNotifications();
-
-//   final previous = ref.state.value ?? [];
-
-//   final newItems = newList.where(
-//     (n) => !previous.any((p) => p.id == n.id),
-//   );
-
-//   for (final n in newItems) {
-//     showSystemNotification(n);
-//   }
-
-//   return newList;
-// });
-
-// final unreadCountProvider = Provider<AsyncValue<int>>((ref) {
-//   return ref.watch(notificationListProvider).whenData(
-//     (list) => list.where((n) => !n.isRead).length,
-//   );
-// });
-
-// void showSystemNotification(NotificationModel n) {
-//   final plugin = FlutterLocalNotificationsPlugin();
-
-//   const androidDetails = AndroidNotificationDetails(
-//     'high_importance_channel',
-//     'High Importance Notifications',
-//     importance: Importance.max,
-//     priority: Priority.max,
-//   );
-
-//   plugin.show(
-//     n.id.hashCode,
-//     n.title,
-//     n.message,
-//     const NotificationDetails(android: androidDetails),
-//   );
-// }
+import 'dart:developer' as developer;
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -78,32 +25,31 @@ class NotificationState {
 
 class NotificationNotifier extends StateNotifier<NotificationState> {
   final NotificationService service;
+ 
+  static final Set<String> _seenIds = {};
+  static final List<String> _enrollmentMessages = [];
+
   NotificationNotifier(this.service)
     : super(const NotificationState(notifications: []));
 
   final _plugin = FlutterLocalNotificationsPlugin();
-    void markAllRead() {
-    final updatedNotifications = state.notifications
-        .map((n) => NotificationModel(
-              id: n.id,
-              title: n.title,
-              message: n.message,
-              notificationType: n.notificationType,
-              isRead: true, // mark as read
-              createdAt: n.createdAt,
-              data: n.data,
-            ))
-        .toList();
 
-    state = state.copyWith(notifications: updatedNotifications);
-  }
-
-  Future<void> init() async {
+  Future<void> init() async { 
     const androidSettings = AndroidInitializationSettings(
       '@mipmap/ic_launcher',
     );
     const initSettings = InitializationSettings(android: androidSettings);
     await _plugin.initialize(initSettings);
+ 
+    const androidChannel = AndroidNotificationChannel(
+      'high_importance_channel',
+      'High Importance Notifications',
+      importance: Importance.max,
+    ); 
+    await _plugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(androidChannel);
 
     await refresh();
   }
@@ -112,30 +58,85 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
     try {
       final newList = await service.getNotifications();
 
-      final oldList = state.notifications;
-      final newItems = newList.where((n) => !oldList.any((o) => o.id == n.id));
+       final cutoff = DateTime.now().subtract(const Duration(minutes: 5));
+
+      final newItems = newList.where(
+        (n) =>
+            !_seenIds.contains(n.id) &&  
+            !n.isRead &&              
+            n.createdAt.isAfter(cutoff),  
+      );
 
       for (final n in newItems) {
-        showSystemNotification(n);
+        _seenIds.add(n.id);  
+        _showSystemNotification(n);
+      }
+
+ 
+      if (_seenIds.length > 200) {
+        final overflow = _seenIds.length - 200;
+        _seenIds.removeAll(_seenIds.take(overflow).toList());
       }
 
       state = state.copyWith(notifications: newList);
-    } catch (e) {}
+    } catch (e) {
+      developer.log('Notification refresh error: $e');
+    }
   }
 
-  void showSystemNotification(NotificationModel n) {
-    const androidDetails = AndroidNotificationDetails(
+  void _showSystemNotification(NotificationModel n) {
+    const groupKey = 'course_enrollment_group';
+
+    _enrollmentMessages.add(n.message);
+
+    final inboxStyle = InboxStyleInformation(
+      _enrollmentMessages,
+      contentTitle: 'Course Enrollments',
+      summaryText:
+          '${_enrollmentMessages.length} enrollment${_enrollmentMessages.length > 1 ? 's' : ''}',
+    );
+
+    final androidDetails = AndroidNotificationDetails(
       'high_importance_channel',
       'High Importance Notifications',
       importance: Importance.max,
       priority: Priority.max,
+      styleInformation: inboxStyle,
+      groupKey: groupKey,
+      setAsGroupSummary: false, 
+      largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
+      icon: '@mipmap/ic_launcher',
+    );
+ 
+    _plugin.show(
+      groupKey.hashCode,
+      n.title,
+      n.message,
+      NotificationDetails(android: androidDetails),
+    ); 
+    final summaryDetails = AndroidNotificationDetails(
+      'high_importance_channel',
+      'High Importance Notifications',
+      importance: Importance.max,
+      priority: Priority.max,
+      groupKey: groupKey,
+      setAsGroupSummary: true,
+      styleInformation: InboxStyleInformation(
+        _enrollmentMessages,
+        summaryText:
+            '${_enrollmentMessages.length} enrollment${_enrollmentMessages.length > 1 ? 's' : ''}',
+      ),
     );
 
     _plugin.show(
-      n.id.hashCode,
-      n.title,
-      n.message,
-      const NotificationDetails(android: androidDetails),
+      0,
+      'Course Enrollments',
+      '${_enrollmentMessages.length} new enrollment${_enrollmentMessages.length > 1 ? 's' : ''}',
+      NotificationDetails(android: summaryDetails),
+    );
+
+    developer.log(
+      'Notification shown: ${n.title} | type: ${n.notificationType} | course: ${n.data.courseId}',
     );
   }
 }

@@ -145,15 +145,7 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            e.toString(),
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: Colors.grey),
-            textAlign: TextAlign.center,
-          ),
+          ), 
           const SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: () => ref.refresh(courseListProvider),
