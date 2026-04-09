@@ -1477,7 +1477,7 @@ class _FeedItemState extends State<FeedItem>
             // Own media (only shown when NOT a repost)
             if (!widget.content.isRepost && widget.content.files.isNotEmpty)
               Container(
-                margin: const EdgeInsets.symmetric(horizontal: 1.0),
+                margin: EdgeInsets.symmetric(horizontal: 1.0),
                 child: _buildMediaPreview(),
               ),
             // In your action bar section, ABOVE the Divider, add this:
@@ -1733,32 +1733,36 @@ class _FeedItemState extends State<FeedItem>
 
   Widget _buildSingleImage(String url) => GestureDetector(
     onTap: () => _showMediaGallery(context, [url], 0),
-    child: CachedNetworkImage(
-      filterQuality: FilterQuality.high,
-      imageUrl: url,
-      fit: BoxFit.contain,
-      memCacheWidth: (MediaQuery.of(context).size.width * 1.5).toInt(),
-      placeholder:
-          (_, __) => Container(
-            height: 250,
-            color: Colors.grey[300],
-            child: Center(
-              child: SizedBox(
-                width: 40,
-                height: 40,
-                child: Image.asset(
-                  'animation/IdeaBulb.gif',
-                  fit: BoxFit.contain,
+    child: Container(
+      width: double.infinity,
+      alignment: Alignment.center,
+      child: CachedNetworkImage(
+        filterQuality: FilterQuality.high,
+        imageUrl: url,
+        fit: BoxFit.contain,
+        memCacheWidth: (MediaQuery.of(context).size.width * 1.5).toInt(),
+        placeholder:
+            (_, __) => Container(
+              height: 250,
+              color: Colors.grey[300],
+              child: Center(
+                child: SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: Image.asset(
+                    'animation/IdeaBulb.gif',
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
             ),
-          ),
-      errorWidget:
-          (_, __, ___) => Container(
-            height: 250,
-            color: Colors.grey[300],
-            child: const Icon(Icons.error),
-          ),
+        errorWidget:
+            (_, __, ___) => Container(
+              height: 250,
+              color: Colors.grey[300],
+              child: const Icon(Icons.error),
+            ),
+      ),
     ),
   );
 
@@ -1831,29 +1835,33 @@ class _FeedItemState extends State<FeedItem>
         onTap: () => _showMediaGallery(context, allUrls, index),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          child: CachedNetworkImage(
-            imageUrl: url,
-            fit: BoxFit.contain,
-            memCacheWidth: (MediaQuery.of(context).size.width * 0.75).toInt(),
-            placeholder:
-                (_, __) => Container(
-                  color: Colors.grey[300],
-                  child: Center(
-                    child: SizedBox(
-                      width: 30,
-                      height: 30,
-                      child: Image.asset(
-                        'animation/IdeaBulb.gif',
-                        fit: BoxFit.contain,
+          child: Container(
+            width: double.infinity,
+            alignment: Alignment.center,
+            child: CachedNetworkImage(
+              imageUrl: url,
+              fit: BoxFit.contain,
+              memCacheWidth: (MediaQuery.of(context).size.width * 0.75).toInt(),
+              placeholder:
+                  (_, __) => Container(
+                    color: Colors.grey[300],
+                    child: Center(
+                      child: SizedBox(
+                        width: 30,
+                        height: 30,
+                        child: Image.asset(
+                          'animation/IdeaBulb.gif',
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ),
                   ),
-                ),
-            errorWidget:
-                (_, __, ___) => Container(
-                  color: Colors.grey[300],
-                  child: const Icon(Icons.error, color: AppColors.whitecolor),
-                ),
+              errorWidget:
+                  (_, __, ___) => Container(
+                    color: Colors.grey[300],
+                    child: const Icon(Icons.error, color: AppColors.whitecolor),
+                  ),
+            ),
           ),
         ),
       );

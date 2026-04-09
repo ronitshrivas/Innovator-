@@ -481,49 +481,49 @@ class _LoginPageState extends State<LoginPage> {
                               ],
                             ),
                             SizedBox(height: mq.height * 0.03),
-                            ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Color.fromRGBO(244, 135, 6, 1),
-                                shape: StadiumBorder(),
-                                elevation: 1,
-                              ),
-                              onPressed: () {},
-                              //onPressed: _isGoogleLoading ? null : _showAccountPicker,
-                              icon:
-                                  _isGoogleLoading
-                                      ? SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          color: Colors.white,
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                      : Lottie.asset(
-                                        'animation/Googlesignup.json',
-                                        height: mq.height * .05,
-                                      ),
-                              label: RichText(
-                                text: const TextSpan(
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: 19,
-                                  ),
-                                  children: [
-                                    TextSpan(
-                                      text: 'Sign In with ',
-                                      style: TextStyle(color: Colors.white),
-                                    ),
-                                    TextSpan(
-                                      text: 'Google',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                            // ElevatedButton.icon(
+                            //   style: ElevatedButton.styleFrom(
+                            //     backgroundColor: Color.fromRGBO(244, 135, 6, 1),
+                            //     shape: StadiumBorder(),
+                            //     elevation: 1,
+                            //   ),
+                            //   onPressed: () {},
+                            //   //onPressed: _isGoogleLoading ? null : _showAccountPicker,
+                            //   icon:
+                            //       _isGoogleLoading
+                            //           ? SizedBox(
+                            //             width: 20,
+                            //             height: 20,
+                            //             child: CircularProgressIndicator(
+                            //               color: Colors.white,
+                            //               strokeWidth: 2,
+                            //             ),
+                            //           )
+                            //           : Lottie.asset(
+                            //             'animation/Googlesignup.json',
+                            //             height: mq.height * .05,
+                            //           ),
+                            //   label: RichText(
+                            //     text: const TextSpan(
+                            //       style: TextStyle(
+                            //         color: Colors.black,
+                            //         fontSize: 19,
+                            //       ),
+                            //       children: [
+                            //         TextSpan(
+                            //           text: 'Sign In with ',
+                            //           style: TextStyle(color: Colors.white),
+                            //         ),
+                            //         TextSpan(
+                            //           text: 'Google',
+                            //           style: TextStyle(
+                            //             fontWeight: FontWeight.w500,
+                            //           ),
+                            //         ),
+                            //       ],
+                            //     ),
+                            //   ),
+                            // ),
                           ],
                         ),
                       ),

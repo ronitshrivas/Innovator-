@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
@@ -486,9 +487,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
         _descriptionController.text = processed;
         _isProcessingAI = false;
       });
-      _showSuccess(
-        'Post enhanced by ELIZA! (${processed.trim().split(RegExp(r"\s+")).length} words)',
-      );
+      _showSuccess('Post enhanced by ELIZA AI)');
       _updateButtonState();
     } catch (e) {
       _showError('ELIZA enhancement failed: $e');
@@ -605,25 +604,27 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
         message,
         style: const TextStyle(fontWeight: FontWeight.w600),
       ),
+      duration: Duration(seconds: 1),
       backgroundColor: Colors.red.shade700,
-      behavior: SnackBarBehavior.floating,
+      behavior: SnackBarBehavior.fixed,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ),
   );
 
-  void _showSuccess(String message) => ScaffoldMessenger.of(
-    context,
-  ).showSnackBar(
-    SnackBar(
-      content: Text(
-        message,
-        style: const TextStyle(fontWeight: FontWeight.w600),
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        duration: Duration(seconds: 1),
+        backgroundColor: Colors.green.shade600,
+        behavior: SnackBarBehavior.fixed,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
-      backgroundColor: Colors.green.shade600,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-    ),
-  );
+    );
+  }
 
   // ── Build ─────────────────────────────────────────────────────────────────
 

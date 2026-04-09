@@ -3,16 +3,9 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:isolate';
 import 'dart:developer' as developer;
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MODEL — matches your exact API fields
-// API returns flat array: [{id, sender_username, sender_avatar, type,
-//                           title, message, related_post_id, is_read, created_at}]
-// ─────────────────────────────────────────────────────────────────────────────
 
 class AppNotification {
   final String id;

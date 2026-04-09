@@ -76,6 +76,15 @@ class MutualFriendsNotifier extends StateNotifier<MutualFriendsState> {
     }
   }
 
+  void bumpToTop(String friendId) {
+    final idx = state.friends.indexWhere((f) => f.id == friendId);
+    if (idx <= 0) return; // already at top or not found
+    final updated = [...state.friends];
+    final friend = updated.removeAt(idx);
+    updated.insert(0, friend);
+    _setState(state.copyWith(friends: updated));
+  }
+
   @override
   void dispose() {
     _mounted = false;
@@ -266,26 +275,57 @@ final mutualFriendsProvider =
 final chatUnreadCountProvider = StateProvider<int>((ref) => 0);
 // ─────────────────────────────────────────────────────────────────
 
-class ChatListScreen extends ConsumerWidget {
+class ChatListScreen extends ConsumerStatefulWidget {
   const ChatListScreen({super.key});
+  @override
+  ConsumerState<ChatListScreen> createState() => _ChatListScreenState();
+}
+
+class _ChatListScreenState extends ConsumerState<ChatListScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // When returning from ChatScreen, bump the last active friend to top
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final friendId = ref.read(lastActiveFriendProvider);
+      if (friendId != null) {
+        ref.read(mutualFriendsProvider.notifier).bumpToTop(friendId);
+        ref.read(lastActiveFriendProvider.notifier).state = null;
+      }
+    });
+  }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final state = ref.watch(mutualFriendsProvider);
     final realtimeUnread = ref.watch(perFriendUnreadProvider);
-    // // Keep global FAB badge in sync
-    // ref.listen<MutualFriendsState>(mutualFriendsProvider, (_, next) {
-    //   ref.read(chatUnreadCountProvider.notifier).state = next.totalUnread;
-    // });
+    final activity = ref.watch(friendActivityProvider);
+
+    final sortedFriends =
+        state.friends.map((f) {
+            final t = activity[f.id];
+            return (t != null) ? f.copyWithLastMessageAt(t) : f;
+          }).toList()
+          ..sort((a, b) => b.lastMessageAt.compareTo(a.lastMessageAt));
+
+    final sortedState = state.copyWith(friends: sortedFriends);
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: NestedScrollView(
-        headerSliverBuilder:
-            (context, innerBoxIsScrolled) => [
-              _buildSliverAppBar(context, ref, state, realtimeUnread), // ← pass
-            ],
-        body: _buildBody(context, ref, state, realtimeUnread), // ← pass
+      body: CustomScrollView(
+        // ← replace NestedScrollView entirely
+        slivers: [
+          _buildSliverAppBar(context, ref, sortedState, realtimeUnread),
+          if (sortedState.isLoading && sortedState.friends.isEmpty)
+            const SliverFillRemaining(child: _SkeletonListSliver())
+          else if (sortedState.error != null && sortedState.friends.isEmpty)
+            SliverFillRemaining(child: _buildError(ref, sortedState.error!))
+          else if (sortedState.friends.isEmpty)
+            SliverFillRemaining(child: _buildEmpty(ref))
+          else
+            ..._buildFriendSlivers(context, ref, sortedState, realtimeUnread),
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+        ],
       ),
     );
   }
@@ -302,141 +342,98 @@ class ChatListScreen extends ConsumerWidget {
       0,
       (sum, f) => sum + (realtimeUnread[f.id] ?? f.unreadCount),
     );
+
     return SliverAppBar(
-      // floating: false,
-      // pinned: true,
-      // snap: false,
-      //elevation: innerBoxIsScrolled ? 4 : 0,
+      pinned: true,
       backgroundColor: Colors.white,
-      //shadowColor: Colors.black12,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
         color: Colors.black87,
         onPressed: () => Navigator.of(context).pop(),
       ),
-      // actions: [
-      //   IconButton(
-      //     icon: const Icon(Icons.search_rounded, size: 24),
-      //     color: Colors.black87,
-      //     onPressed: () {},
-      //   ),
-      // ],
-      flexibleSpace: FlexibleSpaceBar(
-        collapseMode: CollapseMode.pin,
-        background: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Colors.white, Color(0xFFFFF8F0)],
-            ),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 52, 20, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      // Online pill
-                      if (state.onlineFriends.isNotEmpty)
-                        _Pill(
-                          color: _orange,
-                          dotColor: const Color(0xFF2ECC71),
-                          label: '${state.onlineFriends.length} online',
-                        ),
-                      // Unread pill
-                      if (totalUnread > 0) ...[
-                        const SizedBox(width: 10),
-                        _Pill(
-                          color: Colors.red,
-                          dotColor: Colors.red,
-                          label: '${totalUnread} unread',
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+      // title: Row(
+      //   children: [
+      //     if (state.onlineFriends.isNotEmpty)
+      //       _Pill(
+      //         color: _orange,
+      //         dotColor: const Color(0xFF2ECC71),
+      //         label: '${state.onlineFriends.length} online',
+      //       ),
+      //     if (totalUnread > 0) ...[
+      //       const SizedBox(width: 10),
+      //       _Pill(
+      //         color: Colors.red,
+      //         dotColor: Colors.red,
+      //         label: '$totalUnread unread',
+      //       ),
+      //     ],
+      //   ],
+      // ),
     );
   }
 
   // ── Body ────────────────────────────────────────────────────────────────────
 
-  Widget _buildBody(
+  List<Widget> _buildFriendSlivers(
     BuildContext context,
     WidgetRef ref,
     MutualFriendsState state,
     Map<String, int> realtimeUnread,
   ) {
-    if (state.isLoading && state.friends.isEmpty) return _buildSkeletonList();
-    if (state.error != null && state.friends.isEmpty) {
-      return _buildError(ref, state.error!);
-    }
-    if (state.friends.isEmpty) return _buildEmpty(ref);
-
-    return RefreshIndicator(
-      onRefresh: () async => ref.read(mutualFriendsProvider.notifier).refresh(),
-      color: _orange,
-      child: CustomScrollView(
-        slivers: [
-          if (state.onlineFriends.isNotEmpty) ...[
-            _buildSectionHeader('Active Now', state.onlineFriends.length),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, i) => _ChatCard(
-                    friend: state.onlineFriends[i],
-                    isOnline: true,
-                    realtimeUnreadCount:
-                        realtimeUnread[state.onlineFriends[i].id] ?? 0,
-                    onTap:
-                        () => _openChat(context, ref, state.onlineFriends[i]),
-                    onDelete:
-                        () => ref
-                            .read(mutualFriendsProvider.notifier)
-                            .deleteConversation(state.onlineFriends[i].id),
-                  ),
-                  childCount: state.onlineFriends.length,
-                ),
-              ),
-            ),
-          ],
-          if (state.offlineFriends.isNotEmpty) ...[
-            _buildSectionHeader('All Connections', state.offlineFriends.length),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, i) => _ChatCard(
-                    friend: state.offlineFriends[i],
-                    isOnline: false,
-                    realtimeUnreadCount: // ← ADDED
-                        realtimeUnread[state.offlineFriends[i].id] ?? 0,
-                    onTap:
-                        () => _openChat(context, ref, state.offlineFriends[i]),
-                    onDelete:
-                        () => ref
-                            .read(mutualFriendsProvider.notifier)
-                            .deleteConversation(state.offlineFriends[i].id),
-                  ),
-                  childCount: state.offlineFriends.length,
-                ),
-              ),
-            ),
-          ],
-          const SliverToBoxAdapter(child: SizedBox(height: 24)),
-        ],
+    return [
+      SliverToBoxAdapter(
+        child: RefreshIndicator(
+          onRefresh:
+              () async => ref.read(mutualFriendsProvider.notifier).refresh(),
+          color: _orange,
+          child: const SizedBox.shrink(),
+        ),
       ),
-    );
+      if (state.onlineFriends.isNotEmpty) ...[
+        _buildSectionHeader('Active Now', state.onlineFriends.length),
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, i) => _ChatCard(
+                friend: state.onlineFriends[i],
+                isOnline: true,
+                realtimeUnreadCount:
+                    realtimeUnread[state.onlineFriends[i].id] ?? 0,
+                onTap: () => _openChat(context, ref, state.onlineFriends[i]),
+                onDelete:
+                    () => ref
+                        .read(mutualFriendsProvider.notifier)
+                        .deleteConversation(state.onlineFriends[i].id),
+              ),
+              childCount: state.onlineFriends.length,
+            ),
+          ),
+        ),
+      ],
+      if (state.offlineFriends.isNotEmpty) ...[
+        _buildSectionHeader('All Connections', state.offlineFriends.length),
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, i) => _ChatCard(
+                friend: state.offlineFriends[i],
+                isOnline: false,
+                realtimeUnreadCount:
+                    realtimeUnread[state.offlineFriends[i].id] ?? 0,
+                onTap: () => _openChat(context, ref, state.offlineFriends[i]),
+                onDelete:
+                    () => ref
+                        .read(mutualFriendsProvider.notifier)
+                        .deleteConversation(state.offlineFriends[i].id),
+              ),
+              childCount: state.offlineFriends.length,
+            ),
+          ),
+        ),
+      ],
+    ];
   }
 
   void _openChat(BuildContext context, WidgetRef ref, MutualFriend friend) {
@@ -452,7 +449,7 @@ class ChatListScreen extends ConsumerWidget {
               isOnline: friend.onlineStatus,
             ),
       ),
-    ).then((_) => ref.read(mutualFriendsProvider.notifier).refresh());
+    );
   }
 
   Widget _buildSectionHeader(String title, int count) {
@@ -1215,4 +1212,16 @@ class _SkeletonBox extends StatelessWidget {
       borderRadius: BorderRadius.circular(radius),
     ),
   );
+}
+
+class _SkeletonListSliver extends StatelessWidget {
+  const _SkeletonListSliver();
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      itemCount: 7,
+      itemBuilder: (_, i) => const _SkeletonCard(),
+    );
+  }
 }
