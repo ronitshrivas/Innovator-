@@ -472,7 +472,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       }
     } catch (e) {
       setState(() => _isProcessing = false);
- 
     }
   }
 
@@ -499,7 +498,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       );
     } catch (e) {
       setState(() => _isProcessing = false);
-      
     }
   }
 
@@ -1280,19 +1278,11 @@ class _KhaltiPaymentCard extends StatelessWidget {
 
 //Reusable animated radio dot
 
-<<<<<<< prashantmerger
 class RadioDot extends StatelessWidget {
   final bool isSelected;
   final Color color;
 
   const RadioDot({required this.isSelected, required this.color});
-=======
-class _RadioDot extends StatelessWidget {
-  final bool isSelected;
-  final Color color;
-
-  const _RadioDot({required this.isSelected, required this.color});
->>>>>>> Ronit
 
   @override
   Widget build(BuildContext context) {
