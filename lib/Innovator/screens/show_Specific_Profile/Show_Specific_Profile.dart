@@ -10,6 +10,7 @@ import 'package:innovator/Innovator/Authorization/Login.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/screens/Feed/Inner_Homepage.dart';
+import 'package:innovator/Innovator/screens/Feed/Optimize%20Media/full_screen_image_viewer.dart';
 import 'package:innovator/Innovator/screens/Follow/follow_Button.dart';
 import 'package:innovator/Innovator/screens/chatrrom/screen/chatlistscreen.dart';
 import 'package:innovator/Innovator/screens/comment/comment_screen.dart';
@@ -456,7 +457,21 @@ class _SpecificUserProfilePageState
                 ],
               ),
               padding: const EdgeInsets.all(4),
-              child: _buildAvatar(avatarUrl, name, radius: 70),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (_) => FullScreenImageViewer(
+                            imageUrl: '$avatarUrl',
+                            tag: name,
+                          ),
+                    ),
+                  );
+                },
+                child: _buildAvatar(avatarUrl, name, radius: 70),
+              ),
             ),
 
             const SizedBox(height: 12),
