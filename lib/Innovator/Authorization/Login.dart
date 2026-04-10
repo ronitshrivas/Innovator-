@@ -1,12 +1,12 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
-import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
-import 'package:hive_flutter/adapters.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Forget_PWD.dart';
@@ -43,6 +43,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final TextEditingController _emailCtrl = TextEditingController();
   final TextEditingController _passwordCtrl = TextEditingController();
 
+  // ── Google Sign-In singleton ──────────────────────────────────────────────
+  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+
   @override
   void initState() {
     super.initState();
@@ -63,7 +66,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     super.dispose();
   }
 
-  // ── Saved credentials ────────────────────────────────────────────────────
+  // ── Saved credentials ─────────────────────────────────────────────────────
 
   Future<void> _loadSaved() async {
     try {
@@ -98,7 +101,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
-  // ── Login ────────────────────────────────────────────────────────────────
+  // ── Email / Password Login ────────────────────────────────────────────────
 
   Future<void> _login() async {
     if (_emailCtrl.text.trim().isEmpty || _passwordCtrl.text.isEmpty) {
@@ -133,9 +136,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           return;
         }
 
-        // ── Save via AppData (single source of truth) ──────────────────────
-        // This writes 'access_token', 'refresh_token', 'user_data' to prefs.
-        // ApiService reads 'access_token' — so they are always in sync.
         await AppData().saveLoginData(
           accessToken: accessToken,
           refreshToken: refreshToken,
@@ -149,39 +149,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
         await _saveCredentials();
         _navigateAfterLogin(user);
-        // WidgetsBinding.instance.addPostFrameCallback((_) async {
-        //   try {
-        //     String? fcmToken = await FirebaseMessaging.instance.getToken();
-        //     if (fcmToken != null) {
-        //       final accessToken = AppData().accessToken;
-        //       if (accessToken == null || accessToken.isEmpty) return;
-
-        //       String deviceName =
-        //           Platform.isAndroid ? 'Android Device' : 'iPhone';
-
-        //       await http.post(
-        //         Uri.parse('http://182.93.94.220:8005/api/fcm-tokens/'),
-        //         headers: {
-        //           'Content-Type': 'application/json',
-        //           'Authorization': 'Bearer $accessToken',
-        //         },
-        //         body: jsonEncode({
-        //           'token': fcmToken,
-        //           'device_name': deviceName,
-        //         }),
-        //       );
-        //       developer.log('FCM token sent after login');
-        //     }
-        //   } catch (e) {
-        //     developer.log('FCM post-login error: $e');
-        //   }
-        // });
 
         WidgetsBinding.instance.addPostFrameCallback((_) async {
           final fcmToken = await FirebaseMessaging.instance.getToken();
           developer.log('FCM TOKEN IS: $fcmToken');
           if (fcmToken == null) return;
-
           await Future.wait([
             FCMService().registerToken(),
             ref.read(notificationServiceProvider).registerFcmToken(fcmToken),
@@ -208,13 +180,179 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
-  // ── Navigation ───────────────────────────────────────────────────────────
+  // ── Google Sign-In ────────────────────────────────────────────────────────
+
+  /// Shows the native Google account picker, gets the idToken,
+  /// signs into Firebase, then sends the token to the backend SSO API.
+  Future<void> _showAccountPicker() async {
+    setState(() => _isGoogleLoading = true);
+
+    try {
+      // Step 1: Show Google account picker
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+
+      if (googleUser == null) {
+        // User dismissed the picker — not an error
+        developer.log('Google Sign-In: user cancelled');
+        return;
+      }
+
+      // Step 2: Get Google auth tokens
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+      final String? idToken = googleAuth.idToken;
+
+      if (idToken == null || idToken.isEmpty) {
+        developer.log('Google Sign-In: idToken is null');
+        if (mounted) {
+          Dialogs.showSnackbar(
+            context,
+            'Google Sign-In failed: could not retrieve token',
+          );
+        }
+        return;
+      }
+
+      developer.log(
+        'Google idToken (first 40): ${idToken.substring(0, 40)}...',
+      );
+
+      // Step 3: Sign into Firebase with Google credential (keeps Firebase Auth in sync)
+      try {
+        final OAuthCredential firebaseCred = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: idToken,
+        );
+        await FirebaseAuth.instance.signInWithCredential(firebaseCred);
+        developer.log('Firebase sign-in with Google: success');
+      } catch (firebaseErr) {
+        // Non-fatal — still proceed with backend SSO
+        developer.log('Firebase Google sign-in (non-fatal): $firebaseErr');
+      }
+
+      // Step 4: Exchange token with your backend
+      await _sendGoogleTokenToBackend(idToken);
+    } catch (e) {
+      developer.log('Google Sign-In error: $e');
+      if (mounted) {
+        Dialogs.showSnackbar(
+          context,
+          'Google Sign-In failed. Please try again.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGoogleLoading = false);
+    }
+  }
+
+  /// POSTs the Google ID token to the backend SSO endpoint.
+  /// On success, saves auth tokens via AppData and navigates — same as email login.
+  Future<void> _sendGoogleTokenToBackend(String googleIdToken) async {
+    const String ssoUrl = 'http://182.93.94.220:8010/api/auth/sso/google/';
+
+    developer.log('Posting to SSO: $ssoUrl');
+
+    try {
+      final response = await http.post(
+        Uri.parse(ssoUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'google_token': googleIdToken}),
+      );
+
+      developer.log(
+        'SSO ${response.statusCode}: '
+        '${response.body.substring(0, response.body.length.clamp(0, 300))}',
+      );
+      developer.log('googgle id token : $googleIdToken');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+
+        // Handles multiple common token key patterns from backends
+        final accessToken =
+            data['access_token']?.toString() ??
+            data['token']?.toString() ??
+            (data['tokens'] as Map<String, dynamic>?)?['access']?.toString() ??
+            '';
+
+        final refreshToken =
+            data['refresh_token']?.toString() ??
+            (data['tokens'] as Map<String, dynamic>?)?['refresh']?.toString() ??
+            '';
+
+        final user =
+            (data['user'] as Map<String, dynamic>?) ??
+            (data['data'] as Map<String, dynamic>?) ??
+            {};
+
+        if (accessToken.isEmpty) {
+          developer.log(
+            'SSO: no token in response. Keys: ${data.keys.toList()}',
+          );
+          if (mounted) {
+            Dialogs.showSnackbar(
+              context,
+              'Google Sign-In failed: server did not return a token',
+            );
+          }
+          await _googleSignIn.signOut(); // Allow retry
+          return;
+        }
+
+        // Save auth data — identical path to email/password login
+        await AppData().saveLoginData(
+          accessToken: accessToken,
+          refreshToken: refreshToken,
+          user: user,
+        );
+
+        developer.log('SSO login saved. User: $user');
+
+        // Register FCM token after successful Google login
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          final fcmToken = await FirebaseMessaging.instance.getToken();
+          developer.log('FCM TOKEN after Google login: $fcmToken');
+          if (fcmToken == null) return;
+          await Future.wait([
+            FCMService().registerToken(),
+            ref.read(notificationServiceProvider).registerFcmToken(fcmToken),
+          ]);
+        });
+
+        if (mounted) _navigateAfterLogin(user);
+      } else {
+        // Parse backend error message
+        Map<String, dynamic>? errorData;
+        try {
+          errorData = jsonDecode(response.body) as Map<String, dynamic>?;
+        } catch (_) {}
+
+        final msg =
+            errorData?['detail']?.toString() ??
+            errorData?['message']?.toString() ??
+            errorData?['error']?.toString() ??
+            'Google Sign-In failed (${response.statusCode})';
+
+        developer.log('SSO error: $msg');
+        if (mounted) Dialogs.showSnackbar(context, msg);
+
+        await _googleSignIn.signOut(); // Allow retry with different account
+      }
+    } catch (e) {
+      developer.log('SSO network error: $e');
+      if (mounted) {
+        Dialogs.showSnackbar(
+          context,
+          'Network error during Google Sign-In. Please try again.',
+        );
+      }
+    }
+  }
+
+  // ── Navigation ────────────────────────────────────────────────────────────
 
   void _navigateAfterLogin(Map<String, dynamic> user) {
     final appData = AppData();
 
-    // Re-sync AppData user so isProfileComplete works
-    // (saveLoginData already set it, but re-check after a tick)
     if (appData.isProfileComplete) {
       developer.log('Profile complete → Homepage');
       Navigator.pushAndRemoveUntil(
@@ -223,7 +361,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         (_) => false,
       );
     } else {
-      developer.log('Profile incomplete → EditProfileScreen');
+      developer.log('Profile incomplete → Homepage + snackbar');
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const Homepage()),
@@ -255,7 +393,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
-  // ── Build ────────────────────────────────────────────────────────────────
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -494,50 +632,58 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 ),
                               ],
                             ),
+
                             SizedBox(height: mq.height * 0.03),
-                            // ElevatedButton.icon(
-                            //   style: ElevatedButton.styleFrom(
-                            //     backgroundColor: Color.fromRGBO(244, 135, 6, 1),
-                            //     shape: StadiumBorder(),
-                            //     elevation: 1,
-                            //   ),
-                            //   onPressed: () {},
-                            //   //onPressed: _isGoogleLoading ? null : _showAccountPicker,
-                            //   icon:
-                            //       _isGoogleLoading
-                            //           ? SizedBox(
-                            //             width: 20,
-                            //             height: 20,
-                            //             child: CircularProgressIndicator(
-                            //               color: Colors.white,
-                            //               strokeWidth: 2,
-                            //             ),
-                            //           )
-                            //           : Lottie.asset(
-                            //             'animation/Googlesignup.json',
-                            //             height: mq.height * .05,
-                            //           ),
-                            //   label: RichText(
-                            //     text: const TextSpan(
-                            //       style: TextStyle(
-                            //         color: Colors.black,
-                            //         fontSize: 19,
-                            //       ),
-                            //       children: [
-                            //         TextSpan(
-                            //           text: 'Sign In with ',
-                            //           style: TextStyle(color: Colors.white),
-                            //         ),
-                            //         TextSpan(
-                            //           text: 'Google',
-                            //           style: TextStyle(
-                            //             fontWeight: FontWeight.w500,
-                            //           ),
-                            //         ),
-                            //       ],
-                            //     ),
-                            //   ),
-                            // ),
+
+                            // Google Sign-In button
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color.fromRGBO(
+                                  244,
+                                  135,
+                                  6,
+                                  1,
+                                ),
+                                shape: const StadiumBorder(),
+                                elevation: 1,
+                              ),
+                              onPressed:
+                                  _isGoogleLoading ? null : _showAccountPicker,
+                              icon:
+                                  _isGoogleLoading
+                                      ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                      : Lottie.asset(
+                                        'animation/Googlesignup.json',
+                                        height: mq.height * .05,
+                                      ),
+                              label: RichText(
+                                text: const TextSpan(
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 19,
+                                  ),
+                                  children: [
+                                    TextSpan(
+                                      text: 'Sign In with ',
+                                      style: TextStyle(color: Colors.white),
+                                    ),
+                                    TextSpan(
+                                      text: 'Google',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -547,7 +693,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               ),
             ),
 
-            if (_isLoading)
+            // Full-screen loading overlay (covers both email & Google loading)
+            if (_isLoading || _isGoogleLoading)
               Container(
                 color: Colors.black.withAlpha(30),
                 child: const Center(child: CircularProgressIndicator()),
