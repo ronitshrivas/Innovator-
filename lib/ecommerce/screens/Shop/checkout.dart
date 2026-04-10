@@ -472,7 +472,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       }
     } catch (e) {
       setState(() => _isProcessing = false);
- 
     }
   }
 
@@ -499,7 +498,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       );
     } catch (e) {
       setState(() => _isProcessing = false);
-      
     }
   }
 
@@ -613,12 +611,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     return Scaffold(
       backgroundColor: _backgroundColor,
       appBar: AppBar(
-        backgroundColor: _orange,
-        foregroundColor: Colors.white,
-        title: const Text(
-          'Checkout',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        backgroundColor: Colors.transparent,
+        leading: IconButton(
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          icon: Icon(Icons.arrow_back_ios_new, color: Colors.black),
         ),
+        // foregroundColor: Colors.white,
+        // title: const Text(
+        //   'Checkout',
+        //   style: TextStyle(fontWeight: FontWeight.bold),
+        // ),
         elevation: 0,
       ),
       body: Padding(
