@@ -31,15 +31,18 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
   void initState() {
     super.initState();
     ref.refresh(courseListProvider);
+    ref.refresh(enrollmentProvider);
+    ref.refresh(notificationListProvider);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(notificationListProvider.notifier).refresh();
+    });
     _tabController = TabController(length: _tabs.length, vsync: this);
     _searchController.addListener(() {
       setState(
         () => _searchQuery = _searchController.text.trim().toLowerCase(),
       );
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(enrollmentProvider);
-    });
+   
   }
 
   @override
@@ -145,14 +148,6 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            e.toString(),
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: Colors.grey),
-            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           ElevatedButton.icon(
@@ -338,7 +333,6 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
   }
 
   Widget _buildGrid(List<CourseListModel> courses) {
-    // Watch enrolled IDs so grid rebuilds when enrollment changes
     final enrolledIds = ref.watch(enrolledCoursesProvider);
 
     return CustomRefreshIndicator(
@@ -370,7 +364,10 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
                   MaterialPageRoute(
                     builder: (_) => CourseDetailScreen(course: course),
                   ),
-                ),
+                ).then((_) {
+                  ref.read(notificationListProvider.notifier).refresh();
+                  ref.refresh(enrollmentProvider);
+                }),
           );
         },
       ),
