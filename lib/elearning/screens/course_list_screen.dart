@@ -31,7 +31,7 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
   void initState() {
     super.initState();
     ref.refresh(courseListProvider);
-    ref.refresh(enrolledCoursesProvider);
+    ref.refresh(enrollmentProvider);
     ref.refresh(notificationListProvider);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(notificationListProvider.notifier).refresh();
@@ -42,9 +42,7 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
         () => _searchQuery = _searchController.text.trim().toLowerCase(),
       );
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(enrollmentProvider);
-    });
+   
   }
 
   @override
@@ -368,7 +366,7 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
                   ),
                 ).then((_) {
                   ref.read(notificationListProvider.notifier).refresh();
-                  ref.refresh(enrolledCoursesProvider);
+                  ref.refresh(enrollmentProvider);
                 }),
           );
         },

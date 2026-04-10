@@ -40,7 +40,10 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
     ref.refresh(unreadCountProvider);
     ref.refresh(notificationListProvider);
     _tabController = TabController(length: _tabs.length, vsync: this);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeStartVideo());
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    await ref.refresh(enrollmentProvider.future); 
+    _maybeStartVideo();  
+  });
   }
 
   /// Silently refreshes enrollment; if now enrolled → auto-play video.
@@ -249,15 +252,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
   Widget build(BuildContext context) {
     final enrolledIds = ref.watch(enrolledCoursesProvider);
     final isEnrolled = enrolledIds.contains(widget.course.id);
-
-    if (isEnrolled && !_videoStarted) {
-      _videoStarted = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && widget.course.contents.isNotEmpty) {
-          _initVideo(widget.course.contents.first);
-        }
-      });
-    }
+ 
     final unreadCount = ref.watch(chatUnreadCountProvider);
 
     return Scaffold(
