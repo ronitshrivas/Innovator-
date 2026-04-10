@@ -190,6 +190,7 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
 
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         _showForegroundNotification(message);
+         ref.read(notificationListProvider.notifier).refresh();
        
       });
 

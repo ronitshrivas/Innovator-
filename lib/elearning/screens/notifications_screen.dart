@@ -4,11 +4,22 @@ import 'package:innovator/Innovator/widget/Custom_refresh_Indicator.dart';
 import 'package:innovator/elearning/model/notification_model.dart';
 import 'package:innovator/elearning/provider/notificationProvider.dart';
 
-class NotificationScreen extends ConsumerWidget {
+class NotificationScreen extends ConsumerStatefulWidget {
   const NotificationScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NotificationScreen> createState() => _NotificationScreenState();
+}
+
+class _NotificationScreenState extends ConsumerState<NotificationScreen> {
+  @override
+  void initState() {
+    super.initState();
+    ref.read(notificationListProvider.notifier).refresh();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(notificationListProvider);
     final notifications = state.notifications;
 
@@ -32,23 +43,25 @@ class NotificationScreen extends ConsumerWidget {
               PopupMenuButton(
                 iconColor: Colors.black87,
                 color: Colors.white,
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'mark_all_read',
-                    child: Text('Mark all as read'),
-                  ),
-                ],
+                itemBuilder:
+                    (context) => [
+                      const PopupMenuItem(
+                        value: 'mark_all_read',
+                        child: Text('Mark all as read'),
+                      ),
+                    ],
                 onSelected: (value) {
                   if (value == 'mark_all_read') {
-                    // TODO: implement mark all as read
+                    ref.read(markAllAsReadProvider)();
                   }
                 },
               ),
             ],
           ),
-          body: notifications.isEmpty
-              ? const _EmptyView()
-              : _NotificationList(notifications: notifications),
+          body:
+              notifications.isEmpty
+                  ? const _EmptyView()
+                  : _NotificationList(notifications: notifications),
         ),
       ),
     );
@@ -72,17 +85,23 @@ class _NotificationList extends StatelessWidget {
   }
 }
 
-class _NotificationTile extends StatelessWidget {
+class _NotificationTile extends ConsumerStatefulWidget {
   const _NotificationTile({required this.notification});
   final NotificationModel notification;
 
+  @override
+  ConsumerState<_NotificationTile> createState() => _NotificationTileState();
+}
+
+class _NotificationTileState extends ConsumerState<_NotificationTile> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     return ListTile(
-      tileColor: notification.isRead ? null : colorScheme.primary.withAlpha(13),
+      tileColor:
+          widget.notification.isRead ? null : colorScheme.primary.withAlpha(13),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       leading: Stack(
         children: [
@@ -90,12 +109,12 @@ class _NotificationTile extends StatelessWidget {
             radius: 22,
             backgroundColor: colorScheme.primaryContainer,
             child: Icon(
-              _iconForType(notification.data.type),
+              _iconForType(widget.notification.data.type),
               color: colorScheme.primary,
               size: 20,
             ),
           ),
-          if (!notification.isRead)
+          if (!widget.notification.isRead)
             Positioned(
               top: 0,
               right: 0,
@@ -105,16 +124,20 @@ class _NotificationTile extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: colorScheme.primary,
                   shape: BoxShape.circle,
-                  border: Border.all(color: theme.scaffoldBackgroundColor, width: 1.5),
+                  border: Border.all(
+                    color: theme.scaffoldBackgroundColor,
+                    width: 1.5,
+                  ),
                 ),
               ),
             ),
         ],
       ),
       title: Text(
-        notification.title,
+        widget.notification.title,
         style: theme.textTheme.bodyMedium?.copyWith(
-          fontWeight: notification.isRead ? FontWeight.normal : FontWeight.w600,
+          fontWeight:
+              widget.notification.isRead ? FontWeight.normal : FontWeight.w600,
         ),
       ),
       subtitle: Column(
@@ -122,20 +145,24 @@ class _NotificationTile extends StatelessWidget {
         children: [
           const SizedBox(height: 2),
           Text(
-            notification.message,
-            style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+            widget.notification.message,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
           Text(
-            _timeAgo(notification.createdAt),
-            style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.outline),
+            _timeAgo(widget.notification.createdAt),
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: colorScheme.outline,
+            ),
           ),
         ],
       ),
       onTap: () {
-        
+        ref.read(markAsReadProvider(widget.notification.id));
       },
     );
   }
@@ -171,9 +198,16 @@ class _EmptyView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.notifications_none_outlined, size: 56, color: Theme.of(context).colorScheme.outline),
+          Icon(
+            Icons.notifications_none_outlined,
+            size: 56,
+            color: Theme.of(context).colorScheme.outline,
+          ),
           const SizedBox(height: 12),
-          Text('No notifications yet', style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            'No notifications yet',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
         ],
       ),
     );

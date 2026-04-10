@@ -5,6 +5,7 @@ import 'package:innovator/Innovator/screens/chatrrom/screen/chatlistscreen.dart'
 import 'package:innovator/Innovator/widget/CustomizeFAB.dart';
 import 'package:innovator/elearning/model/course_list_model.dart';
 import 'package:innovator/elearning/provider/course_provider.dart';
+import 'package:innovator/elearning/provider/notificationProvider.dart';
 import 'package:video_player/video_player.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:shimmer/shimmer.dart';
@@ -36,6 +37,8 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
   @override
   void initState() {
     super.initState();
+    ref.refresh(unreadCountProvider);
+    ref.refresh(notificationListProvider);
     _tabController = TabController(length: _tabs.length, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _maybeStartVideo());
   }
@@ -55,6 +58,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
 
       if (isNowEnrolled) {
         setState(() => _isVerifyingPayment = false);
+         ref.read(notificationListProvider.notifier).refresh();
         _videoStarted = true;
         if (widget.course.contents.isNotEmpty) {
           _initVideo(widget.course.contents.first);
@@ -112,7 +116,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
     super.dispose();
   }
 
-  // ─── Video Init ───────────────────────────────────────────────────────────
+  // Video Init
 
   void _initVideo(CourseContent content) {
     final oldController = _videoController;
@@ -167,7 +171,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
         });
   }
 
-  // ─── Enroll ───────────────────────────────────────────────────────────────
+ 
 
   Future<void> _enroll() async {
     final courseId = widget.course.id;
@@ -175,10 +179,10 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
 
     try {
       if (widget.course.isFree) {
-        // FREE: enroll directly
         await ref.read(courseServiceProvider).enrollCourse(courseId);
         await ref.refresh(enrollmentProvider.future);
         ref.read(enrollLoadingProvider(courseId).notifier).setLoading(false);
+ ref.read(notificationListProvider.notifier).refresh();
 
         _videoStarted = true;
         if (widget.course.contents.isNotEmpty) {
@@ -239,7 +243,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
     );
   }
 
-  // ─── Build ────────────────────────────────────────────────────────────────
+  // Build
 
   @override
   Widget build(BuildContext context) {
@@ -328,7 +332,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
         ],
       ),
       floatingActionButton: CountBadgeFAB(
-        count: unreadCount, // ← real-time total
+        count: unreadCount,
         gifAsset: 'animation/chaticon.gif',
         backgroundColor: Colors.transparent,
         onPressed: () {
@@ -338,14 +342,13 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
             MaterialPageRoute(builder: (_) => const ChatListScreen()),
           ).then((_) {
             ref.invalidate(mutualFriendsProvider);
-            //ref.read(mutualFriendsProvider.notifier).refresh();
           });
         },
       ),
     );
   }
 
-  // ─── Title Bar ────────────────────────────────────────────────────────────
+  // Title Bar
 
   Widget _buildTitleBar() {
     return Container(
@@ -408,7 +411,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
     );
   }
 
-  // ─── Video Section ────────────────────────────────────────────────────────
+  // Video Section
 
   Widget _buildVideoSection(bool isEnrolled) {
     final isLoading = ref.watch(enrollLoadingProvider(widget.course.id));
@@ -507,7 +510,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
     ),
   );
 
-  // ─── Lessons Tab ──────────────────────────────────────────────────────────
+  // Lessons Tab
 
   Widget _buildLessonsTab(bool isEnrolled) {
     final contents = widget.course.contents;
@@ -661,7 +664,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
     ),
   );
 
-  // ─── Docs Tab ─────────────────────────────────────────────────────────────
+  // Docs Tab
 
   Widget _buildDocsTab(bool isEnrolled) {
     final docs =
@@ -680,7 +683,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
     );
   }
 
-  // ─── About Tab ────────────────────────────────────────────────────────────
+  // About Tab
 
   Widget _buildAboutTab(bool isEnrolled) {
     final course = widget.course;
@@ -770,9 +773,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
   );
 }
 
-// ─── Khalti WebView Screen ────────────────────────────────────────────────────
-
-// ─── Khalti WebView Screen ────────────────────────────────────────────────────
+ 
 
 class KhaltiWebViewScreen extends StatefulWidget {
   final String paymentUrl;
@@ -974,7 +975,7 @@ class _KhaltiWebViewScreenState extends State<KhaltiWebViewScreen> {
   }
 }
 
-// ─── Video Player With Controls ───────────────────────────────────────────────
+// Video Player With Controls
 
 class _VideoPlayerWithControls extends StatefulWidget {
   final VideoPlayerController controller;
@@ -1417,7 +1418,7 @@ class _VideoPlayerWithControlsState extends State<_VideoPlayerWithControls> {
   }
 }
 
-// ─── Fullscreen Video Screen ──────────────────────────────────────────────────
+// Fullscreen Video Screen
 
 class _FullscreenVideoScreen extends StatefulWidget {
   final VideoPlayerController controller;
@@ -1460,7 +1461,7 @@ class _FullscreenVideoScreenState extends State<_FullscreenVideoScreen> {
   }
 }
 
-// ─── Locked Overlay ───────────────────────────────────────────────────────────
+// Locked Overlay
 
 class _LockedOverlay extends StatelessWidget {
   final CourseListModel course;
@@ -1516,7 +1517,7 @@ class _LockedOverlay extends StatelessWidget {
   }
 }
 
-// ─── Enroll Button ────────────────────────────────────────────────────────────
+// Enroll Button
 
 class _EnrollButton extends StatelessWidget {
   final bool isFree;
@@ -1590,7 +1591,7 @@ class _EnrollButton extends StatelessWidget {
   }
 }
 
-// ─── Course Badge ─────────────────────────────────────────────────────────────
+// Course Badge
 
 class _CourseBadge extends StatelessWidget {
   final bool isFree;
@@ -1614,7 +1615,7 @@ class _CourseBadge extends StatelessWidget {
   );
 }
 
-// ─── Doc Item ─────────────────────────────────────────────────────────────────
+// Doc Item
 
 class _DocItem extends StatelessWidget {
   final CourseContent content;
@@ -1720,7 +1721,7 @@ class _DocItem extends StatelessWidget {
   );
 }
 
-// ─── PDF Viewer ───────────────────────────────────────────────────────────────
+// PDF Viewer
 
 class _PdfViewScreen extends StatelessWidget {
   final String url;
@@ -1746,7 +1747,7 @@ class _PdfViewScreen extends StatelessWidget {
   );
 }
 
-// ─── About Card ───────────────────────────────────────────────────────────────
+// About Card
 
 class _AboutCard extends StatelessWidget {
   final IconData icon;
