@@ -1,6 +1,4 @@
- 
-
-
+import 'dart:async';
 import 'dart:developer' as developer;
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -25,7 +23,8 @@ class NotificationState {
 
 class NotificationNotifier extends StateNotifier<NotificationState> {
   final NotificationService service;
- 
+  Timer? _timer;
+
   static final Set<String> _seenIds = {};
   static final List<String> _enrollmentMessages = [];
 
@@ -34,45 +33,57 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
 
   final _plugin = FlutterLocalNotificationsPlugin();
 
-  Future<void> init() async { 
+  Future<void> init() async {
     const androidSettings = AndroidInitializationSettings(
       '@mipmap/ic_launcher',
     );
     const initSettings = InitializationSettings(android: androidSettings);
     await _plugin.initialize(initSettings);
- 
+
     const androidChannel = AndroidNotificationChannel(
       'high_importance_channel',
       'High Importance Notifications',
       importance: Importance.max,
-    ); 
+    );
     await _plugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(androidChannel);
 
     await refresh();
+    _startPolling();
+  }
+
+  void _startPolling() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 15), (_) => refresh());
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   Future<void> refresh() async {
     try {
       final newList = await service.getNotifications();
 
-       final cutoff = DateTime.now().subtract(const Duration(minutes: 5));
+      final cutoff = DateTime.now().subtract(const Duration(minutes: 5));
 
       final newItems = newList.where(
         (n) =>
-            !_seenIds.contains(n.id) &&  
-            !n.isRead &&              
-            n.createdAt.isAfter(cutoff),  
+            !_seenIds.contains(n.id) &&
+            !n.isRead &&
+            n.createdAt.isAfter(cutoff),
       );
 
       for (final n in newItems) {
-        _seenIds.add(n.id);  
+        _seenIds.add(n.id);
         _showSystemNotification(n);
       }
 
- 
       if (_seenIds.length > 200) {
         final overflow = _seenIds.length - 200;
         _seenIds.removeAll(_seenIds.take(overflow).toList());
@@ -103,17 +114,17 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
       priority: Priority.max,
       styleInformation: inboxStyle,
       groupKey: groupKey,
-      setAsGroupSummary: false, 
+      setAsGroupSummary: false,
       largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
       icon: '@mipmap/ic_launcher',
     );
- 
+
     _plugin.show(
       groupKey.hashCode,
       n.title,
       n.message,
       NotificationDetails(android: androidDetails),
-    ); 
+    );
     final summaryDetails = AndroidNotificationDetails(
       'high_importance_channel',
       'High Importance Notifications',
@@ -152,4 +163,17 @@ final notificationListProvider =
 final unreadCountProvider = Provider<int>((ref) {
   final state = ref.watch(notificationListProvider);
   return state.notifications.where((n) => !n.isRead).length;
+});
+
+final markAsReadProvider = Provider.family((ref, String notificationId) async {
+  await ref.read(notificationServiceProvider).markAsRead(notificationId);
+  await ref.read(notificationListProvider.notifier).refresh();
+});
+
+final markAllAsReadProvider = Provider((ref) {
+  final service = ref.watch(notificationServiceProvider);
+  return () async {
+    await service.markAllAsRead();
+    await ref.read(notificationListProvider.notifier).refresh();
+  };
 });

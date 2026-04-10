@@ -103,4 +103,14 @@ class NotificationService extends ElearningBaseApiService {
         .map((e) => NotificationModel.fromJson(e as Map<String, dynamic>))
         .toList();
   }
+
+  //Mark as read
+  Future<void> markAsRead(String notificationId) async {
+    await post(ElearningApi.markNotificationAsRead(notificationId));
+  }
+
+  // Mark all as read
+  Future<void> markAllAsRead() async {
+    await post(ElearningApi.markAllNotificationsAsRead);
+  }
 }

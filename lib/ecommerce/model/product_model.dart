@@ -88,8 +88,5 @@ class CategoryDetails {
       createdAt: json['created_at'] as String,
     );
   }
-<<<<<<< prashantmerger
 }
-=======
-}
->>>>>>> Ronit
+
