@@ -4,6 +4,7 @@ import 'package:innovator/KMS/core/constants/app_style.dart';
 import 'package:innovator/KMS/core/constants/mediaquery.dart';
 import 'package:innovator/KMS/provider/auth_provider.dart';
 import 'package:innovator/KMS/provider/constant_provider.dart';
+import 'package:innovator/KMS/provider/coordinator_provider.dart';
 import 'package:innovator/KMS/provider/teacher_provider.dart';
 import 'package:innovator/KMS/provider/user_provider.dart';
 import 'package:innovator/KMS/screens/auth/signup_screen.dart';
@@ -58,6 +59,8 @@ class _KmsLoginScreenState extends ConsumerState<KmsLoginScreen> {
         //   break;
         case 'coordinator':
           ref.invalidate(userDetailsProvider);
+          ref.refresh(coordinatorAttendanceProvider);
+          ref.refresh(teacherSessionsProvider);
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => CoordinatorDashboardScreen()),

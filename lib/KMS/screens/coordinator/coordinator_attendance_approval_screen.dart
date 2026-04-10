@@ -363,16 +363,7 @@ class _CoordinatorAttendanceDetailScreenState
                         fontFamily: 'Inter',
                         color: Colors.black87,
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.item.schoolName,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade500,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
+                    ), 
                     const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -586,13 +577,15 @@ class _DetailRow extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Colors.black87,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w600,
+          Flexible(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Colors.black87,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
