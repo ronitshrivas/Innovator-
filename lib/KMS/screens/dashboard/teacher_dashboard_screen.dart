@@ -534,57 +534,114 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                 kycAsync.when(
                   loading: () => const SizedBox.shrink(),
                   error: (_, __) => const SizedBox.shrink(),
+                  // data: (kyc) {
+                  //   final config = switch (kyc.status) {
+                  //     'approved' => (
+                  //       label: 'KYC Verified',
+                  //       color: Colors.green,
+                  //     ),
+                  //     'rejected' => (label: 'KYC Rejected', color: Colors.red),
+                  //     _ => (label: 'KYC Pending', color: Colors.blue),
+                  //   };
+                  //   return Padding(
+                  //     padding: const EdgeInsets.only(bottom: 8),
+                  //     child: Column(
+                  //       crossAxisAlignment: CrossAxisAlignment.start,
+                  //       children: [
+                  //         CustomPaint(
+                  //           painter:  ProfileStatusCircularPercentage(
+                  //             percentage: kyc.kycPercentage.replaceAll('%', '') as double,
+                  //           ),
+                  //           size: Size(
+                  //             context.screenWidth * 0.2,
+                  //             context.screenHeight * 0.08,
+                  //           ),
+                  //         ),
+                  //         Row(
+                  //           mainAxisAlignment: MainAxisAlignment.start,
+                  //           mainAxisSize: MainAxisSize.min,
+                  //           children: [
+                  //             Container(
+                  //               width: 7,
+                  //               height: 7,
+                  //               decoration: BoxDecoration(
+                  //                 color: config.color,
+                  //                 shape: BoxShape.circle,
+                  //               ),
+                  //             ),
+                  //             const SizedBox(width: 5),
+                  //             Text(
+                  //               config.label,
+                  //               style: TextStyle(
+                  //                 fontSize: 10,
+                  //                 fontFamily: 'Inter',
+                  //                 fontWeight: FontWeight.w600,
+                  //                 color: config.color,
+                  //               ),
+                  //             ),
+                  //           ],
+                  //         ),
+                  //       ],
+                  //     ),
+                  //   );
+                  // },
+
+
                   data: (kyc) {
-                    final config = switch (kyc.status) {
-                      'approved' => (
-                        label: 'KYC Verified',
-                        color: Colors.green,
-                      ),
-                      'rejected' => (label: 'KYC Rejected', color: Colors.red),
-                      _ => (label: 'KYC Pending', color: Colors.blue),
-                    };
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          CustomPaint(
-                            painter: const ProfileStatusCircularPercentage(
-                              percentage: 75,
-                            ),
-                            size: Size(
-                              context.screenWidth * 0.2,
-                              context.screenHeight * 0.08,
-                            ),
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 7,
-                                height: 7,
-                                decoration: BoxDecoration(
-                                  color: config.color,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 5),
-                              Text(
-                                config.label,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w600,
-                                  color: config.color,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+  // Safe parse: strip %, fallback to 0.0
+  final percentage = double.tryParse(
+    kyc.kycPercentage?.replaceAll('%', '').trim() ?? '',
+  ) ?? 0.0;
+
+  final config = switch (kyc.status) {
+    'approved' => (label: 'KYC Verified', color: Colors.green),
+    'rejected'  => (label: 'KYC Rejected', color: Colors.red),
+    _           => (label: 'KYC Pending',  color: Colors.blue),
+  };
+
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (percentage > 0)
+          CustomPaint(
+            painter: ProfileStatusCircularPercentage(percentage: percentage),
+            size: Size(context.screenWidth * 0.2, context.screenHeight * 0.08),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'Not yet set up',
+              style: TextStyle(
+                fontSize: 11,
+                fontFamily: 'Inter',
+                color: Colors.grey.shade400,
+              ),
+            ),
+          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 7, height: 7,
+              decoration: BoxDecoration(color: config.color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 5),
+            Text(
+              config.label,
+              style: TextStyle(
+                fontSize: 10, fontFamily: 'Inter',
+                fontWeight: FontWeight.w600, color: config.color,
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+},
                 ),
               ],
             ),

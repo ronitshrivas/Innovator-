@@ -96,6 +96,11 @@ final teacherAttendanceProvider = FutureProvider.family<
       ),
 );
 
+final csvUploadProvider =
+    FutureProvider.family<Map<String, dynamic>, File>((ref, file) {
+  return ref.read(teacherServiceProvider).csvUpload(file: file);
+});
+
 
 //can also be used this way above is checking for the token 
 // final teacherProfileProvider = FutureProvider<TeacherProfileModel>((ref) {

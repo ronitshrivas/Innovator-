@@ -13,6 +13,7 @@ import 'package:innovator/KMS/screens/dashboard/coordinator_dashboard_screen.dar
 import 'package:innovator/KMS/screens/dashboard/teacher_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/student/homework_screen.dart';
 import 'package:innovator/KMS/screens/student/student_attendance_screen.dart';
+import 'package:innovator/KMS/screens/teacher/add_student_screen.dart';
 import 'package:innovator/KMS/screens/teacher/kyc_upload_screen.dart';
 import 'package:innovator/KMS/screens/teacher/teacher_attendance_screen.dart';
 import 'package:innovator/KMS/screens/teacher/teacher_invoice_screen.dart';
@@ -40,12 +41,17 @@ const List<DrawerItemData> _teacherDrawerItems = [
     image: 'assets/kms/drawer/attendance.png',
     screen: TeacherSchoolAttendanceScreen(),
   ),
-
+DrawerItemData(
+    title: 'Add Student',
+    image: 'assets/kms/drawer/progresstracking.png',
+    screen: AddStudentScreen(),
+  ),
   DrawerItemData(
     title: 'KYC Verification',
     image: 'assets/kms/drawer/teacher.png',
     screen: KycUploadScreen(),
   ),
+
   DrawerItemData(
     title: 'Invoice',
     image: 'assets/kms/drawer/salary.png',
