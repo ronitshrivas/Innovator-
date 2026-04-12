@@ -13,7 +13,7 @@ class PaymentService extends EcommerBaseApiService {
   PaymentService() : super(dio: DioClient.instance);
 
   Future<List<PaymentModel>> getPaymentQRs() async {
-    final data = await get<List<dynamic>>(EcommerApi.payment);
+    final data = await get<List<dynamic>>(EcommerceApi.payment);
     final payments = PaymentModel.fromJsonList(data);
     log('Payments loaded: ${payments.length}');
     return payments;
@@ -35,7 +35,7 @@ class PaymentService extends EcommerBaseApiService {
     };
     log('Checkout payload: $body');
     final data = await post<Map<String, dynamic>>(
-      EcommerApi.checkoutSummary,
+      EcommerceApi.checkoutSummary,
       data: body,
     );
     final response = CheckoutSummaryResponse.fromJson(data);
@@ -53,7 +53,7 @@ class PaymentService extends EcommerBaseApiService {
         filename: path.basename(screenshot.path),
       ),
     });
-    await DioClient.instance.post(EcommerApi.orders(orderId), data: formData);
+    await DioClient.instance.post(EcommerceApi.orders(orderId), data: formData);
     log('Payment confirmed for order: $orderId');
   }
 
@@ -62,7 +62,7 @@ class PaymentService extends EcommerBaseApiService {
   }) async {
     log('Initiating Khalti payment for order: $orderId');
     final data = await post<Map<String, dynamic>>(
-      EcommerApi.khaltiPayment,
+      EcommerceApi.khaltiPayment,
       data: {'order_id': orderId},
     );
     final response = KhaltiPaymentResponse.fromJson(data);

@@ -7,11 +7,12 @@ import 'package:innovator/ecommerce/core/constants/api_constants.dart';
 class AuthInterceptor extends Interceptor {
   final Dio     _dio;   
   final AppData _appData = AppData();   
+  final bool showToasts;
 
 
   bool _isRefreshing = false;
 
-  AuthInterceptor(this._dio); 
+  AuthInterceptor(this._dio, {this.showToasts = true}); 
   
   // On Request
   @override
@@ -66,11 +67,17 @@ class AuthInterceptor extends Interceptor {
       return;
     }
       final exception = mapDioError(err);
-  ToastUtils.showError(exception.message);
+  // ToastUtils.showError(exception.message);
+    if (showToasts && _isUserFacingError(exception)) {
+      ToastUtils.showError(exception.message);
+    }
  
     handler.next(err);
   }
-
+  bool _isUserFacingError(AppException exception) {
+    return exception is! TimeoutException && 
+           exception is! NetworkException;
+  }
   
   Future<String?> _tryRefreshToken() async {
     final refreshToken = _appData.refreshToken;
@@ -78,13 +85,13 @@ class AuthInterceptor extends Interceptor {
 
     try {
       final plainDio = Dio(BaseOptions(
-        baseUrl:        EcommerApi.baseUrl,
-        connectTimeout: EcommerApi.defaultTimeout,
-        receiveTimeout: EcommerApi.uploadTimeout,
+        baseUrl:        EcommerceApi.baseUrl,
+        connectTimeout: EcommerceApi.defaultTimeout,
+        receiveTimeout: EcommerceApi.uploadTimeout,
       ));
 
       final response = await plainDio.post(
-        EcommerApi.baseUrl,
+        EcommerceApi.baseUrl,
         data: {'refresh': refreshToken}, 
       );
 

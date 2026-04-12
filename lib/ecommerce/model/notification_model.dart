@@ -1,36 +1,40 @@
 
-class ElearningNotificationData {
+class EcommerceNotificationData {
   final String type;
-  final String courseId;
+  final String productId;
+  final String categroy;
 
-  const ElearningNotificationData({
+  const EcommerceNotificationData({
     required this.type,
-    required this.courseId,
+    required this.productId,
+    required this.categroy,
   });
 
-  factory ElearningNotificationData.fromJson(Map<String, dynamic> json) {
-    return ElearningNotificationData(
+  factory EcommerceNotificationData.fromJson(Map<String, dynamic> json) {
+    return EcommerceNotificationData(
       type: json['type'] as String,
-      courseId: json['course_id'] as String,
+      productId: json['product_id'] as String,
+      categroy: json['category'] as String,
     );
   }
 
   Map<String, dynamic> toJson() => {
     'type': type,
-    'course_id': courseId,
+    'product_id': productId,
+    'category': categroy,
   };
 }
 
-class ElearningNotificationModel {
+class EcommerceNotificationModel {
   final String id;
   final String title;
   final String message;
   final String notificationType;
   final bool isRead;
   final DateTime createdAt;
-  final ElearningNotificationData data;
+  final EcommerceNotificationData data;
 
-  const ElearningNotificationModel({
+  const EcommerceNotificationModel({
     required this.id,
     required this.title,
     required this.message,
@@ -40,15 +44,15 @@ class ElearningNotificationModel {
     required this.data,
   });
 
-  factory ElearningNotificationModel.fromJson(Map<String, dynamic> json) {
-    return ElearningNotificationModel(
+  factory EcommerceNotificationModel.fromJson(Map<String, dynamic> json) {
+    return EcommerceNotificationModel(
       id: json['id'] as String,
       title: json['title'] as String,
       message: json['message'] as String,
       notificationType: json['notification_type'] as String,
       isRead: json['is_read'] as bool,
       createdAt: DateTime.parse(json['created_at'] as String),
-      data: ElearningNotificationData.fromJson(
+      data: EcommerceNotificationData.fromJson(
         json['data'] as Map<String, dynamic>,
       ),
     );
@@ -64,9 +68,9 @@ class ElearningNotificationModel {
     'data': data.toJson(),
   };
 
-   static List<ElearningNotificationModel> fromJsonList(List<dynamic> jsonList) {
+   static List<EcommerceNotificationModel> fromJsonList(List<dynamic> jsonList) {
     return jsonList
-      .map((e) => ElearningNotificationModel.fromJson(e as Map<String, dynamic>))
+      .map((e) => EcommerceNotificationModel.fromJson(e as Map<String, dynamic>))
       .toList();
   }
 }

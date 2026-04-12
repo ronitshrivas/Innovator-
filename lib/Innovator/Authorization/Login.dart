@@ -15,7 +15,8 @@ import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/helper/dialogs.dart';
 import 'package:innovator/Innovator/services/fcm_services.dart';
-import 'package:innovator/elearning/provider/notificationProvider.dart';
+import 'package:innovator/ecommerce/provider/notificationProvider.dart';
+import 'package:innovator/elearning/provider/notificationProvider.dart'; 
 import 'package:innovator/innovator_home.dart';
 import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -156,7 +157,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           if (fcmToken == null) return;
           await Future.wait([
             FCMService().registerToken(),
-            ref.read(notificationServiceProvider).registerFcmToken(fcmToken),
+            ref.read(elearningNotificationServiceProvider).registerFcmToken(fcmToken),
+            ref.read(ecommerceNotificationServiceProvider).registerFcmToken(fcmToken),
           ]);
         });
       } else {
@@ -314,7 +316,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           if (fcmToken == null) return;
           await Future.wait([
             FCMService().registerToken(),
-            ref.read(notificationServiceProvider).registerFcmToken(fcmToken),
+            ref.read(elearningNotificationServiceProvider).registerFcmToken(fcmToken),
+            ref.read(ecommerceNotificationServiceProvider).registerFcmToken(fcmToken),
           ]);
         });
 
