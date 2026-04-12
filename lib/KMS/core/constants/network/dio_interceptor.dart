@@ -9,12 +9,14 @@ import 'package:innovator/KMS/core/utils/toast_utils.dart';
 class AppInterceptor extends Interceptor {
   final TokenService _tokenService = TokenService();
   final ConnectivityService _connectivityService = ConnectivityService();
+   final bool showToasts;
   bool _isRefreshing = false;
   final List<_PendingRequest> _pendingRequests = [];
 
   static const _authEndpoints = ['/auth/sso/login/', '/auth/register/', '/student/login/',];
 
   static const _refreshEndpoint = '/auth/token/refresh/';
+   AppInterceptor({this.showToasts = true});
 
   //Request
   @override
@@ -55,7 +57,7 @@ class AppInterceptor extends Interceptor {
 
     await _autoSaveToken(response);
 
-    if (_shouldShowSuccessToast(response)) {
+    if (showToasts &&_shouldShowSuccessToast(response)) {
       final message = _extractMessage(response.data) ?? 'Success';
       ToastUtils.showSuccess(message);
     }
@@ -78,7 +80,10 @@ class AppInterceptor extends Interceptor {
     }
 
     final exception = _handleError(err);
-    ToastUtils.showError(exception.message);
+    // ToastUtils.showError(exception.message);
+     if (showToasts && _isUserFacingError(exception)) {
+      ToastUtils.showError(exception.message);
+    }
 
     handler.reject(
       DioException(
@@ -88,6 +93,9 @@ class AppInterceptor extends Interceptor {
         response: err.response,
       ),
     );
+  }
+    bool _isUserFacingError(AppException exception) {
+    return exception is! TimeoutException && exception is! NetworkException;
   }
 
   //Token Refresh

@@ -1,4 +1,4 @@
-class EcommerApi {
+class EcommerceApi {
   static const String baseUrl = 'http://182.93.94.220:8004/api';
   static const String productList = '$baseUrl/products';
   static const String cartItems = '$baseUrl/cart-items/';
@@ -10,6 +10,15 @@ class EcommerApi {
   static String orders(String orderId) =>
       '$baseUrl/orders/$orderId/confirm-payment/';
   static String khaltiPayment = '$baseUrl/payments/initiate/';
+
+  //  notifications
+  static const String fcmTokens = '$baseUrl/fcm-tokens/';
+  static const String notificationsList = '$baseUrl/notifications/';
+  static String markNotificationAsRead(String notificationId) =>
+      '$baseUrl/notifications/$notificationId/mark-read/';
+  static const String markAllNotificationsAsRead =
+      '$baseUrl/notifications/mark-all-read/';
+ 
 
   // time out
   static const Duration defaultTimeout = Duration(seconds: 30);

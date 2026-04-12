@@ -11,7 +11,7 @@ class ProductListService extends EcommerBaseApiService {
   ProductListService() : super(dio: DioClient.instance);
 
   Future<List<ProductModel>> getProductList() async {
-    final data = await get<List<dynamic>>(EcommerApi.productList);
+    final data = await get<List<dynamic>>(EcommerceApi.productList);
     final products = ProductModel.fromJsonList(data);
     log('Products: $products');
     return products;
@@ -19,7 +19,7 @@ class ProductListService extends EcommerBaseApiService {
 
   Future<ProductDetailModel> getProductDetails(String id) async {
     final data = await get<Map<String, dynamic>>(
-      '${EcommerApi.productDetails}$id/',
+      '${EcommerceApi.productDetails}$id/',
     );
     final detail = ProductDetailModel.fromJson(data);
     log('Product detail: ${detail.name}');
@@ -27,18 +27,18 @@ class ProductListService extends EcommerBaseApiService {
   }
 
   Future<Map<String, dynamic>> addCartItem({required String product}) async {
-    return await post(EcommerApi.cartItems, data: {'product': product});
+    return await post(EcommerceApi.cartItems, data: {'product': product});
   }
 
   Future<List<CartItemModel>> getCartList() async {
-    final data = await get<List<dynamic>>(EcommerApi.cartItems);
+    final data = await get<List<dynamic>>(EcommerceApi.cartItems);
     final items = CartItemModel.fromJsonList(data);
     log('Cart items: $items');
     return items;
   }
 
   Future<void> deleteCartItem({required String cartItemId}) async {
-    await delete(EcommerApi.itemUpdate(cartItemId));
+    await delete(EcommerceApi.itemUpdate(cartItemId));
   }
 
   Future<void> updateCartItemQuantity({
@@ -46,7 +46,7 @@ class ProductListService extends EcommerBaseApiService {
     required int quantity,
   }) async {
     await patch(
-      EcommerApi.itemUpdate(cartItemId),
+      EcommerceApi.itemUpdate(cartItemId),
       data: {'quantity': quantity},
     );
   }

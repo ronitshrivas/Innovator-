@@ -32,9 +32,9 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
     super.initState();
     ref.refresh(courseListProvider);
     ref.refresh(enrollmentProvider);
-    ref.refresh(notificationListProvider);
+    ref.refresh(elearningNotificationListProvider);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(notificationListProvider.notifier).refresh();
+      ref.read(elearningNotificationListProvider.notifier).refresh();
     });
     _tabController = TabController(length: _tabs.length, vsync: this);
     _searchController.addListener(() {
@@ -232,7 +232,7 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
                     ),
                 child: Consumer(
                   builder: (context, ref, _) {
-                    final unreadAsync = ref.watch(unreadCountProvider);
+                    final unreadAsync = ref.watch(elearningUnreadCountProvider);
                     final count = unreadAsync;
                     return count > 0
                         ? Badge.count(
@@ -365,7 +365,7 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
                     builder: (_) => CourseDetailScreen(course: course),
                   ),
                 ).then((_) {
-                  ref.read(notificationListProvider.notifier).refresh();
+                  ref.read(elearningNotificationListProvider.notifier).refresh();
                   ref.refresh(enrollmentProvider);
                 }),
           );
