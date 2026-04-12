@@ -50,8 +50,7 @@
 //     _authInstance = null;
 //   }
 // }
-
-// dio_client.dart
+ 
 import 'dart:developer';
 import 'package:dio/dio.dart';
 import 'package:innovator/KMS/core/constants/api_constants.dart';
@@ -60,7 +59,7 @@ import 'dio_interceptor.dart';
 class DioClient {
   static Dio? _instance;
   static Dio? _authInstance;
-  static Dio? _silentInstance; // ✅ Added
+  static Dio? _silentInstance;  
 
   static Dio get instance {
     _instance ??= _create(

@@ -35,6 +35,8 @@ class ApiConstants {
     final query = params.isEmpty ? '' : '?${params.join('&')}';
     return '$baseUrl/teacher/attendance/$query';
   }
+
+  static String get csvUpload => '$baseUrl/students/csv-upload/';
   //admin endpoints
 
   // Coordinator endpoints

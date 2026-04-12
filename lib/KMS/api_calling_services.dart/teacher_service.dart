@@ -175,16 +175,47 @@ class TeacherService extends BaseApiService {
   }
 
   Future<List<TeacherAttendanceRecord>> getTeacherAttendance({
-  String? school,
-  String? date,
-}) async {
-  final data = await get<List<dynamic>>(
-    ApiConstants.teacherAttendance(school: school, date: date),
-  );
-  final list = data
-      .map((e) => TeacherAttendanceRecord.fromJson(e as Map<String, dynamic>))
-      .toList();
-  log('Teacher attendance: ${list.length} records');
-  return list;
-}
+    String? school,
+    String? date,
+  }) async {
+    final data = await get<List<dynamic>>(
+      ApiConstants.teacherAttendance(school: school, date: date),
+    );
+    final list =
+        data
+            .map(
+              (e) =>
+                  TeacherAttendanceRecord.fromJson(e as Map<String, dynamic>),
+            )
+            .toList();
+    log('Teacher attendance: ${list.length} records');
+    return list;
+  }
+
+  Future<Map<String, dynamic>> csvUpload({required File file}) async {
+    final filename = file.path.split('/').last;
+    final ext = filename.split('.').last.toLowerCase();
+
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(
+        file.path,
+        filename: filename,
+        contentType:
+            ext == 'csv'
+                ? DioMediaType('text', 'csv')
+                : DioMediaType(
+                  'application',
+                  'vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                ),
+      ),
+    });
+
+    final result = await post<Map<String, dynamic>>(
+      ApiConstants.csvUpload,
+      data: formData,
+      options: Options(headers: {'Content-Type': 'multipart/form-data'}),
+    );
+    log('CSV upload: $result');
+    return result;
+  }
 }
