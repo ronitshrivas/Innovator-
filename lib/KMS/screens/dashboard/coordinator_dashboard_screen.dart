@@ -136,13 +136,13 @@ class CoordinatorDashboardScreen extends ConsumerWidget {
                   ),
               error: (e, _) => CoordinatorErrorBox(error: e),
               data: (data) {
-                if (data.sessions.isEmpty) {
+                if (data.sessions!.isEmpty) {
                   return const CoordinatorEmptyState(
                     icon: Icons.menu_book_rounded,
                     message: 'No teaching logs yet',
                   );
                 }
-                final preview = data.sessions.take(3).toList();
+                final preview = data.sessions!.take(3).toList();
                 return Column(
                   children: [
                     ...preview.map(
@@ -160,7 +160,7 @@ class CoordinatorDashboardScreen extends ConsumerWidget {
                             ),
                       ),
                     ),
-                    if (data.totalSessions > 3)
+                    if (data.totalSessions! > 3)
                       _ViewMoreButton(
                         label: 'View all ${data.totalSessions} logs',
                         color: const Color(0xFF7C3AED),
@@ -472,7 +472,7 @@ class _SessionPreviewTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    session.teacherName,
+                    session.teacherName ?? 'Unknown Teacher',
                     style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
@@ -481,7 +481,7 @@ class _SessionPreviewTile extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    session.notes,
+                    session.notes ?? 'No notes available',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey.shade500,
@@ -498,7 +498,9 @@ class _SessionPreviewTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  session.date,
+                  session.date != null
+                      ? '${DateTime.parse(session.date!).day}/${DateTime.parse(session.date!).month}'
+                      : 'No Date',
                   style: TextStyle(
                     fontSize: 11,
                     color: Colors.grey.shade400,
