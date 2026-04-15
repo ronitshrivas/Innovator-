@@ -17,6 +17,7 @@ import 'package:innovator/KMS/screens/teacher/add_student_screen.dart';
 import 'package:innovator/KMS/screens/teacher/kyc_upload_screen.dart';
 import 'package:innovator/KMS/screens/teacher/teacher_attendance_screen.dart';
 import 'package:innovator/KMS/screens/teacher/teacher_invoice_screen.dart';
+import 'package:innovator/KMS/screens/teacher/teacher_review_screen.dart';
 import 'package:innovator/KMS/screens/teacher/teacher_school_attendance.dart';
 
 class DrawerItemData {
@@ -41,7 +42,7 @@ const List<DrawerItemData> _teacherDrawerItems = [
     image: 'assets/kms/drawer/attendance.png',
     screen: TeacherSchoolAttendanceScreen(),
   ),
-DrawerItemData(
+  DrawerItemData(
     title: 'Add Student',
     image: 'assets/kms/drawer/progresstracking.png',
     screen: AddStudentScreen(),
@@ -61,6 +62,11 @@ DrawerItemData(
     title: 'Attendance History',
     image: 'assets/kms/drawer/invoice.png',
     screen: TeacherAttendanceScreen(),
+  ),
+  DrawerItemData(
+    title: "My review",
+    image: 'assets/kms/drawer/review.png',
+    screen: TeacherReviewsScreen(),
   ),
 ];
 

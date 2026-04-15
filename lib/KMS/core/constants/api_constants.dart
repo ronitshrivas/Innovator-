@@ -51,6 +51,7 @@ class ApiConstants {
       '$baseUrl/coordinator/teaching-notes/';
   static String get teacherNotes => '$baseUrl/coordinator/teaching-notes/';
   static String get teacherRating => '$baseUrl/coordinator/teacher-rating/';
+  
 
   //student endpoints
   static String get schoolList => '$baseUrl/public/registration-metadata/';

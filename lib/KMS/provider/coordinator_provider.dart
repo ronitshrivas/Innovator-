@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/KMS/api_calling_services.dart/coordinator_service.dart';
 import 'package:innovator/KMS/model/coordinator_model/coordinator_teacher_response_model.dart';
 import 'package:innovator/KMS/model/coordinator_model/teacher_notes_model.dart';
+import 'package:innovator/KMS/model/coordinator_model/teacher_rating_model.dart';
 
 final coordinatorServiceProvider = Provider<CoordinatorService>(
   (_) => CoordinatorService(),
@@ -55,3 +56,7 @@ final ratingProvider =
             feedback: data['review'],
           ),
     );
+
+final getRatingProvider = FutureProvider<List<TeacherRatingModel>>(
+  (ref) => ref.read(coordinatorServiceProvider).getTeacherRating(),
+);

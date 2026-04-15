@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/KMS/core/constants/app_style.dart';
 import 'package:innovator/KMS/model/teacher_model/student_model.dart';
-import 'package:innovator/KMS/model/teacher_model/teacher-profile.dart';
+import 'package:innovator/KMS/model/teacher_model/teacher_profile_model.dart';
 import 'package:innovator/KMS/provider/teacher_provider.dart';
 
 // Screen 1: School List 
