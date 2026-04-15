@@ -62,6 +62,8 @@ class AuthInterceptor extends Interceptor {
       return;
     }
     final exception = mapDioError(err);
+    // final isSilent = err.requestOptions.extra['silent'] == true;
+    // if (!isSilent) ToastUtils.showError(exception.message);
     ToastUtils.showError(exception.message);
     handler.next(err);
   }

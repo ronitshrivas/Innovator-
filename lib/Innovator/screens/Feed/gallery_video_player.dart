@@ -84,7 +84,7 @@ class _GalleryVideoPlayerState extends State<GalleryVideoPlayer>
       final controller = VideoPlayerController.networkUrl(
         Uri.parse(widget.url),
         videoPlayerOptions: VideoPlayerOptions(
-          mixWithOthers: false,
+          mixWithOthers: true,
           allowBackgroundPlayback: false,
         ),
       );
@@ -678,6 +678,7 @@ class _GalleryFullscreenPageState extends State<_GalleryFullscreenPage>
     try {
       final controller = VideoPlayerController.networkUrl(
         Uri.parse(widget.url),
+
         videoPlayerOptions: VideoPlayerOptions(mixWithOthers: false),
       );
       await controller.initialize();
