@@ -51,34 +51,34 @@ class _HomepageState extends ConsumerState<Homepage>
   }
 
   // ── CHANGE 3: Wire lifecycle to polling speed ───────────────────────────
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    switch (state) {
-      case AppLifecycleState.resumed:
-        // User opened the app → switch to fast polling (every 8 seconds)
-        // Also triggers an immediate poll so the user sees fresh notifications
-        // the moment they return to the app.
-        log('App resumed → fast polling');
-        ref.read(notificationProvider.notifier).setAppActive(true);
-        break;
+  // @override
+  // void didChangeAppLifecycleState(AppLifecycleState state) {
+  //   super.didChangeAppLifecycleState(state);
+  //   switch (state) {
+  //     case AppLifecycleState.resumed:
+  //       // User opened the app → switch to fast polling (every 8 seconds)
+  //       // Also triggers an immediate poll so the user sees fresh notifications
+  //       // the moment they return to the app.
+  //       log('App resumed → fast polling');
+  //       ref.read(notificationProvider.notifier).setAppActive(true);
+  //       break;
 
-      case AppLifecycleState.paused:
-        // App went to background → switch to slow polling (every 30 seconds)
-        // This is battery-friendly. FCM handles background system tray
-        // notifications independently — this polling is only for the
-        // in-app banner when the app is open.
-        log('App paused → slow polling');
-        ref.read(notificationProvider.notifier).setAppActive(false);
-        break;
+  //     case AppLifecycleState.paused:
+  //       // App went to background → switch to slow polling (every 30 seconds)
+  //       // This is battery-friendly. FCM handles background system tray
+  //       // notifications independently — this polling is only for the
+  //       // in-app banner when the app is open.
+  //       log('App paused → slow polling');
+  //       ref.read(notificationProvider.notifier).setAppActive(false);
+  //       break;
 
-      case AppLifecycleState.inactive:
-      case AppLifecycleState.detached:
-      case AppLifecycleState.hidden:
-        // No polling changes needed for these states
-        break;
-    }
-  }
+  //     case AppLifecycleState.inactive:
+  //     case AppLifecycleState.detached:
+  //     case AppLifecycleState.hidden:
+  //       // No polling changes needed for these states
+  //       break;
+  //   }
+  // }
 
   // ── Everything below is IDENTICAL to your original ─────────────────────
 

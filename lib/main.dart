@@ -13,13 +13,13 @@ import 'package:innovator/Innovator/provider/global_chat_listener.dart';
 import 'package:innovator/Innovator/provider/notification_provider.dart';
 import 'package:innovator/Innovator/screens/Splash_Screen/splash_screen.dart';
 import 'package:innovator/Innovator/services/fcm_services.dart';
- import 'package:innovator/KMS/screens/auth/login_screen.dart';
+import 'package:innovator/KMS/screens/auth/login_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/admin_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/teacher_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/student/student_attendance_screen.dart';
 import 'dart:developer' as developer;
 import 'package:innovator/ecommerce/screens/Shop/Shop_Page.dart';
- import 'package:innovator/elearning/provider/notificationProvider.dart';
+import 'package:innovator/elearning/provider/notificationProvider.dart';
 
 // ─── everything above main() is IDENTICAL to your original ───────────────────
 
@@ -81,7 +81,7 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
     developer.log('InnovatorHomePage initialized');
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       _setupFCM();
-      ref.read(notificationProvider.notifier).startPolling();
+      // ref.read(notificationProvider.notifier).startPolling();
       final fcmToken = await FirebaseMessaging.instance.getToken();
       ref.read(notificationServiceProvider).registerFcmToken(fcmToken ?? '');
     });
@@ -190,8 +190,7 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
 
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         _showForegroundNotification(message);
-         ref.read(notificationListProvider.notifier).refresh();
-       
+        ref.read(notificationListProvider.notifier).refresh();
       });
 
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {

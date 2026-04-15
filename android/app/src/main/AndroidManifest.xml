@@ -66,6 +66,7 @@
 </queries>
     <application
         android:label="Innovator"
+        android:allowBackup="false"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:enableOnBackInvokedCallback="true"

@@ -24,8 +24,11 @@ class MutualFriend {
     avatar: json['avatar']?.toString() ?? '',
     onlineStatus: json['online_status'] == true,
     lastMessageAt:
-        DateTime.tryParse(json['last_message_at']?.toString() ?? '') ??
-        DateTime(2000), // ← ADD
+        json['last_message_at'] != null
+            ? DateTime.fromMillisecondsSinceEpoch(
+              json['last_message_at'] * 1000,
+            )
+            : DateTime(2000), // ← ADD
   );
 
   MutualFriend copyWithUnread(int count) => MutualFriend(
