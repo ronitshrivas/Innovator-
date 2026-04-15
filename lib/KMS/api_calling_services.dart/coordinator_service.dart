@@ -3,6 +3,8 @@ import 'package:innovator/KMS/core/constants/network/base_api_service.dart';
 import 'package:innovator/KMS/core/constants/network/dio_client.dart';
 import 'package:innovator/KMS/model/coordinator_model/coordinator_teacher_response_model.dart';
 import 'package:innovator/KMS/model/coordinator_model/teacher_notes_model.dart';
+import 'package:innovator/KMS/model/coordinator_model/teacher_rating_model.dart'
+    show TeacherRatingModel;
 
 class CoordinatorService extends BaseApiService {
   CoordinatorService() : super(dio: DioClient.instance);
@@ -71,5 +73,12 @@ class CoordinatorService extends BaseApiService {
         if (feedback != null && feedback.isNotEmpty) 'review': feedback,
       },
     );
+  }
+
+  Future<List<TeacherRatingModel>> getTeacherRating() async {
+    final response = await get<List<dynamic>>(ApiConstants.teacherRating);
+    return response
+        .map((e) => TeacherRatingModel.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 }

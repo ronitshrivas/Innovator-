@@ -6,7 +6,7 @@ import 'package:innovator/KMS/core/constants/network/base_api_service.dart';
 import 'package:innovator/KMS/core/constants/network/dio_client.dart';
 import 'package:innovator/KMS/model/teacher_model/student_attendance_model.dart';
 import 'package:innovator/KMS/model/teacher_model/student_model.dart';
-import 'package:innovator/KMS/model/teacher_model/teacher-profile.dart';
+import 'package:innovator/KMS/model/teacher_model/teacher_profile_model.dart';
 import 'package:innovator/KMS/model/teacher_model/teacher_attendance_model.dart';
 import 'package:innovator/KMS/model/teacher_model/teacher_kyc_model.dart';
 import 'package:innovator/KMS/model/teacher_model/teacher_salary_slips.dart';
