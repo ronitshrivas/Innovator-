@@ -142,7 +142,7 @@ class _LikeButtonState extends State<LikeButton>
     ReactionResult result;
     if (type == null) {
       // Remove: re-post same reaction to toggle off, or use removeReaction
-      result = await widget.likeService.react(
+      result = await widget.likeService.reactPost(
         widget.contentId,
         previous ?? ReactionType.like,
       );
@@ -151,7 +151,7 @@ class _LikeButtonState extends State<LikeButton>
         _setReaction(null, previous);
       }
     } else {
-      result = await widget.likeService.react(widget.contentId, type);
+      result = await widget.likeService.reactPost(widget.contentId, type);
       if (result.success) {
         _setReaction(result.reactionType ?? type, previous);
       }
