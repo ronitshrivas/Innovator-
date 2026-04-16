@@ -32,8 +32,8 @@ class TeacherRatingModel {
       coordinatorName: json['coordinator_name'] ?? "",
       review: json['review'] ?? '',
       rating: json['rating'] ?? "",
-      month: json['month'] ?? '',
-      year: json['year'] ?? 0,
+      month: json['month'] as int?,
+      year: json['year'] as int?,
       isRated: json['is_rated'] ?? false,
     );
   }
