@@ -46,107 +46,114 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
     _fileName = null;
   });
 
- 
-  
   Future<void> _upload() async {
-  if (_file == null) return;
-  setState(() => _isUploading = true);
-  try {
-    await ref.read(csvUploadProvider(_file!).future);
-    if (!mounted) return;
-    _clearFile();
-  } on DioException catch (e) {
-    if (!mounted) return;
-    final data = e.response?.data;
-    if (e.response?.statusCode == 400 &&
-        data is Map &&
-        data['errors'] is List) {
-      _showBulkErrorDialog(
-        successCount: (data['success_count'] as num?)?.toInt() ?? 0,
-        errors: List<String>.from(data['errors']),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(data?['message'] ?? 'Upload failed')),
-      );
+    if (_file == null) return;
+    setState(() => _isUploading = true);
+    try {
+      await ref.read(csvUploadProvider(_file!).future);
+      if (!mounted) return;
+      _clearFile();
+    } on DioException catch (e) {
+      if (!mounted) return;
+      final data = e.response?.data;
+      if (e.response?.statusCode == 400 &&
+          data is Map &&
+          data['errors'] is List) {
+        _showBulkErrorDialog(
+          successCount: (data['success_count'] as num?)?.toInt() ?? 0,
+          errors: List<String>.from(data['errors']),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(data?['message'] ?? 'Upload failed')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Something went wrong')));
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
     }
-  } catch (e) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Something went wrong')),
-    );
-  } finally {
-    if (mounted) setState(() => _isUploading = false);
   }
-}
 
-void _showBulkErrorDialog({
-  required int successCount,
-  required List<String> errors,
-}) {
-  showDialog(
-    context: context,
-    builder: (_) => AlertDialog(
-      title: const Text('Upload Issues'),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (successCount > 0) ...[
-              Text(
-                '$successCount student(s) added successfully.',
-                style: const TextStyle(
-                  color: Colors.green,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 10),
-            ],
-            Text(
-              '${errors.length} row(s) had errors:',
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Colors.red,
-              ),
-            ),
-            const SizedBox(height: 8),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 260),
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: errors.length,
-                itemBuilder: (_, i) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.error_outline, color: Colors.red, size: 17),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          errors[i],
-                          style: const TextStyle(fontSize: 13, height: 1.4),
-                        ),
+  void _showBulkErrorDialog({
+    required int successCount,
+    required List<String> errors,
+  }) {
+    showDialog(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Upload Issues'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (successCount > 0) ...[
+                    Text(
+                      '$successCount student(s) added successfully.',
+                      style: const TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.w600,
                       ),
-                    ],
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  Text(
+                    '${errors.length} row(s) had errors:',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.red,
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 260),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: errors.length,
+                      itemBuilder:
+                          (_, i) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(
+                                  Icons.error_outline,
+                                  color: Colors.red,
+                                  size: 17,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    errors[i],
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('OK'),
-        ),
-      ],
-    ),
-  );
-}
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -191,7 +198,7 @@ void _showBulkErrorDialog({
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [ 
+            children: [
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
@@ -258,7 +265,6 @@ void _showBulkErrorDialog({
 
               const SizedBox(height: 32),
 
-              
               const Text(
                 'Accepted Formats',
                 style: TextStyle(
@@ -287,7 +293,6 @@ void _showBulkErrorDialog({
 
               const SizedBox(height: 32),
 
-             
               const Text(
                 'Upload File *',
                 style: TextStyle(
@@ -430,7 +435,6 @@ void _showBulkErrorDialog({
 
               const SizedBox(height: 28),
 
-          
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(

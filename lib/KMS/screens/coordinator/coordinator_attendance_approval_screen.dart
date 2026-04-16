@@ -182,6 +182,25 @@ String labelForRating(double r) {
   return 'Outstanding';
 }
 
+String month(int m) {
+  const months = [
+    '',
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+  return (m >= 1 && m <= 12) ? months[m] : '';
+}
+
 Color colorForRating(double r) {
   if (r <= 1.0) return const Color(0xFFEF4444);
   if (r <= 2.0) return const Color(0xFFF97316);
@@ -211,8 +230,9 @@ class HalfStarRatingState extends State<HalfStarRating> {
 
   void _onTap(int starIndex, bool isLeft) {
     final candidate = isLeft ? starIndex - 0.5 : starIndex.toDouble();
-    setState(() => _rating = candidate < 1.0 ? 1.0 : candidate);
-    widget.onRatingChanged(_rating);
+    final newRating = candidate < 1.0 ? 1.0 : candidate;
+    setState(() => _rating = newRating);
+    widget.onRatingChanged(newRating);
   }
 
   Widget star(int starIndex) {
@@ -723,6 +743,11 @@ class _CoordinatorAttendanceDetailScreenState
 
   Widget alreadyRatedCard(TeacherRatingModel existingRating) {
     final ratingValue = double.tryParse(existingRating.rating ?? '0') ?? 0;
+    final nextMonth = (existingRating.month ?? 1) % 12 + 1;
+    final nextYear =
+        (existingRating.month ?? 1) == 12
+            ? (existingRating.year ?? 0) + 1
+            : (existingRating.year ?? 0);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -835,7 +860,7 @@ class _CoordinatorAttendanceDetailScreenState
               const SizedBox(width: 6),
               Flexible(
                 child: Text(
-                  'You\'ve already rated this teacher for this month.',
+                  'You\'ve already rated this teacher for ${existingRating.year ?? 0} ${month(existingRating.month ?? 1)}',
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 12,
@@ -856,7 +881,7 @@ class _CoordinatorAttendanceDetailScreenState
               const SizedBox(width: 6),
               Flexible(
                 child: Text(
-                  'Next rating available from next month.',
+                  'Next rating will be available on $nextYear ${month(nextMonth)}',
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 12,
