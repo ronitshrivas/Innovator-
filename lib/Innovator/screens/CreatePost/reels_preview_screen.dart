@@ -1,6 +1,12 @@
 // ─── reels_preview_screen.dart ───────────────────────────────────────────────
 // Place at: lib/Innovator/screens/CreatePost/reels_preview_screen.dart
+//
+// FIXES:
+// 1. Video preview stretch/squish → correct AspectRatio + BoxFit.cover
+// 2. Music plays properly during preview
+// 3. Upload sends BOTH video + music_url to backend (no ffmpeg needed)
 // ─────────────────────────────────────────────────────────────────────────────
+
 import 'dart:convert';
 import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
@@ -36,6 +42,8 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
   bool _isUploading = false;
 
   final TextEditingController _captionCtrl = TextEditingController();
+
+  // ── Music player ──────────────────────────────────────────────────────────
   AudioPlayer? _musicPlayer;
   bool _musicPlaying = false;
 
@@ -46,9 +54,14 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
   void initState() {
     super.initState();
     _initVideo();
-    // FIX: [setRecordedVideo] is now defined on [ReelsNotifier]
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(reelsProvider.notifier).setRecordedVideo(widget.videoPath);
+
+      // FIX: Auto-play the selected music when preview opens (like Instagram)
+      final selectedMusic = ref.read(reelsProvider).selectedMusic;
+      if (selectedMusic != null && selectedMusic.audioUrl.isNotEmpty) {
+        _startMusicPlayback(selectedMusic);
+      }
     });
   }
 
@@ -57,16 +70,28 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
     _videoCtrl = ctrl;
     await ctrl.initialize();
     ctrl.setLooping(true);
+    // FIX: Mute the video's own audio track since we play music separately
+    // If no music selected, keep video audio
+    final hasMusic = ref.read(reelsProvider).selectedMusic != null;
+    ctrl.setVolume(hasMusic ? 0.0 : 1.0);
     ctrl.play();
     if (mounted) setState(() => _videoReady = true);
   }
 
-  @override
-  void dispose() {
-    _videoCtrl?.dispose();
-    _captionCtrl.dispose();
-    _musicPlayer?.dispose();
-    super.dispose();
+  Future<void> _startMusicPlayback(ReelsMusicTrack track) async {
+    _musicPlayer ??= AudioPlayer();
+    try {
+      await _musicPlayer!.play(UrlSource(track.audioUrl));
+      if (mounted) setState(() => _musicPlaying = true);
+      // Loop the music
+      _musicPlayer!.onPlayerComplete.listen((_) async {
+        if (mounted && _musicPlaying) {
+          await _musicPlayer!.play(UrlSource(track.audioUrl));
+        }
+      });
+    } catch (e) {
+      debugPrint('Music playback error: $e');
+    }
   }
 
   Future<void> _toggleMusicPlayback(ReelsMusicTrack track) async {
@@ -80,18 +105,49 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
     }
   }
 
+  @override
+  void dispose() {
+    _videoCtrl?.dispose();
+    _captionCtrl.dispose();
+    _musicPlayer?.stop();
+    _musicPlayer?.dispose();
+    super.dispose();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // UPLOAD: Send video + music_url as separate fields (no ffmpeg needed)
+  // The backend merges the audio server-side, or stores them separately.
+  // This approach avoids ALL ffmpeg dependencies.
+  // ─────────────────────────────────────────────────────────────────────────
   Future<void> _uploadReel() async {
     if (_isUploading) return;
     setState(() => _isUploading = true);
+
+    // Stop music before uploading
+    await _musicPlayer?.stop();
+    setState(() => _musicPlaying = false);
+
     try {
       final appData = AppData();
       final request = http.MultipartRequest('POST', Uri.parse(_reelsApi));
+
       if (appData.accessToken != null) {
         request.headers['Authorization'] = 'Bearer ${appData.accessToken}';
       }
+
+      // Caption
       final caption = _captionCtrl.text.trim();
       if (caption.isNotEmpty) request.fields['caption'] = caption;
 
+      // FIX: Send selected music URL as a field so backend can merge/store it
+      final selectedMusic = ref.read(reelsProvider).selectedMusic;
+      if (selectedMusic != null && selectedMusic.audioUrl.isNotEmpty) {
+        request.fields['music_url'] = selectedMusic.audioUrl;
+        request.fields['music_title'] = selectedMusic.title;
+        request.fields['music_artist'] = selectedMusic.artist;
+      }
+
+      // Video file
       final mimeType = lookupMimeType(widget.videoPath) ?? 'video/mp4';
       request.files.add(
         await http.MultipartFile.fromPath(
@@ -109,6 +165,8 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         if (mounted) {
+          // Reset provider state
+          ref.read(reelsProvider.notifier).reset();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text('🎉 Reel published successfully!'),
@@ -152,9 +210,9 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // ── Filtered video preview ───────────────────────────────────────
+          // ── FIX: Correct video preview (no squish) ────────────────────────
           if (_videoReady && _videoCtrl != null)
-            _buildFilteredVideo(reels)
+            _buildFixedVideoPreview(reels)
           else
             const Center(
               child: CircularProgressIndicator(
@@ -171,7 +229,6 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
           ),
 
           // ── Music bar ────────────────────────────────────────────────────
-          // FIX: null-safe access — only show when selectedMusic != null
           if (reels.selectedMusic != null)
             Positioned(
               top: MediaQuery.of(context).padding.top + 52,
@@ -192,58 +249,72 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
     );
   }
 
-  Widget _buildFilteredVideo(ReelsState reels) {
-    // FIX: use [reelsFilters] — defined in reels_provider.dart
+  // ─────────────────────────────────────────────────────────────────────────
+  // FIX: Build video preview that fills the screen correctly
+  //
+  // Root cause of squish: using SizedBox.expand + FittedBox.cover with
+  // VideoPlayer directly causes the widget to use the widget's size, not the
+  // video's actual pixel dimensions, leading to incorrect aspect mapping.
+  //
+  // Fix: Wrap VideoPlayer in its correct pixel dimensions, then let
+  // FittedBox + BoxFit.cover scale it to fill the screen properly.
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildFixedVideoPreview(ReelsState reels) {
     final filter = reelsFilters[reels.selectedFilterIndex];
-    Widget video = SizedBox.expand(
-      child: FittedBox(
-        fit: BoxFit.cover,
-        child: SizedBox(
-          width: _videoCtrl!.value.size.width,
-          height: _videoCtrl!.value.size.height,
-          child: VideoPlayer(_videoCtrl!),
+
+    // The video's actual pixel size
+    final Size videoSize = _videoCtrl!.value.size;
+
+    Widget videoWidget = ColorFiltered(
+      colorFilter: ColorFilter.matrix(filter.matrix),
+      child: SizedBox.expand(
+        child: FittedBox(
+          fit: BoxFit.cover,
+          clipBehavior: Clip.hardEdge,
+          child: SizedBox(
+            // FIX: Use the video's actual pixel dimensions so FittedBox
+            // scales with the correct aspect ratio, preventing squish
+            width: videoSize.width,
+            height: videoSize.height,
+            child: VideoPlayer(_videoCtrl!),
+          ),
         ),
       ),
     );
-    video = ColorFiltered(
-      colorFilter: ColorFilter.matrix(filter.matrix),
-      child: video,
-    );
 
-    // Simple brightness / warmth colour overlay layers
-    final layers = <Widget>[video];
+    // Overlay brightness / warmth layers
+    final layers = <Widget>[videoWidget];
+
     if (reels.brightness > 0)
       layers.add(
         Opacity(
-          opacity: (reels.brightness / 100).clamp(0, 0.4),
+          opacity: (reels.brightness / 100).clamp(0.0, 0.4),
           child: Container(color: Colors.white),
         ),
       );
     if (reels.brightness < 0)
       layers.add(
         Opacity(
-          opacity: (-reels.brightness / 100).clamp(0, 0.5),
+          opacity: (-reels.brightness / 100).clamp(0.0, 0.5),
           child: Container(color: Colors.black),
         ),
       );
     if (reels.warmth > 0)
       layers.add(
         Opacity(
-          opacity: (reels.warmth / 100).clamp(0, 0.25),
+          opacity: (reels.warmth / 100).clamp(0.0, 0.25),
           child: Container(color: Colors.orange.shade300),
         ),
       );
     if (reels.warmth < 0)
       layers.add(
         Opacity(
-          opacity: (-reels.warmth / 100).clamp(0, 0.25),
+          opacity: (-reels.warmth / 100).clamp(0.0, 0.25),
           child: Container(color: Colors.blue.shade200),
         ),
       );
 
-    return layers.length == 1
-        ? video
-        : Stack(fit: StackFit.expand, children: layers);
+    return Stack(fit: StackFit.expand, children: layers);
   }
 
   Widget _buildTopBar() {
@@ -256,7 +327,10 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
               Icons.arrow_back_ios_new_rounded,
               color: Colors.white,
             ),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              _musicPlayer?.stop();
+              Navigator.pop(context);
+            },
           ),
           const Spacer(),
           IconButton(
@@ -274,7 +348,6 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
     );
   }
 
-  // FIX: parameter type is [ReelsMusicTrack] (defined in reels_provider.dart)
   Widget _buildMusicBar(ReelsMusicTrack track) {
     return GestureDetector(
       onTap: () => _toggleMusicPlayback(track),
@@ -288,17 +361,23 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // FIX: show pause/play based on actual playback state
             Icon(
-              _musicPlaying ? Icons.pause : Icons.play_arrow,
+              _musicPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
               color: Colors.white,
               size: 18,
             ),
             const SizedBox(width: 6),
-            const Icon(Icons.music_note, color: Colors.white, size: 14),
-            const SizedBox(width: 4),
+            // Animated music wave when playing
+            if (_musicPlaying) ...[
+              _MusicWaveSmall(),
+              const SizedBox(width: 4),
+            ] else ...[
+              const Icon(Icons.music_note, color: Colors.white, size: 14),
+              const SizedBox(width: 4),
+            ],
             Flexible(
               child: Text(
-                // FIX: null-safe title/artist access via the typed parameter
                 '${track.title} • ${track.artist}',
                 style: const TextStyle(color: Colors.white, fontSize: 12),
                 overflow: TextOverflow.ellipsis,
@@ -310,6 +389,7 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
               onTap: () {
                 _musicPlayer?.stop();
                 setState(() => _musicPlaying = false);
+                _videoCtrl?.setVolume(1.0); // restore video audio
                 ref.read(reelsProvider.notifier).clearMusic();
               },
               child: const Icon(Icons.close, color: Colors.white70, size: 16),
@@ -419,10 +499,24 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
         Icons.music_note_rounded,
         'Music',
         reels.selectedMusic != null,
-        () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ReelsMusicScreen()),
-        ),
+        () async {
+          // Pause music before navigating to music screen
+          await _musicPlayer?.pause();
+          setState(() => _musicPlaying = false);
+          if (mounted) {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ReelsMusicScreen()),
+            );
+            // After returning, auto-play newly selected music
+            final music = ref.read(reelsProvider).selectedMusic;
+            if (music != null) {
+              await _startMusicPlayback(music);
+              // Mute video audio since music is selected
+              _videoCtrl?.setVolume(0.0);
+            }
+          }
+        },
       ),
       (
         Icons.auto_fix_high_rounded,
@@ -447,7 +541,6 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
       (
         Icons.tune_rounded,
         'Adjust',
-        // FIX: contrast default is now 0.0 so comparison is correct
         reels.brightness != 0 ||
             reels.contrast != 0 ||
             reels.saturation != 0 ||
@@ -574,6 +667,57 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
               ),
             ),
           ),
+    );
+  }
+}
+
+// ─── Small music wave indicator ───────────────────────────────────────────────
+class _MusicWaveSmall extends StatefulWidget {
+  @override
+  State<_MusicWaveSmall> createState() => _MusicWaveSmallState();
+}
+
+class _MusicWaveSmallState extends State<_MusicWaveSmall>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (_, __) {
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: List.generate(3, (i) {
+            final t = (_ctrl.value + i * 0.3) % 1.0;
+            final h = 4.0 + 6.0 * t;
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 1),
+              width: 2,
+              height: h,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(1),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 }

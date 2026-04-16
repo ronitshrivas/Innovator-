@@ -1,2773 +1,2150 @@
 import 'dart:async';
-
+import 'dart:convert';
+import 'dart:developer' as developer;
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
-import 'package:innovator/Innovator/App_data/App_data.dart';
-import 'package:innovator/Innovator/Authorization/Login.dart';
-import 'package:innovator/Innovator/constant/app_colors.dart';
-import 'package:innovator/Innovator/controllers/user_controller.dart';
-import 'package:innovator/Innovator/screens/Profile/profile_page.dart';
-import 'package:innovator/main.dart';
-import 'package:innovator/Innovator/screens/Feed/VideoPlayer/videoplayerpackage.dart';
-import 'package:innovator/Innovator/screens/Likes/Content-Like-Service.dart';
-import 'package:innovator/Innovator/screens/Likes/content-Like-Button.dart';
-import 'package:innovator/Innovator/screens/chatrrom/sound/soundplayer.dart';
-import 'package:innovator/Innovator/screens/comment/comment_section.dart';
-import 'package:innovator/Innovator/widget/Feed&Post.dart';
-import 'dart:convert';
-import 'package:video_player/video_player.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:lottie/lottie.dart';
-import 'dart:io';
+import 'package:shimmer/shimmer.dart';
+import 'package:video_player/video_player.dart';
+import 'package:innovator/Innovator/App_data/App_data.dart';
+import 'package:innovator/Innovator/constant/api_constants.dart';
+import 'package:innovator/Innovator/constant/app_colors.dart';
+import 'package:innovator/Innovator/screens/comment/comment_section.dart';
 import 'package:innovator/Innovator/screens/Follow/follow_Button.dart';
-import 'package:innovator/Innovator/screens/Follow/follow-Service.dart';
+import 'package:innovator/Innovator/screens/Likes/Content-Like-Service.dart';
+import 'package:innovator/Innovator/screens/SHow_Specific_Profile/Show_Specific_Profile.dart';
 
-// Updated Models for new API structure
-class Author {
+// ─────────────────────────────────────────────────────────────────────────────
+// MODELS
+// ─────────────────────────────────────────────────────────────────────────────
+
+class ReelModel {
   final String id;
-  final String name;
-  final String email;
-  final String picture;
-
-  const Author({
-    required this.id,
-    required this.name,
-    required this.email,
-    required this.picture,
-  });
-
-  factory Author.fromJson(Map<String, dynamic> json) {
-    return Author(
-      id: json['_id'] ?? '',
-      name: json['name'] ?? 'Unknown',
-      email: json['email'] ?? '',
-      picture: json['picture'] ?? '',
-    );
-  }
-}
-
-// Updated StreamingUrls class to match new API
-class StreamingUrls {
-  final String hls;
-  final String original;
-  final String thumbnail;
-  final Map<VideoQuality, String> qualityUrls;
-
-  StreamingUrls({
-    required this.hls,
-    required this.original,
-    required this.thumbnail,
-    required this.qualityUrls,
-  });
-
-  factory StreamingUrls.fromJson(Map<String, dynamic> json) {
-    Map<VideoQuality, String> qualityUrls = {};
-
-    // First, try to parse quality URLs from API response if available
-    final qualities = json['qualities'] as Map<String, dynamic>? ?? {};
-    qualities.forEach((key, value) {
-      switch (key) {
-        case '144p':
-          qualityUrls[VideoQuality.low144p] = value ?? '';
-          break;
-        case '240p':
-          qualityUrls[VideoQuality.low240p] = value ?? '';
-          break;
-        case '360p':
-          qualityUrls[VideoQuality.medium360p] = value ?? '';
-          break;
-        case '480p':
-          qualityUrls[VideoQuality.medium480p] = value ?? '';
-          break;
-        case '720p':
-          qualityUrls[VideoQuality.high720p] = value ?? '';
-          break;
-        case '1080p':
-          qualityUrls[VideoQuality.high1080p] = value ?? '';
-          break;
-      }
-    });
-
-    // If no quality URLs from API, generate them from original or HLS URL
-    if (qualityUrls.isEmpty) {
-      final baseUrl = json['original'] ?? json['hls'] ?? '';
-      if (baseUrl.isNotEmpty) {
-        qualityUrls = FrontendVideoUrlGenerator.generateAllQualityUrls(baseUrl);
-      }
-    }
-
-    return StreamingUrls(
-      hls: json['hls'] ?? '',
-      original: json['original'] ?? '',
-      thumbnail: json['thumbnail'] ?? '',
-      qualityUrls: qualityUrls,
-    );
-  }
-
-  String getUrlForQuality(VideoQuality quality) {
-    if (qualityUrls.containsKey(quality) && qualityUrls[quality]!.isNotEmpty) {
-      final url = qualityUrls[quality]!;
-      // Add base URL if needed
-      if (url.startsWith('/')) {
-        return 'http://182.93.94.210:3067$url';
-      }
-      return url;
-    }
-
-    // Fallback logic - find closest available quality
-    List<VideoQuality> fallbackOrder = [
-      VideoQuality.medium360p,
-      VideoQuality.medium480p,
-      VideoQuality.low240p,
-      VideoQuality.high720p,
-      VideoQuality.low144p,
-      VideoQuality.high1080p,
-    ];
-
-    for (VideoQuality fallback in fallbackOrder) {
-      if (qualityUrls.containsKey(fallback) &&
-          qualityUrls[fallback]!.isNotEmpty) {
-        final url = qualityUrls[fallback]!;
-        if (url.startsWith('/')) {
-          return 'http://182.93.94.210:3067$url';
-        }
-        return url;
-      }
-    }
-
-    // Final fallback to original or HLS
-    if (original.isNotEmpty) {
-      return original.startsWith('/')
-          ? 'http://182.93.94.210:3067$original'
-          : original;
-    }
-    if (hls.isNotEmpty) {
-      return hls.startsWith('/') ? 'http://182.93.94.210:3067$hls' : hls;
-    }
-
-    return '';
-  }
-
-  List<VideoQuality> getAvailableQualities() {
-    return qualityUrls.keys
-        .where((quality) => qualityUrls[quality]!.isNotEmpty)
-        .toList();
-  }
-}
-
-// Updated PlaybackSettings class
-class PlaybackSettings {
-  final bool autoplay;
-  final bool muted;
-  final bool loop;
-  final String preload;
-  final bool controls;
-  final bool playsInline;
-
-  PlaybackSettings({
-    required this.autoplay,
-    required this.muted,
-    required this.loop,
-    required this.preload,
-    required this.controls,
-    required this.playsInline,
-  });
-
-  factory PlaybackSettings.fromJson(Map<String, dynamic> json) {
-    return PlaybackSettings(
-      autoplay: json['autoplay'] ?? true,
-      muted: json['muted'] ?? true,
-      loop: json['loop'] ?? true,
-      preload: json['preload'] ?? 'auto',
-      controls: json['controls'] ?? true,
-      playsInline: json['playsInline'] ?? true,
-    );
-  }
-}
-
-// Updated FeedContent class for new API structure
-class FeedContent {
-  final String id;
-  final String status;
-  final String type;
-  final Author author;
+  final String userId;
+  final String username;
+  final String avatar;
+  String caption; // mutable for edit
+  final String? videoUrl;
+  final String? hlsUrl;
+  final String? thumbnail;
+  int viewsCount;
+  int reactionsCount;
+  String? currentUserReaction;
+  bool isFollowed;
+  int commentsCount;
   final DateTime createdAt;
-  final int views;
-  final bool isShared;
-  final String videoUrl;
-  final List<String> allFiles;
-  final StreamingUrls streamingUrls;
-  final PlaybackSettings playbackSettings;
-  final double engagementRate;
-  final bool canShare;
-  final bool canDownload;
-  final String contentType;
-  final String feedPosition;
-  final String loadPriority;
-  final bool hasMore;
 
-  int likes;
-  int comments;
-  int shares;
-  bool isLiked;
-  bool isCommented;
-  bool isFollowing;
+  // Repost fields
+  final String? sharedReelId;
+  final ReelModel? sharedReelDetails;
 
-  final List<String> _mediaUrls;
-  final bool _hasVideos;
-
-  FeedContent({
+  ReelModel({
     required this.id,
-    required this.status,
-    required this.type,
-    required this.author,
+    required this.userId,
+    required this.username,
+    required this.avatar,
+    required this.caption,
+    this.videoUrl,
+    this.hlsUrl,
+    this.thumbnail,
+    required this.viewsCount,
+    required this.reactionsCount,
+    this.currentUserReaction,
+    required this.isFollowed,
+    required this.commentsCount,
     required this.createdAt,
-    required this.views,
-    required this.isShared,
-    required this.videoUrl,
-    required this.allFiles,
-    required this.streamingUrls,
-    required this.playbackSettings,
-    required this.engagementRate,
-    required this.canShare,
-    required this.canDownload,
-    required this.contentType,
-    required this.feedPosition,
-    required this.loadPriority,
-    required this.hasMore,
-    this.likes = 0,
-    this.comments = 0,
-    this.shares = 0,
-    this.isLiked = false,
-    this.isCommented = false,
-    this.isFollowing = false,
-  }) : _mediaUrls = _buildMediaUrls(streamingUrls, videoUrl, allFiles),
-       _hasVideos = _checkHasVideos(contentType, videoUrl, allFiles);
-
-  static List<String> _buildMediaUrls(
-    StreamingUrls streamingUrls,
-    String videoUrl,
-    List<String> allFiles,
-  ) {
-    final List<String> mediaUrls = [];
-
-    // Add quality
-    streamingUrls.qualityUrls.values.forEach((url) {
-      if (url.isNotEmpty) {
-        mediaUrls.add('http://182.93.94.210:3067$url');
-      }
-    });
-
-    // Add HLS URL if available
-    if (streamingUrls.hls.isNotEmpty) {
-      mediaUrls.add('http://182.93.94.210:3067${streamingUrls.hls}');
-    }
-
-    // Add original video URL if available
-    if (streamingUrls.original.isNotEmpty) {
-      mediaUrls.add('http://182.93.94.210:3067${streamingUrls.original}');
-    }
-
-    // Add main video URL if available
-    if (videoUrl.isNotEmpty) {
-      mediaUrls.add('http://182.93.94.210:3067$videoUrl');
-    }
-
-    // Add other files
-    mediaUrls.addAll(allFiles.map((file) => 'http://182.93.94.210:3067$file'));
-
-    // Remove duplicates
-    return mediaUrls.toSet().toList();
-  }
-
-  static bool _checkHasVideos(
-    String contentType,
-    String videoUrl,
-    List<String> allFiles,
-  ) {
-    return contentType == 'video' ||
-        videoUrl.isNotEmpty ||
-        allFiles.any(
-          (file) =>
-              file.toLowerCase().endsWith('.mp4') ||
-              file.toLowerCase().endsWith('.mov') ||
-              file.toLowerCase().endsWith('.avi') ||
-              file.toLowerCase().endsWith('.m3u8'),
-        );
-  }
-
-  factory FeedContent.fromJson(Map<String, dynamic> json) {
-    return FeedContent(
-      id: json['_id'] ?? '',
-      status: json['status'] ?? '',
-      type: json['type'] ?? '',
-      author: Author.fromJson(json['author'] ?? {}),
-      createdAt:
-          json['createdAt'] != null
-              ? DateTime.parse(json['createdAt'])
-              : DateTime.now(),
-      views: json['views'] ?? 0,
-      isShared: json['isShared'] ?? false,
-      videoUrl: json['videoUrl'] ?? '',
-      allFiles: List<String>.from(json['allFiles'] ?? []),
-      streamingUrls: StreamingUrls.fromJson(json['streamingUrls'] ?? {}),
-      playbackSettings: PlaybackSettings.fromJson(
-        json['playbackSettings'] ?? {},
-      ),
-      engagementRate: (json['engagementRate'] ?? 0.0).toDouble(),
-      canShare: json['canShare'] ?? true,
-      canDownload: json['canDownload'] ?? false,
-      contentType: json['contentType'] ?? '',
-      feedPosition: json['feedPosition'] ?? 'normal',
-      loadPriority: json['loadPriority'] ?? 'normal',
-      hasMore: json['hasMore'] ?? false,
-      likes: json['likes'] ?? 0,
-      comments: json['comments'] ?? 0,
-      shares: json['shares'] ?? 0,
-      isLiked: json['liked'] ?? false,
-      isCommented: json['commented'] ?? false,
-      isFollowing: json['following'] ?? json['isFollowing'] ?? false,
-    );
-  }
-
-  bool get hasVideos => _hasVideos;
-  List<String> get mediaUrls => _mediaUrls;
-
-  String? get thumbnailUrl {
-    if (streamingUrls.thumbnail.isNotEmpty) {
-      return 'http://182.93.94.210:3067${streamingUrls.thumbnail}';
-    }
-    return null;
-  }
-}
-
-// API Response wrapper for new structure
-class VideoApiResponse {
-  final int status;
-  final FeedContent? data;
-  final String? error;
-  final String message;
-
-  VideoApiResponse({
-    required this.status,
-    this.data,
-    this.error,
-    required this.message,
+    this.sharedReelId,
+    this.sharedReelDetails,
   });
 
-  factory VideoApiResponse.fromJson(Map<String, dynamic> json) {
-    return VideoApiResponse(
-      status: json['status'] ?? 0,
-      data: json['data'] != null ? FeedContent.fromJson(json['data']) : null,
-      error: json['error'],
-      message: json['message'] ?? '',
-    );
+  bool get hasVideo =>
+      (hlsUrl != null && hlsUrl!.isNotEmpty) ||
+      (videoUrl != null && videoUrl!.isNotEmpty);
+
+  String? get bestVideoUrl =>
+      (hlsUrl != null && hlsUrl!.isNotEmpty) ? hlsUrl : videoUrl;
+
+  bool get isLiked => currentUserReaction != null;
+  bool get isRepost => sharedReelId != null;
+
+  ReactionType? get currentReactionType =>
+      ReactionTypeExtension.fromValue(currentUserReaction);
+
+  factory ReelModel.fromJson(Map<String, dynamic> j) => ReelModel(
+    id: j['id']?.toString() ?? '',
+    userId: j['user_id']?.toString() ?? '',
+    username: j['username']?.toString() ?? '',
+    avatar: j['avatar']?.toString() ?? '',
+    caption: j['caption']?.toString() ?? '',
+    videoUrl: j['video']?.toString(),
+    hlsUrl: j['hls_playlist_url']?.toString(),
+    thumbnail: j['thumbnail']?.toString(),
+    viewsCount: (j['views_count'] as num?)?.toInt() ?? 0,
+    reactionsCount:
+        (j['reactions_count'] as num?)?.toInt() ??
+        (j['like_count'] as num?)?.toInt() ??
+        0,
+    currentUserReaction: j['current_user_reaction']?.toString(),
+    isFollowed: j['is_followed'] == true,
+    commentsCount: (j['comments_count'] as num?)?.toInt() ?? 0,
+    createdAt:
+        DateTime.tryParse(j['created_at']?.toString() ?? '') ?? DateTime.now(),
+    sharedReelId: j['shared_reel']?.toString(),
+    sharedReelDetails:
+        j['shared_reel_details'] != null
+            ? ReelModel.fromJson(
+              j['shared_reel_details'] as Map<String, dynamic>,
+            )
+            : null,
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REEL OPERATION RESULT
+// ─────────────────────────────────────────────────────────────────────────────
+
+class ReelOperationResult {
+  final bool success;
+  final String? errorMessage;
+  final ReelModel? data;
+
+  const ReelOperationResult({
+    required this.success,
+    this.errorMessage,
+    this.data,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// API SERVICE
+// ─────────────────────────────────────────────────────────────────────────────
+
+class ReelsApiService {
+  static const String _baseUrl = 'http://182.93.94.220:8005';
+  static const String _reelsUrl = '$_baseUrl/api/reels/';
+
+  static Map<String, String> _headers() {
+    final token = AppData().accessToken ?? '';
+    return {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+    };
   }
 
-  bool get isSuccess => status == 200 && data != null;
+  // ── Fetch feed ────────────────────────────────────────────────────────────
+
+  static Future<ReelsFeed> fetchReels({String? cursor}) async {
+    final uri =
+        cursor != null && cursor.isNotEmpty
+            ? Uri.parse(cursor)
+            : Uri.parse(_reelsUrl);
+    developer.log('[Reels] GET $uri');
+    final res = await http
+        .get(uri, headers: _headers())
+        .timeout(const Duration(seconds: 20));
+    if (res.statusCode == 200) {
+      final data = json.decode(res.body) as Map<String, dynamic>;
+      final results =
+          (data['results'] as List<dynamic>? ?? [])
+              .whereType<Map<String, dynamic>>()
+              .map(ReelModel.fromJson)
+              .where((r) => r.hasVideo)
+              .toList();
+      return ReelsFeed(
+        reels: results,
+        nextCursor: data['next']?.toString(),
+        hasMore: data['next'] != null,
+      );
+    }
+    throw Exception('Reels fetch failed: ${res.statusCode}');
+  }
+
+  // ── Record view ───────────────────────────────────────────────────────────
+
+  static Future<void> recordView(String reelId) async {
+    try {
+      await http
+          .post(Uri.parse('$_reelsUrl$reelId/view/'), headers: _headers())
+          .timeout(const Duration(seconds: 5));
+    } catch (_) {}
+  }
+
+  // ── Edit reel (PATCH) ─────────────────────────────────────────────────────
+
+  static Future<ReelOperationResult> editReel({
+    required String reelId,
+    required String caption,
+  }) async {
+    try {
+      developer.log('[Reels] PATCH $_reelsUrl$reelId/');
+      final res = await http
+          .patch(
+            Uri.parse('$_reelsUrl$reelId/'),
+            headers: _headers(),
+            body: json.encode({'caption': caption}),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      if (res.statusCode == 200) {
+        final data = json.decode(res.body) as Map<String, dynamic>;
+        return ReelOperationResult(
+          success: true,
+          data: ReelModel.fromJson(data),
+        );
+      }
+      developer.log('[Reels] Edit failed: ${res.statusCode} ${res.body}');
+      return ReelOperationResult(
+        success: false,
+        errorMessage: _parseError(res.body, res.statusCode),
+      );
+    } catch (e) {
+      developer.log('[Reels] Edit error: $e');
+      return ReelOperationResult(
+        success: false,
+        errorMessage: 'Network error. Please try again.',
+      );
+    }
+  }
+
+  // ── Delete reel (DELETE) ──────────────────────────────────────────────────
+
+  static Future<ReelOperationResult> deleteReel(String reelId) async {
+    try {
+      developer.log('[Reels] DELETE $_reelsUrl$reelId/');
+      final res = await http
+          .delete(Uri.parse('$_reelsUrl$reelId/'), headers: _headers())
+          .timeout(const Duration(seconds: 15));
+
+      // 204 No Content = success
+      if (res.statusCode == 204 || res.statusCode == 200) {
+        return const ReelOperationResult(success: true);
+      }
+      developer.log('[Reels] Delete failed: ${res.statusCode} ${res.body}');
+      return ReelOperationResult(
+        success: false,
+        errorMessage: _parseError(res.body, res.statusCode),
+      );
+    } catch (e) {
+      developer.log('[Reels] Delete error: $e');
+      return ReelOperationResult(
+        success: false,
+        errorMessage: 'Network error. Please try again.',
+      );
+    }
+  }
+
+  // ── Repost reel (POST /repost/) ───────────────────────────────────────────
+
+  static Future<ReelOperationResult> repostReel(String reelId) async {
+    try {
+      developer.log('[Reels] POST $_reelsUrl$reelId/repost/');
+      final res = await http
+          .post(Uri.parse('$_reelsUrl$reelId/repost/'), headers: _headers())
+          .timeout(const Duration(seconds: 15));
+
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        final data = json.decode(res.body) as Map<String, dynamic>;
+        return ReelOperationResult(
+          success: true,
+          data: ReelModel.fromJson(data),
+        );
+      }
+      developer.log('[Reels] Repost failed: ${res.statusCode} ${res.body}');
+      return ReelOperationResult(
+        success: false,
+        errorMessage: _parseError(res.body, res.statusCode),
+      );
+    } catch (e) {
+      developer.log('[Reels] Repost error: $e');
+      return ReelOperationResult(
+        success: false,
+        errorMessage: 'Network error. Please try again.',
+      );
+    }
+  }
+
+  // ── Helper ────────────────────────────────────────────────────────────────
+
+  static String _parseError(String body, int statusCode) {
+    try {
+      final data = json.decode(body);
+      if (data is Map) {
+        final detail = data['detail'] ?? data['message'] ?? data['error'];
+        if (detail != null) return detail.toString();
+      }
+    } catch (_) {}
+    return 'Something went wrong (code $statusCode)';
+  }
 }
 
-// Main Video Feed Page (Updated for new API)
-class VideoFeedPage extends StatefulWidget {
-  const VideoFeedPage({Key? key}) : super(key: key);
-
-  @override
-  _VideoFeedPageState createState() => _VideoFeedPageState();
+class ReelsFeed {
+  final List<ReelModel> reels;
+  final String? nextCursor;
+  final bool hasMore;
+  const ReelsFeed({
+    required this.reels,
+    this.nextCursor,
+    required this.hasMore,
+  });
 }
 
-// Fixed Video Feed Page with proper pagination handling
+// ─────────────────────────────────────────────────────────────────────────────
+// RIVERPOD PROVIDERS
+// ─────────────────────────────────────────────────────────────────────────────
 
-class _VideoFeedPageState extends State<VideoFeedPage> {
-  final List<FeedContent> _videoContents = [];
-  final ScrollController _scrollController = ScrollController();
-  bool _isLoading = false;
-  bool _hasError = false;
-  String _errorMessage = '';
-  bool _hasMoreVideos = true;
-  String? _nextVideoCursor;
-  bool _isOnline = true;
-  final PageController _pageController = PageController();
-  int _currentPage = 0;
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  bool _isRefreshing = false;
-  final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey =
-      GlobalKey<RefreshIndicatorState>();
+final activeReelIndexProvider = StateProvider<int>((ref) => 0);
 
-  // Track loaded video IDs to avoid duplicates
-  final Set<String> _loadedVideoIds = {};
+class ReelsFeedNotifier extends StateNotifier<AsyncValue<List<ReelModel>>> {
+  ReelsFeedNotifier() : super(const AsyncValue.loading()) {
+    _load();
+  }
 
-  // Add a flag to prevent multiple simultaneous API calls
+  String? _nextCursor;
+  bool _hasMore = true;
   bool _isLoadingMore = false;
 
-  // Counter for failed attempts to prevent infinite loops
-  int _failedAttempts = 0;
-  final int _maxFailedAttempts = 5;
+  Future<void> _load() async {
+    try {
+      final feed = await ReelsApiService.fetchReels();
+      _nextCursor = feed.nextCursor;
+      _hasMore = feed.hasMore;
+      state = AsyncValue.data(feed.reels);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<void> refresh() async {
+    _nextCursor = null;
+    _hasMore = true;
+    state = const AsyncValue.loading();
+    await _load();
+  }
+
+  Future<void> loadMore() async {
+    if (_isLoadingMore || !_hasMore || _nextCursor == null) return;
+    _isLoadingMore = true;
+    try {
+      final current = state.value ?? [];
+      final feed = await ReelsApiService.fetchReels(cursor: _nextCursor);
+      _nextCursor = feed.nextCursor;
+      _hasMore = feed.hasMore;
+      state = AsyncValue.data([...current, ...feed.reels]);
+    } catch (e) {
+      developer.log('[Reels] loadMore error: $e');
+    } finally {
+      _isLoadingMore = false;
+    }
+  }
+
+  void applyReaction(String reelId, String? newReaction) {
+    final list = state.value;
+    if (list == null) return;
+    final idx = list.indexWhere((r) => r.id == reelId);
+    if (idx == -1) return;
+    final reel = list[idx];
+    final hadReaction = reel.currentUserReaction != null;
+    final willHaveReaction = newReaction != null;
+    reel.currentUserReaction = newReaction;
+    if (!hadReaction && willHaveReaction) {
+      reel.reactionsCount++;
+    } else if (hadReaction && !willHaveReaction) {
+      reel.reactionsCount = (reel.reactionsCount - 1).clamp(0, 999999);
+    }
+    state = AsyncValue.data(List.from(list));
+  }
+
+  void updateFollow(String userId, bool isFollowed) {
+    final list = state.value;
+    if (list == null) return;
+    for (final r in list) {
+      if (r.userId == userId) r.isFollowed = isFollowed;
+    }
+    state = AsyncValue.data(List.from(list));
+  }
+
+  void incrementComments(String reelId) {
+    final list = state.value;
+    if (list == null) return;
+    final idx = list.indexWhere((r) => r.id == reelId);
+    if (idx != -1) list[idx].commentsCount++;
+    state = AsyncValue.data(List.from(list));
+  }
+
+  // ── Edit ─────────────────────────────────────────────────────────────────
+
+  /// Optimistically updates caption, calls API, reverts on failure.
+  /// Returns error message or null on success.
+  Future<String?> editReel(String reelId, String newCaption) async {
+    final list = state.value;
+    if (list == null) return 'No data';
+    final idx = list.indexWhere((r) => r.id == reelId);
+    if (idx == -1) return 'Reel not found';
+
+    final oldCaption = list[idx].caption;
+
+    // Optimistic update
+    list[idx].caption = newCaption;
+    state = AsyncValue.data(List.from(list));
+
+    final result = await ReelsApiService.editReel(
+      reelId: reelId,
+      caption: newCaption,
+    );
+
+    if (result.success) {
+      // Sync with server response
+      if (result.data != null) {
+        list[idx].caption = result.data!.caption;
+        state = AsyncValue.data(List.from(list));
+      }
+      return null;
+    } else {
+      // Revert
+      list[idx].caption = oldCaption;
+      state = AsyncValue.data(List.from(list));
+      return result.errorMessage;
+    }
+  }
+
+  // ── Delete ────────────────────────────────────────────────────────────────
+
+  /// Removes the reel from feed on success.
+  /// Returns error message or null on success.
+  Future<String?> deleteReel(String reelId) async {
+    final result = await ReelsApiService.deleteReel(reelId);
+    if (result.success) {
+      final list = state.value ?? [];
+      state = AsyncValue.data(list.where((r) => r.id != reelId).toList());
+      return null;
+    }
+    return result.errorMessage;
+  }
+
+  // ── Repost ────────────────────────────────────────────────────────────────
+
+  /// Calls the repost API and prepends the new repost reel to the feed.
+  /// Returns error message or null on success.
+  Future<String?> repostReel(String reelId) async {
+    final result = await ReelsApiService.repostReel(reelId);
+    if (result.success && result.data != null) {
+      final list = state.value ?? [];
+      // Prepend repost to feed so user sees it immediately
+      state = AsyncValue.data([result.data!, ...list]);
+      return null;
+    }
+    return result.errorMessage;
+  }
+}
+
+final reelsFeedProvider =
+    StateNotifierProvider<ReelsFeedNotifier, AsyncValue<List<ReelModel>>>(
+      (ref) => ReelsFeedNotifier(),
+    );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REELS SCREEN
+// ─────────────────────────────────────────────────────────────────────────────
+
+class ReelsScreen extends ConsumerStatefulWidget {
+  const ReelsScreen({Key? key}) : super(key: key);
+
+  @override
+  ConsumerState<ReelsScreen> createState() => _ReelsScreenState();
+}
+
+class _ReelsScreenState extends ConsumerState<ReelsScreen>
+    with WidgetsBindingObserver {
+  late PageController _pageController;
+  int _currentPage = 0;
+  bool _isAnimating = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeAppData();
-    _checkConnectivity();
-  }
-
-  Future<void> _initializeAppData() async {
-    try {
-      await AppData().initialize();
-
-      if (AppData().isAuthenticated) {
-        await _loadInitialContent();
-      } else {
-        setState(() {
-          _hasError = true;
-          _errorMessage = 'Please log in to view videos';
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _hasError = true;
-        _errorMessage = 'Initialization error: ${e.toString()}';
-      });
-    }
-  }
-
-  Future<void> _loadInitialContent() async {
-    // Load multiple videos initially to have a good starting set
-    for (
-      int i = 0;
-      i < 5 && _hasMoreVideos && _failedAttempts < _maxFailedAttempts;
-      i++
-    ) {
-      await _loadSingleVideo();
-      if (_videoContents.length >= 3) break; // Stop when we have enough content
-    }
-  }
-
-  Future<void> _checkConnectivity() async {
-    try {
-      final testResponse = await http
-          .get(
-            Uri.parse('http://182.93.94.210:3067/api/v1/health'),
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-          )
-          .timeout(Duration(seconds: 10));
-
-      setState(() {
-        _isOnline =
-            testResponse.statusCode == 200 || testResponse.statusCode == 404;
-      });
-    } catch (e) {
-      try {
-        final result = await InternetAddress.lookup('8.8.8.8');
-        setState(() {
-          _isOnline = result.isNotEmpty && result[0].rawAddress.isNotEmpty;
-        });
-      } on SocketException catch (e) {
-        setState(() {
-          _isOnline = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _loadSingleVideo() async {
-    if (_isLoadingMore ||
-        !_hasMoreVideos ||
-        _failedAttempts >= _maxFailedAttempts)
-      return;
-
-    setState(() {
-      _isLoadingMore = true;
-      _hasError = false;
-    });
-
-    try {
-      final response = await _makeApiRequest();
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = json.decode(response.body);
-        final apiResponse = VideoApiResponse.fromJson(responseData);
-
-        if (apiResponse.isSuccess && apiResponse.data != null) {
-          final content = apiResponse.data!;
-
-          // Check if we already have this video to avoid duplicates
-          if (!_loadedVideoIds.contains(content.id) && content.hasVideos) {
-            final isFollowing = await FollowService.checkFollowStatus(
-              content.author.email,
-            );
-
-            content.isFollowing = isFollowing;
-
-            setState(() {
-              _videoContents.add(content);
-              _loadedVideoIds.add(content.id);
-              _hasMoreVideos = content.hasMore;
-              _isOnline = true;
-              _failedAttempts = 0; // Reset failed attempts on success
-            });
-          } else {
-            // If duplicate or no videos, increment failed attempts
-            _failedAttempts++;
-
-            // If we still have more videos according to API, try again
-            if (_hasMoreVideos &&
-                content.hasMore &&
-                _failedAttempts < _maxFailedAttempts) {
-              await Future.delayed(Duration(milliseconds: 500));
-              await _loadSingleVideo();
-            } else {
-              setState(() {
-                _hasMoreVideos = false;
-              });
-            }
-          }
-        } else {
-          _failedAttempts++;
-          setState(() {
-            _hasError = _failedAttempts >= _maxFailedAttempts;
-            _errorMessage = apiResponse.error ?? 'Failed to load video content';
-          });
-        }
-      } else if (response.statusCode == 401) {
-        setState(() {
-          _hasError = true;
-          _errorMessage = 'Session expired. Please log in again.';
-        });
-        await AppData().logout();
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => LoginPage()),
-          (route) => false,
-        );
-      } else if (response.statusCode == 404) {
-        setState(() {
-          _hasMoreVideos = false;
-        });
-      } else {
-        _failedAttempts++;
-        setState(() {
-          _hasError = _failedAttempts >= _maxFailedAttempts;
-          _errorMessage = 'Failed to load videos: ${response.statusCode}';
-          _isOnline = false;
-        });
-      }
-    } catch (e) {
-      _failedAttempts++;
-      setState(() {
-        _hasError = _failedAttempts >= _maxFailedAttempts;
-        _errorMessage = 'Connection Error: ${e.toString()}';
-        _isOnline = false;
-      });
-    } finally {
-      setState(() {
-        _isLoadingMore = false;
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<http.Response> _makeApiRequest() async {
-    final url = Uri.parse('http://182.93.94.210:3067/api/v1/video-reel');
-
-    try {
-      final response = await http
-          .get(
-            url,
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'Authorization': 'Bearer ${AppData().accessToken}',
-            },
-          )
-          .timeout(Duration(seconds: 30));
-      return response;
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  Future<void> _refresh() async {
-    if (_isRefreshing) return;
-
-    setState(() {
-      _isRefreshing = true;
-      _videoContents.clear();
-      _loadedVideoIds.clear();
-      _nextVideoCursor = null;
-      _hasError = false;
-      _hasMoreVideos = true;
-      _currentPage = 0;
-      _failedAttempts = 0; // Reset failed attempts
-    });
-
-    try {
-      await _loadInitialContent();
-      if (_videoContents.isNotEmpty && _pageController.hasClients) {
-        _pageController.animateToPage(
-          0,
-          duration: Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isRefreshing = false;
-        });
-      }
-    }
+    WidgetsBinding.instance.addObserver(this);
+    _pageController = PageController();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   }
 
   @override
   void dispose() {
-    _scrollController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     _pageController.dispose();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
 
-  Widget _buildReelsView() {
-    return RefreshIndicator(
-      key: _refreshIndicatorKey,
-      onRefresh: _refresh,
-      color: Colors.deepOrange,
-      backgroundColor: AppColors.whitecolor,
-      strokeWidth: 3.0,
-      displacement: 40.0,
-      child: PageView.builder(
-        controller: _pageController,
-        scrollDirection: Axis.vertical,
-        // Always allow scrolling - we'll handle the logic inside
-        physics: AlwaysScrollableScrollPhysics(),
-        // Important: Only show actual video count, no extra loading items
-        itemCount: _videoContents.length,
-        onPageChanged: (index) async {
-          setState(() {
-            _currentPage = index;
-          });
+  void _goToPage(int page, List<ReelModel> reels) {
+    if (_isAnimating) return;
+    if (page < 0 || page >= reels.length) return;
+    _isAnimating = true;
+    _pageController
+        .animateToPage(
+          page,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        )
+        .then((_) => _isAnimating = false);
+  }
 
-          // Load more videos when approaching the end (2 videos before the last one)
-          if (index >= _videoContents.length - 2 &&
-              _hasMoreVideos &&
-              !_isLoadingMore &&
-              _failedAttempts < _maxFailedAttempts) {
-            // Load multiple videos at once to prevent the blank screen
-            for (
-              int i = 0;
-              i < 3 && _hasMoreVideos && _failedAttempts < _maxFailedAttempts;
-              i++
-            ) {
-              await _loadSingleVideo();
-              // Add small delay between requests to prevent overwhelming the server
-              if (i < 2) await Future.delayed(Duration(milliseconds: 200));
-            }
-          }
-        },
-        itemBuilder: (context, index) {
-          // Only build widgets for actual video content
-          if (index >= _videoContents.length) {
-            return Container(
-              color: Colors.black,
-              child: Center(
-                child: CircularProgressIndicator(color: Colors.deepOrange),
+  void _onPageChanged(int index) {
+    setState(() => _currentPage = index);
+    ref.read(activeReelIndexProvider.notifier).state = index;
+    final feedState = ref.read(reelsFeedProvider);
+    final reels = feedState.value ?? [];
+    if (index >= reels.length - 3) {
+      ref.read(reelsFeedProvider.notifier).loadMore();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final feedState = ref.watch(reelsFeedProvider);
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: feedState.when(
+        loading: () => const _ReelsShimmer(),
+        error:
+            (e, _) => _ReelsError(
+              onRetry: () => ref.read(reelsFeedProvider.notifier).refresh(),
+            ),
+        data: (reels) {
+          if (reels.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.video_library_outlined,
+                    color: Colors.white54,
+                    size: 64,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'No reels yet',
+                    style: TextStyle(color: Colors.white70, fontSize: 18),
+                  ),
+                  const SizedBox(height: 20),
+                  TextButton(
+                    onPressed:
+                        () => ref.read(reelsFeedProvider.notifier).refresh(),
+                    child: const Text(
+                      'Refresh',
+                      style: TextStyle(color: Colors.orange),
+                    ),
+                  ),
+                ],
               ),
             );
           }
 
-          final isLastVideo =
-              !_hasMoreVideos && index == _videoContents.length - 1;
-
-          return ReelsVideoItem(
-            content: _videoContents[index],
-            onFollowToggled: (isFollowed) {
-              setState(() {
-                _videoContents[index].isFollowing = isFollowed;
-              });
+          return RawGestureDetector(
+            gestures: {
+              VerticalDragGestureRecognizer:
+                  GestureRecognizerFactoryWithHandlers<
+                    VerticalDragGestureRecognizer
+                  >(() => VerticalDragGestureRecognizer(), (instance) {
+                    double dragStart = 0;
+                    instance.onStart = (details) {
+                      dragStart = details.globalPosition.dy;
+                    };
+                    instance.onEnd = (details) {
+                      if (_isAnimating) return;
+                      final dragDelta = dragStart - details.globalPosition.dy;
+                      final velocity = details.primaryVelocity ?? 0;
+                      if (dragDelta > 60 || velocity < -400) {
+                        _goToPage(_currentPage + 1, reels);
+                      } else if (dragDelta < -60 || velocity > 400) {
+                        _goToPage(_currentPage - 1, reels);
+                      }
+                    };
+                  }),
             },
-            onLikeToggled: (isLiked) {
-              setState(() {
-                _videoContents[index].isLiked = isLiked;
-                _videoContents[index].likes += isLiked ? 1 : -1;
-              });
-            },
-            isCurrent: index == _currentPage,
-            isLastVideo: isLastVideo,
+            child: PageView.builder(
+              controller: _pageController,
+              scrollDirection: Axis.vertical,
+              physics: const NeverScrollableScrollPhysics(),
+              onPageChanged: _onPageChanged,
+              itemCount: reels.length,
+              itemBuilder: (context, index) {
+                return _ReelItem(
+                  key: ValueKey(reels[index].id),
+                  reel: reels[index],
+                  isActive: index == _currentPage,
+                  shouldPreload: (index - _currentPage).abs() <= 1,
+                );
+              },
+            ),
           );
         },
       ),
     );
   }
-
-  Widget _buildLoadingIndicator() {
-    return Container(
-      color: Colors.black,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(color: Colors.deepOrange),
-            SizedBox(height: 16),
-            Text(
-              'Loading videos...',
-              style: TextStyle(color: AppColors.whitecolor),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNoMoreContent() {
-    return Container(
-      color: Colors.black,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Lottie.asset(
-            //   'animation/No-Content.json',
-            //   height: 150,
-            //   repeat: false,
-            // ),
-            // SizedBox(height: 20),
-            // Text(
-            //   'You\'ve reached the end!',
-            //   style: TextStyle(
-            //     color: AppColors.whitecolor,
-            //     fontSize: 18,
-            //     fontWeight: FontWeight.bold,
-            //   ),
-            // ),
-            // SizedBox(height: 8),
-            // Text(
-            //   'Pull down to refresh for new content',
-            //   style: TextStyle(
-            //     color: AppColors.whitecolor70,
-            //     fontSize: 14,
-            //   ),
-            // ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepOrange,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-              onPressed: _refresh,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.refresh, color: AppColors.whitecolor, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Refresh for more',
-                    style: TextStyle(color: AppColors.whitecolor),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      key: _scaffoldKey,
-      body: GestureDetector(
-        onHorizontalDragEnd: (DragEndDetails details) {
-          // Detect swipe from left to right
-          if (details.primaryVelocity! > 200) {
-            // Navigate back to Homepage with animation
-            Navigator.pop(context);
-          }
-        },
-        child: Stack(
-          children: [
-            if (_hasError)
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Lottie.asset(
-                      _isOnline
-                          ? 'animation/No-Content.json'
-                          : 'animation/No_Internet.json',
-                      height: 200,
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                      child: Text(
-                        _errorMessage,
-                        style: TextStyle(
-                          color:
-                              _errorMessage.contains('expired')
-                                  ? Colors.orange
-                                  : Colors.red,
-                          fontSize: 16,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    SizedBox(height: 16),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepOrange,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                      ),
-                      onPressed:
-                          _hasError && _errorMessage.contains('log in')
-                              ? () => Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(builder: (_) => LoginPage()),
-                                (route) => false,
-                              )
-                              : _refresh,
-                      child: Text(
-                        _hasError && _errorMessage.contains('log in')
-                            ? 'Log In'
-                            : 'Retry',
-                        style: TextStyle(color: AppColors.whitecolor),
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            else if (_videoContents.isEmpty &&
-                !_isLoadingMore &&
-                !_isRefreshing)
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Lottie.asset('animation/No-Content.json', height: 200),
-                    Text(
-                      'No video content available',
-                      style: TextStyle(
-                        color: AppColors.whitecolor,
-                        fontSize: 16,
-                      ),
-                    ),
-                    SizedBox(height: 16),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepOrange,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                      ),
-                      onPressed: _refresh,
-                      child: Text(
-                        'Refresh',
-                        style: TextStyle(color: AppColors.whitecolor),
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            else if (_isRefreshing && _videoContents.isEmpty)
-              _buildLoadingIndicator()
-            else if (_videoContents.isNotEmpty)
-              _buildReelsView()
-            else
-              _buildLoadingIndicator(),
-
-            // Loading indicator overlay when loading more content
-            if (_isLoadingMore && _videoContents.isNotEmpty)
-              Positioned(
-                bottom: 20,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withAlpha(70),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.deepOrange,
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          'Loading more...',
-                          style: TextStyle(
-                            color: AppColors.whitecolor,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-            // Remove FeedToggleButton from VideoFeedPage
-            // Visual swipe indicator (optional - shows during first few seconds)
-            // if (_videoContents.isNotEmpty)
-            //   Positioned(
-            //     left: 10,
-            //     top: MediaQuery.of(context).size.height / 2 - 30,
-            //     child: _SwipeIndicator(isLeftSwipe: true),
-            //   ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
-// Updated Reels Video Item Widget
-class ReelsVideoItem extends StatefulWidget {
-  final FeedContent content;
-  final Function(bool)? onFollowToggled;
-  final Function(bool) onLikeToggled;
-  final bool isCurrent;
-  final bool isLastVideo;
+// ─────────────────────────────────────────────────────────────────────────────
+// SINGLE REEL ITEM
+// ─────────────────────────────────────────────────────────────────────────────
 
-  const ReelsVideoItem({
+class _ReelItem extends ConsumerStatefulWidget {
+  final ReelModel reel;
+  final bool isActive;
+  final bool shouldPreload;
+
+  const _ReelItem({
     Key? key,
-    required this.content,
-    this.onFollowToggled,
-    required this.onLikeToggled,
-    required this.isCurrent,
-    this.isLastVideo = false,
+    required this.reel,
+    required this.isActive,
+    required this.shouldPreload,
   }) : super(key: key);
 
   @override
-  _ReelsVideoItemState createState() => _ReelsVideoItemState();
+  ConsumerState<_ReelItem> createState() => _ReelItemState();
 }
 
-class _ReelsVideoItemState extends State<ReelsVideoItem> {
-  bool _showComments = false;
-  bool _isLiked = false;
-  bool _isFollowing = false;
-  final ContentLikeService likeService = ContentLikeService(
-    baseUrl: 'http://182.93.94.210:3067',
-  );
-
-  @override
-  void initState() {
-    super.initState();
-    _isLiked = widget.content.isLiked;
-    _isFollowing = widget.content.isFollowing;
-  }
-
-  bool _isAuthorCurrentUser() {
-    return AppData().isCurrentUser(widget.content.author.id);
-  }
-
-  Widget _buildSideActionBar() {
-    return Positioned(
-      right: 10,
-      bottom: 80,
-      child: Column(
-        children: [
-          // Like Button
-          Column(
-            children: [
-              LikeButton(
-                contentId: widget.content.id,
-                initialLikeStatus: widget.content.isLiked,
-                likeService: likeService,
-                onLikeToggled: (isLiked) {
-                  widget.onLikeToggled(isLiked);
-                  SoundPlayer player = SoundPlayer();
-                  player.playlikeSound();
-                },
-              ),
-              SizedBox(height: 8),
-              Text(
-                '${widget.content.likes}',
-                style: TextStyle(
-                  color: AppColors.whitecolor,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 20),
-          // Comment Button
-          Column(
-            children: [
-              IconButton(
-                icon: Icon(
-                  _showComments ? Icons.chat : Icons.chat_bubble_outline,
-                  color: AppColors.whitecolor,
-                  size: 32,
-                ),
-                onPressed: () {
-                  setState(() {
-                    _showComments = !_showComments;
-                  });
-                },
-              ),
-              Text(
-                '${widget.content.comments}',
-                style: TextStyle(
-                  color: AppColors.whitecolor,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 20),
-          // Share Button (only show if canShare is true)
-          if (widget.content.canShare)
-            Column(
-              children: [
-                IconButton(
-                  icon: Icon(
-                    Icons.share,
-                    color: AppColors.whitecolor,
-                    size: 32,
-                  ),
-                  onPressed: () => _showShareOptions(context),
-                ),
-                Text(
-                  '${widget.content.shares}',
-                  style: TextStyle(
-                    color: AppColors.whitecolor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          SizedBox(height: 20),
-          // More Options
-          IconButton(
-            icon: Icon(Icons.more_vert, color: AppColors.whitecolor, size: 32),
-            onPressed: () => _showOptionsDialog(context),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildUserInfo() {
-    return Positioned(
-      left: 16,
-      bottom: 80,
-      right: 100,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Author Info
-          Row(
-            children: [
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (_) => UserProfileScreen(
-                            userId: AppData().currentUserId ?? '',
-                          ),
-                    ),
-                  );
-                },
-                child: Hero(
-                  tag:
-                      'avatar_${widget.content.author.id}_${_isAuthorCurrentUser() ? Get.find<UserController>().profilePictureVersion.value : 0}',
-                  child: Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [
-                          Color.fromRGBO(244, 135, 6, 1), // your theme
-                          Color.fromRGBO(255, 204, 0, 1), // golden highlight
-                        ],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.orangeAccent.shade100,
-                          blurRadius: 12.0,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(2.0),
-                      child: _buildAuthorAvatar(),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.content.author.name,
-                      style: TextStyle(
-                        color: AppColors.whitecolor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    // Show views count and engagement rate
-                    Text(
-                      '${widget.content.views} views • ${widget.content.engagementRate.toStringAsFixed(1)}% engagement',
-                      style: TextStyle(
-                        color: AppColors.whitecolor,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (!_isAuthorCurrentUser()) ...[
-                SizedBox(width: 8),
-                FollowButton(
-                  targetUserEmail: widget.content.author.email,
-                  initialFollowStatus: _isFollowing,
-                  onFollowSuccess: () {
-                    setState(() {
-                      _isFollowing = true;
-                    });
-                    widget.onFollowToggled?.call(true);
-                  },
-                  onUnfollowSuccess: () {
-                    setState(() {
-                      _isFollowing = false;
-                    });
-                    widget.onFollowToggled?.call(false);
-                  },
-                  targetUserId: widget.content.author.id,
-                ),
-              ],
-            ],
-          ),
-          SizedBox(height: 8),
-          // Feed Position and Load Priority Info (Debug info, remove in production)
-          if (widget.content.feedPosition != 'normal' ||
-              widget.content.loadPriority != 'normal')
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              margin: EdgeInsets.only(bottom: 8),
-              decoration: BoxDecoration(
-                color: Colors.black45,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                '${widget.content.feedPosition} • ${widget.content.loadPriority}',
-                style: TextStyle(color: AppColors.whitecolor, fontSize: 10),
-              ),
-            ),
-          // Expandable Status Text
-          if (widget.content.status.isNotEmpty)
-            ExpandableStatusText(
-              text: widget.content.status,
-              maxLines: 2,
-              style: TextStyle(
-                color: AppColors.whitecolor,
-                fontSize: 14,
-                height: 1.3,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAuthorAvatar() {
-    final userController = Get.find<UserController>();
-
-    if (_isAuthorCurrentUser()) {
-      return Obx(() {
-        final picturePath = userController.getFullProfilePicturePath();
-        final version = userController.profilePictureVersion.value;
-
-        return CircleAvatar(
-          key: ValueKey('feed_avatar_${widget.content.author.id}_$version'),
-          backgroundImage:
-              picturePath != null
-                  ? CachedNetworkImageProvider('$picturePath?v=$version')
-                  : null,
-          child:
-              picturePath == null || picturePath.isEmpty
-                  ? Text(
-                    widget.content.author.name.isNotEmpty
-                        ? widget.content.author.name[0].toUpperCase()
-                        : '?',
-                  )
-                  : null,
-        );
-      });
-    }
-
-    // ENHANCED: Cache user data if not already cached
-    if (!userController.isUserCached(widget.content.author.id)) {
-      userController.cacheUserProfilePicture(
-        widget.content.author.id,
-        widget.content.author.picture.isNotEmpty
-            ? widget.content.author.picture
-            : null,
-        widget.content.author.name,
-      );
-    }
-
-    // Use cached data with fallback to original author data
-    final cachedImageUrl = userController.getOtherUserFullProfilePicturePath(
-      widget.content.author.id,
-    );
-    final cachedName = userController.getOtherUserName(
-      widget.content.author.id,
-    );
-
-    final imageUrl =
-        cachedImageUrl ??
-        (widget.content.author.picture.isNotEmpty
-            ? 'http://182.93.94.210:3067${widget.content.author.picture}'
-            : null);
-
-    final displayName = cachedName ?? widget.content.author.name;
-
-    if (imageUrl == null || imageUrl.isEmpty) {
-      return CircleAvatar(
-        child: Text(
-          displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
-        ),
-      );
-    }
-
-    return CachedNetworkImage(
-      imageUrl: imageUrl,
-      imageBuilder:
-          (context, imageProvider) => CircleAvatar(
-            backgroundImage: imageProvider,
-            key: ValueKey(
-              'other_user_${widget.content.author.id}_${imageUrl.hashCode}',
-            ),
-          ),
-      placeholder:
-          (context, url) => CircleAvatar(
-            child: Container(
-              width: 20,
-              height: 20,
-              child: Image.asset('animation/IdeaBulb.gif', fit: BoxFit.contain),
-            ),
-          ),
-      errorWidget:
-          (context, url, error) => CircleAvatar(
-            child: Text(
-              displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
-            ),
-          ),
-      cacheKey: 'user_${widget.content.author.id}_${imageUrl.hashCode}',
-      memCacheWidth: 80,
-      memCacheHeight: 80,
-    );
-  }
-
-  Widget _buildCommentsSection() {
-    return Positioned(
-      bottom: 0,
-      left: 0,
-      right: 0,
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: 300),
-        height: _showComments ? MediaQuery.of(context).size.height * 0.5 : 0,
-        decoration: BoxDecoration(
-          color: AppColors.whitecolor,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child:
-            _showComments
-                ? SingleChildScrollView(
-                  child: CommentSection(
-                    contentId: widget.content.id,
-                    onCommentAdded: () {
-                      setState(() {
-                        widget.content.comments++;
-                      });
-                    },
-                  ),
-                )
-                : SizedBox.shrink(),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () {
-        if (_showComments) {
-          setState(() {
-            _showComments = false;
-          });
-        } else {
-          // Trigger play/pause only if comments section is not open
-          final videoWidgetState =
-              context.findAncestorStateOfType<AutoPlayVideoWidgetState>();
-          videoWidgetState?._togglePlayPause();
-        }
-      },
-      child: Stack(
-        children: [
-          // Video Player
-          Container(
-            color: Colors.black,
-            child: Center(
-              child:
-                  widget.content.hasVideos
-                      ? AutoPlayVideoWidget(
-                        url:
-                            widget.content.mediaUrls.isNotEmpty
-                                ? widget.content.mediaUrls.first
-                                : '',
-                        fallbackUrls:
-                            widget.content.mediaUrls.length > 1
-                                ? widget.content.mediaUrls.sublist(1)
-                                : [],
-                        height: MediaQuery.of(context).size.height,
-                        width: MediaQuery.of(context).size.width,
-                        thumbnailUrl: widget.content.thumbnailUrl,
-                        autoPlay: widget.isCurrent,
-                        playbackSettings: widget.content.playbackSettings,
-                        streamingUrls: widget.content.streamingUrls,
-                      )
-                      : Center(
-                        child: Text(
-                          'No video available',
-                          style: TextStyle(color: AppColors.whitecolor),
-                        ),
-                      ),
-            ),
-          ),
-
-          // Gradient Overlay
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              height: 200,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [Colors.black.withAlpha(80), Colors.transparent],
-                ),
-              ),
-            ),
-          ),
-          // UI Elements
-          _buildUserInfo(),
-          _buildSideActionBar(),
-          _buildCommentsSection(),
-
-          // Show "End of Videos" overlay on last video when no more videos
-          // if (widget.isLastVideo)
-          //   Positioned(
-          //     top: MediaQuery.of(context).size.height * 0.3,
-          //     left: 0,
-          //     right: 0,
-          //     child: Container(
-          //       padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-          //       child: Column(
-          //         children: [
-          //           Container(
-          //             padding: EdgeInsets.all(16),
-          //             decoration: BoxDecoration(
-          //               color: Colors.black.withAlpha(0.8),
-          //               borderRadius: BorderRadius.circular(20),
-          //               border: Border.all(color: Colors.deepOrange, width: 2),
-          //             ),
-          //             child: Column(
-          //               children: [
-          //                 Icon(
-          //                   Icons.check_circle,
-          //                   color: Colors.deepOrange,
-          //                   size: 40,
-          //                 ),
-          //                 SizedBox(height: 12),
-          //                 Text(
-          //                   'You\'ve reached the end!',
-          //                   style: TextStyle(
-          //                     color: AppColors.whitecolor,
-          //                     fontSize: 18,
-          //                     fontWeight: FontWeight.bold,
-          //                   ),
-          //                   textAlign: TextAlign.center,
-          //                 ),
-          //                 SizedBox(height: 8),
-          //                 Text(
-          //                   'Pull down to refresh for new content',
-          //                   style: TextStyle(
-          //                     color: AppColors.whitecolor70,
-          //                     fontSize: 14,
-          //                   ),
-          //                   textAlign: TextAlign.center,
-          //                 ),
-          //               ],
-          //             ),
-          //           ),
-          //         ],
-          //       ),
-          //     ),
-          //   ),
-        ],
-      ),
-    );
-  }
-
-  void _showOptionsDialog(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.whitecolor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder:
-          (context) => Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              ListTile(
-                leading: Icon(Icons.copy, color: Colors.blue),
-                title: Text('Copy Link'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _copyLink();
-                },
-              ),
-              if (widget.content.canDownload)
-                ListTile(
-                  leading: Icon(Icons.download, color: Colors.green),
-                  title: Text('Download'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _downloadContent();
-                  },
-                ),
-              ListTile(
-                leading: Icon(Icons.flag, color: Colors.orange),
-                title: Text('Report'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _reportContent();
-                },
-              ),
-              if (_isAuthorCurrentUser())
-                ListTile(
-                  leading: Icon(Icons.delete, color: Colors.red),
-                  title: Text('Delete'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _deleteContent();
-                  },
-                ),
-              SizedBox(height: 16),
-            ],
-          ),
-    );
-  }
-
-  void _reportContent() {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Content reported')));
-  }
-
-  void _copyLink() {
-    Clipboard.setData(
-      ClipboardData(
-        text:
-            'http://182.93.94.210:3067/api/v1/video-reel/${widget.content.id}',
-      ),
-    );
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Link copied to clipboard')));
-  }
-
-  void _downloadContent() {
-    if (widget.content.canDownload) {
-      // Implement download functionality
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Download started...')));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Download not allowed for this content')),
-      );
-    }
-  }
-
-  Future<void> _deleteContent() async {
-    if (!AppData().isAuthenticated) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please log in to delete content')),
-      );
-      return;
-    }
-
-    try {
-      final url = Uri.parse(
-        'http://182.93.94.210:3067/api/v1/delete-content/${widget.content.id}',
-      );
-      final response = await http.delete(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${AppData().accessToken}',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Content deleted')));
-        Navigator.pop(context);
-      } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to delete content')));
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
-    }
-  }
-
-  void _showShareOptions(BuildContext context) {
-    if (!widget.content.canShare) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Sharing is not allowed for this content')),
-      );
-      return;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.whitecolor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder:
-          (context) => Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              ListTile(
-                leading: Icon(Icons.link, color: Colors.blue),
-                title: Text('Copy Link'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _copyLink();
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.share, color: Colors.green),
-                title: Text('Share via Apps'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _shareViaSystem();
-                },
-              ),
-              SizedBox(height: 16),
-            ],
-          ),
-    );
-  }
-
-  void _shareViaSystem() async {
-    try {
-      final videoUrl = widget.content.mediaUrls.firstWhere(
-        (url) =>
-            url.toLowerCase().endsWith('.mp4') ||
-            url.toLowerCase().endsWith('.mov') ||
-            url.toLowerCase().endsWith('.avi'),
-        orElse:
-            () =>
-                widget.content.mediaUrls.isNotEmpty
-                    ? widget.content.mediaUrls.first
-                    : '',
-      );
-
-      await Share.share(
-        'Check out this video by ${widget.content.author.name}: $videoUrl',
-        subject: 'Video shared from Video Feed',
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Could not share video')));
-    }
-  }
-}
-
-// Updated Auto Play Video Widget (Enhanced for new API with playback settings)
-class AutoPlayVideoWidget extends StatefulWidget {
-  final String url;
-  final List<String> fallbackUrls;
-  final double? height;
-  final double? width;
-  final String? thumbnailUrl;
-  final bool autoPlay;
-  final PlaybackSettings? playbackSettings;
-  final StreamingUrls? streamingUrls;
-
-  const AutoPlayVideoWidget({
-    required this.url,
-    required this.fallbackUrls,
-    this.height,
-    this.width,
-    this.thumbnailUrl,
-    this.autoPlay = true,
-    this.playbackSettings,
-    this.streamingUrls,
-    Key? key,
-  }) : super(key: key);
-
-  @override
-  State<AutoPlayVideoWidget> createState() => AutoPlayVideoWidgetState();
-}
-
-class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
-    with
-        AutomaticKeepAliveClientMixin,
-        WidgetsBindingObserver,
-        TickerProviderStateMixin {
+class _ReelItemState extends ConsumerState<_ReelItem>
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   VideoPlayerController? _controller;
   bool _initialized = false;
-  bool _isMuted = false;
   bool _disposed = false;
-  Timer? _initTimer;
-  bool _isPlaying = true;
-  bool _wasPlayingBeforePause = true;
+  bool _isPlaying = false;
+  bool _showControls = false;
+  bool _showComments = false;
 
-  // Quality management
-  final VideoQualityManager _qualityManager = VideoQualityManager();
-  final NetworkSpeedMonitor _speedMonitor = NetworkSpeedMonitor();
-  VideoQuality _currentVideoQuality = VideoQuality.auto;
-  bool _isQualityChanging = false;
-  Timer? _qualityCheckTimer;
-  bool _showQualitySelector = false;
+  late AnimationController _heartCtrl;
+  late Animation<double> _heartScale;
+  late Animation<double> _heartOpacity;
+  bool _showHeartBurst = false;
+  Offset _heartPosition = Offset.zero;
 
-  // Buffering and performance tracking
-  bool _isBuffering = false;
-  int _bufferingEvents = 0;
-  DateTime? _lastBufferTime;
-  Timer? _bufferMonitor;
+  Duration _position = Duration.zero;
+  Duration _duration = Duration.zero;
+  bool _isSeeking = false;
+  Timer? _progressTimer;
 
-  // Animation controllers
-  late AnimationController _soundWaveController;
-  late AnimationController _volumeBarController;
-  late AnimationController _qualityIndicatorController;
-  late Animation<double> _soundWaveAnimation;
-  late Animation<double> _volumeBarAnimation;
-  late Animation<double> _qualityIndicatorAnimation;
+  OverlayEntry? _reactionOverlay;
+  final LayerLink _reactionLayerLink = LayerLink();
 
-  @override
-  bool get wantKeepAlive => _initialized;
+  final ContentLikeService _likeService = ContentLikeService(
+    baseUrl: 'http://182.93.94.220:8005',
+  );
+
+  bool _viewRecorded = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    // Initialize animation controllers
-    _soundWaveController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+    _heartCtrl = AnimationController(
       vsync: this,
+      duration: const Duration(milliseconds: 700),
     );
-
-    _volumeBarController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-
-    _qualityIndicatorController = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
-    );
-
-    _soundWaveAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(parent: _soundWaveController, curve: Curves.easeInOut),
-    );
-
-    _volumeBarAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _volumeBarController, curve: Curves.easeOut),
-    );
-
-    _qualityIndicatorAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _qualityIndicatorController,
-        curve: Curves.elasticOut,
+    _heartScale = TweenSequence([
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: 0.0,
+          end: 1.6,
+        ).chain(CurveTween(curve: Curves.easeOut)),
+        weight: 40,
       ),
-    );
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: 1.6,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.elasticOut)),
+        weight: 40,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: 1.0,
+          end: 0.0,
+        ).chain(CurveTween(curve: Curves.easeIn)),
+        weight: 20,
+      ),
+    ]).animate(_heartCtrl);
+    _heartOpacity = TweenSequence([
+      TweenSequenceItem(tween: ConstantTween<double>(1.0), weight: 80),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 0.0), weight: 20),
+    ]).animate(_heartCtrl);
 
-    _isMuted = false;
-
-    // Start network monitoring
-    // _speedMonitor.startMonitoring();
-
-    // Initialize with optimal quality
-    _initializeAdaptiveVideo();
-
-    // Start quality monitoring
-    _startQualityMonitoring();
+    if (widget.shouldPreload) _initVideo();
   }
 
-  void _startQualityMonitoring() {
-    _qualityCheckTimer = Timer.periodic(Duration(seconds: 20), (timer) {
-      if (!_disposed && _initialized) {
-        _checkAndAdjustQuality();
-      }
-    });
-
-    // Buffer monitoring for automatic quality adjustment
-    _bufferMonitor = Timer.periodic(Duration(seconds: 5), (timer) {
-      if (!_disposed && _initialized) {
-        _monitorBufferHealth();
-      }
-    });
-  }
-
-  void _monitorBufferHealth() {
-    if (_controller == null || !_initialized) return;
-
-    final bufferHealth = _controller!.value.buffered;
-    final position = _controller!.value.position;
-
-    // Check if we're close to running out of buffer
-    bool hasLowBuffer = true;
-    for (DurationRange range in bufferHealth) {
-      if (range.start <= position && range.end > position) {
-        final bufferAhead = range.end - position;
-        hasLowBuffer =
-            bufferAhead.inSeconds < 3; // Less than 3 seconds buffered
-        break;
-      }
+  @override
+  void didUpdateWidget(_ReelItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.shouldPreload && _controller == null && !_disposed) {
+      _initVideo();
     }
-
-    // Auto-downgrade quality if buffering issues detected
-    if (hasLowBuffer && _qualityManager.selectedQuality == VideoQuality.auto) {
-      _bufferingEvents++;
-      _lastBufferTime = DateTime.now();
-
-      if (_bufferingEvents >= 2) {
-        // Multiple buffering events
-        final currentIndex = VideoQuality.values.indexOf(_currentVideoQuality);
-        if (currentIndex > 1) {
-          // Can downgrade
-          final lowerQuality = VideoQuality.values[currentIndex - 1];
-          print(
-            'Auto-downgrading due to buffering: ${_qualityManager.getQualityLabel(lowerQuality)}',
-          );
-          _changeVideoQuality(lowerQuality);
-          _bufferingEvents = 0; // Reset counter
-        }
-      }
-    } else {
-      // Reset buffering counter if playback is smooth
-      if (_lastBufferTime != null &&
-          DateTime.now().difference(_lastBufferTime!).inSeconds > 30) {
-        _bufferingEvents = 0;
-      }
-    }
-  }
-
-  void _initializeAdaptiveVideo() {
-    _currentVideoQuality = _qualityManager.getOptimalQuality();
-    _initializeVideoPlayer();
-  }
-
-  void _initializeVideoPlayer() {
-    if (_disposed) return;
-
-    _initTimer?.cancel();
-    _initTimer = Timer(const Duration(seconds: 30), () {
-      if (!_initialized && !_disposed) {
-        _handleInitializationError();
-      }
-    });
-
-    String videoUrl = _getVideoUrlForCurrentQuality();
-
-    if (videoUrl.isEmpty) {
-      _handleInitializationError();
-      return;
-    }
-
-    bool isHls = videoUrl.toLowerCase().endsWith('.m3u8');
-    _controller =
-        isHls
-            ? VideoPlayerController.networkUrl(
-              Uri.parse(videoUrl),
-              formatHint: VideoFormat.hls,
-              videoPlayerOptions: VideoPlayerOptions(
-                mixWithOthers: widget.playbackSettings?.playsInline ?? true,
-                allowBackgroundPlayback: false,
-              ),
-            )
-            : VideoPlayerController.networkUrl(
-              Uri.parse(videoUrl),
-              videoPlayerOptions: VideoPlayerOptions(
-                mixWithOthers: widget.playbackSettings?.playsInline ?? true,
-                allowBackgroundPlayback: false,
-              ),
-            );
-
-    // Listen for buffering events
-    _controller!.addListener(_onVideoPlayerStateChange);
-
-    _controller!
-      ..setLooping(widget.playbackSettings?.loop ?? true)
-      ..setVolume(_isMuted ? 0.0 : 1.0)
-      ..initialize()
-          .then((_) {
-            _initTimer?.cancel();
-            if (!_disposed && mounted) {
-              setState(() {
-                _initialized = true;
-              });
-
-              _showQualityIndicator();
-
-              if (!_isMuted && _isPlaying) {
-                _startSoundAnimations();
-              }
-
-              if (mounted &&
-                  widget.autoPlay &&
-                  _wasPlayingBeforePause &&
-                  (widget.playbackSettings?.autoplay ?? true)) {
-                _controller!.play();
-                _isPlaying = true;
-                if (!_isMuted) {
-                  _startSoundAnimations();
-                }
-              }
-            }
-          })
-          .catchError((error) {
-            _initTimer?.cancel();
-            if (!_disposed) {
-              _handleInitializationError();
-            }
-          });
-  }
-
-  void _onVideoPlayerStateChange() {
-    if (_controller == null || _disposed) return;
-
-    final wasBuffering = _isBuffering;
-    _isBuffering = _controller!.value.isBuffering;
-
-    if (!wasBuffering && _isBuffering) {
-      print('Video started buffering');
-    } else if (wasBuffering && !_isBuffering) {
-      print('Video stopped buffering');
-    }
-  }
-
-  String _getVideoUrlForCurrentQuality() {
-    if (widget.streamingUrls != null) {
-      final qualityUrl = widget.streamingUrls!.getUrlForQuality(
-        _currentVideoQuality,
-      );
-      if (qualityUrl.isNotEmpty) {
-        return qualityUrl;
-      }
-    }
-
-    // Fallback: Generate quality URL from original URL
-    if (widget.url.isNotEmpty) {
-      return FrontendVideoUrlGenerator.generateQualityUrl(
-        widget.url,
-        _currentVideoQuality,
-      );
-    }
-
-    // Last fallback
-    return widget.fallbackUrls.isNotEmpty ? widget.fallbackUrls.first : '';
-  }
-
-  void _checkAndAdjustQuality() async {
-    if (_isQualityChanging ||
-        _qualityManager.selectedQuality != VideoQuality.auto) {
-      return; // Don't auto-adjust if user has manually selected quality
-    }
-
-    final optimalQuality = _qualityManager.getOptimalQuality();
-
-    if (optimalQuality != _currentVideoQuality) {
-      await _changeVideoQuality(optimalQuality);
-    }
-  }
-
-  Future<void> _changeVideoQuality(VideoQuality newQuality) async {
-    if (_disposed || _isQualityChanging) return;
-
-    setState(() {
-      _isQualityChanging = true;
-    });
-
-    // Store current playback state
-    final wasPlaying = _controller?.value.isPlaying ?? false;
-    final currentPosition = _controller?.value.position ?? Duration.zero;
-
-    // Dispose current controller
-    _controller?.removeListener(_onVideoPlayerStateChange);
-    await _controller?.dispose();
-    _controller = null;
-
-    // Update quality
-    _currentVideoQuality = newQuality;
-
-    // Show quality change indicator
-    _showQualityIndicator();
-
-    // Initialize new controller with new quality
-    _initializeVideoPlayer();
-
-    // Wait for initialization and restore playback state
-    int attempts = 0;
-    while (!_initialized && !_disposed && attempts < 50) {
-      await Future.delayed(Duration(milliseconds: 100));
-      attempts++;
-    }
-
-    if (_initialized && !_disposed) {
-      try {
-        await _controller?.seekTo(currentPosition);
-        if (wasPlaying && widget.autoPlay) {
-          await _controller?.play();
-          setState(() {
-            _isPlaying = true;
-          });
-        }
-      } catch (e) {
-        print('Error restoring playback state: $e');
-      }
-    }
-
-    setState(() {
-      _isQualityChanging = false;
-    });
-  }
-
-  void _showQualityIndicator() {
-    _qualityIndicatorController.forward().then((_) {
-      Timer(Duration(seconds: 2), () {
-        if (mounted && !_disposed) {
-          _qualityIndicatorController.reverse();
-        }
-      });
-    });
-  }
-
-  void _handleInitializationError() {
-    if (mounted && !_disposed) {
-      setState(() {
-        _initialized = false;
-      });
-    }
-  }
-
-  void _startSoundAnimations() {
-    if (!_isMuted && _isPlaying) {
-      _soundWaveController.repeat(reverse: true);
-      _volumeBarController.forward();
-    }
-  }
-
-  void _stopSoundAnimations() {
-    _soundWaveController.stop();
-    _soundWaveController.reset();
-    _volumeBarController.reverse();
-  }
-
-  void _togglePlayPause() {
-    if (_controller == null || _disposed) return;
-
-    setState(() {
-      _isPlaying = !_isPlaying;
-      _wasPlayingBeforePause = _isPlaying;
-      if (_isPlaying) {
-        _controller!.play();
-        if (!_isMuted) {
-          _startSoundAnimations();
+    if (widget.isActive != oldWidget.isActive) {
+      if (widget.isActive) {
+        _play();
+        if (!_viewRecorded) {
+          _viewRecorded = true;
+          ReelsApiService.recordView(widget.reel.id);
         }
       } else {
-        _controller!.pause();
-        _stopSoundAnimations();
+        _pause();
+        _removeReactionOverlay();
+      }
+    }
+  }
+
+  Future<void> _initVideo() async {
+    if (_disposed || widget.reel.bestVideoUrl == null) return;
+    final url = widget.reel.bestVideoUrl!;
+    developer.log('[Reel] Init video: $url');
+
+    VideoPlayerController ctrl;
+    if (url.endsWith('.m3u8')) {
+      ctrl = VideoPlayerController.networkUrl(
+        Uri.parse(url),
+        videoPlayerOptions: VideoPlayerOptions(
+          mixWithOthers: true,
+          allowBackgroundPlayback: false,
+        ),
+        httpHeaders: {'Authorization': 'Bearer ${AppData().accessToken ?? ''}'},
+      );
+    } else {
+      ctrl = VideoPlayerController.networkUrl(
+        Uri.parse(url),
+        videoPlayerOptions: VideoPlayerOptions(
+          mixWithOthers: true,
+          allowBackgroundPlayback: false,
+        ),
+      );
+    }
+
+    _controller = ctrl;
+
+    try {
+      await ctrl.initialize();
+      if (_disposed) {
+        ctrl.dispose();
+        return;
+      }
+      await ctrl.setLooping(true);
+      await ctrl.setVolume(1.0);
+
+      if (mounted) {
+        setState(() {
+          _initialized = true;
+          _duration = ctrl.value.duration;
+        });
+        if (widget.isActive) _play();
+        _startProgressTimer();
+      }
+    } catch (e) {
+      developer.log('[Reel] Init error: $e');
+      if (mounted) setState(() => _initialized = false);
+    }
+  }
+
+  void _play() {
+    if (_controller == null || !_initialized || _disposed) return;
+    _controller!.play();
+    if (mounted) setState(() => _isPlaying = true);
+  }
+
+  void _pause() {
+    if (_controller == null || !_initialized || _disposed) return;
+    _controller!.pause();
+    if (mounted) setState(() => _isPlaying = false);
+  }
+
+  void _startProgressTimer() {
+    _progressTimer?.cancel();
+    _progressTimer = Timer.periodic(const Duration(milliseconds: 200), (_) {
+      if (_controller == null || !_initialized || _disposed || !mounted) return;
+      if (!_isSeeking) {
+        setState(() => _position = _controller!.value.position);
       }
     });
   }
 
-  void _toggleMute() {
-    if (_controller == null || _disposed) return;
-
-    setState(() {
-      _isMuted = !_isMuted;
-      _controller!.setVolume(_isMuted ? 0.0 : 1.0);
-
-      if (_isMuted) {
-        _stopSoundAnimations();
-      } else if (_isPlaying) {
-        _startSoundAnimations();
-      }
-    });
-  }
-
-  Widget _buildQualitySelector() {
-    if (!_showQualitySelector) {
-      return SizedBox.shrink();
-    }
-
-    // Get available qualities - if streamingUrls exists, use those, otherwise generate them
-    List<VideoQuality> availableQualities = [VideoQuality.auto];
-
-    if (widget.streamingUrls != null) {
-      availableQualities.addAll(widget.streamingUrls!.getAvailableQualities());
-    } else {
-      // Add all qualities as they can be generated from any URL
-      availableQualities.addAll([
-        VideoQuality.low144p,
-        VideoQuality.low240p,
-        VideoQuality.medium360p,
-        VideoQuality.medium480p,
-        VideoQuality.high720p,
-      ]);
-    }
-
-    return Positioned(
-      top: 60,
-      right: 20,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.black.withAlpha(80),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.deepOrange.withAlpha(50)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.hd, color: Colors.deepOrange, size: 16),
-                  SizedBox(width: 6),
-                  Text(
-                    'Quality',
-                    style: TextStyle(
-                      color: AppColors.whitecolor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _showQualitySelector = false;
-                      });
-                    },
-                    child: Icon(
-                      Icons.close,
-                      color: AppColors.whitecolor,
-                      size: 16,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            ...availableQualities.map((quality) {
-              final isSelected = _qualityManager.selectedQuality == quality;
-              final isCurrent = _currentVideoQuality == quality;
-
-              return GestureDetector(
-                onTap: () async {
-                  _qualityManager.setManualQuality(quality);
-                  setState(() {
-                    _showQualitySelector = false;
-                  });
-
-                  if (quality == VideoQuality.auto) {
-                    await _changeVideoQuality(
-                      _qualityManager.getOptimalQuality(),
-                    );
-                  } else {
-                    await _changeVideoQuality(quality);
-                  }
-                },
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isSelected ? Colors.deepOrange.withAlpha(30) : null,
-                    border: Border(
-                      top: BorderSide(
-                        color: Colors.grey.withAlpha(30),
-                        width: 0.5,
-                      ),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (isCurrent)
-                        Icon(Icons.play_arrow, color: Colors.green, size: 14)
-                      else
-                        SizedBox(width: 14),
-                      SizedBox(width: 6),
-                      Text(
-                        _qualityManager.getQualityLabel(quality),
-                        style: TextStyle(
-                          color:
-                              isSelected
-                                  ? Colors.deepOrange
-                                  : AppColors.whitecolor,
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.normal,
-                          fontSize: 12,
-                        ),
-                      ),
-                      if (quality == VideoQuality.auto) ...[
-                        SizedBox(width: 4),
-                        Text(
-                          '(${_qualityManager.getQualityLabel(_qualityManager.getOptimalQuality())})',
-                          style: TextStyle(color: Colors.grey, fontSize: 10),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-          ],
-        ),
-      ),
+  void _seekTo(double fraction) {
+    if (_controller == null || !_initialized) return;
+    final target = Duration(
+      milliseconds: (_duration.inMilliseconds * fraction).round(),
     );
-  }
-
-  Widget _buildNetworkSpeedIndicator() {
-    final speed = _speedMonitor.currentSpeed;
-    Color speedColor;
-    String speedText;
-    IconData speedIcon;
-
-    if (speed >= 4.0) {
-      speedColor = Colors.green;
-      speedText = 'Fast';
-      speedIcon = Icons.signal_wifi_4_bar;
-    } else if (speed >= 2.0) {
-      speedColor = Colors.orange;
-      speedText = 'Good';
-      speedIcon = Icons.signal_wifi_4_bar;
-    } else if (speed >= 1.0) {
-      speedColor = Colors.yellow;
-      speedText = 'Slow';
-      speedIcon = Icons.signal_cellular_alt_2_bar;
-    } else {
-      speedColor = Colors.red;
-      speedText = 'Poor';
-      speedIcon = Icons.signal_cellular_alt_1_bar;
-    }
-
-    return AnimatedBuilder(
-      animation: _qualityIndicatorAnimation,
-      builder: (context, child) {
-        return Transform.scale(
-          scale: _qualityIndicatorAnimation.value,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.black.withAlpha(70),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: speedColor.withAlpha(50)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(speedIcon, color: speedColor, size: 14),
-                SizedBox(width: 4),
-                Text(
-                  '${_qualityManager.getQualityLabel(_currentVideoQuality)} • $speedText',
-                  style: TextStyle(
-                    color: AppColors.whitecolor,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildSoundWaveIndicator() {
-    return AnimatedBuilder(
-      animation: _soundWaveAnimation,
-      builder: (context, child) {
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: List.generate(3, (index) {
-            double delay = index * 0.2;
-            double animationValue = (_soundWaveAnimation.value + delay) % 1.0;
-            return Container(
-              margin: EdgeInsets.symmetric(horizontal: 1),
-              width: 3,
-              height: 12 + (8 * animationValue),
-              decoration: BoxDecoration(
-                color: AppColors.whitecolor.withAlpha(80),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            );
-          }),
-        );
-      },
-    );
-  }
-
-  Widget _buildVolumeBarIndicator() {
-    return AnimatedBuilder(
-      animation: _volumeBarAnimation,
-      builder: (context, child) {
-        return Container(
-          width: 4,
-          height: 20,
-          decoration: BoxDecoration(
-            color: AppColors.whitecolor.withAlpha(30),
-            borderRadius: BorderRadius.circular(2),
-          ),
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              width: 4,
-              height: 20 * _volumeBarAnimation.value,
-              decoration: BoxDecoration(
-                color: Colors.green,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    if (_controller == null || _disposed) return;
-
-    switch (state) {
-      case AppLifecycleState.paused:
-      case AppLifecycleState.inactive:
-        _controller!.pause();
-        _stopSoundAnimations();
-        break;
-      case AppLifecycleState.resumed:
-        if (_initialized && mounted && _isPlaying && widget.autoPlay) {
-          _controller!.play();
-          if (!_isMuted) {
-            _startSoundAnimations();
-          }
-        }
-        break;
-      case AppLifecycleState.detached:
-      case AppLifecycleState.hidden:
-        _controller!.pause();
-        _stopSoundAnimations();
-        break;
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant AutoPlayVideoWidget oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    if (widget.autoPlay != oldWidget.autoPlay) {
-      if (widget.autoPlay && _initialized && !_disposed) {
-        if (_wasPlayingBeforePause) {
-          _resumeVideo();
-        }
-      } else if (!widget.autoPlay && _initialized && !_disposed) {
-        _pauseVideo();
-      }
-    }
-  }
-
-  void _pauseVideo() {
-    if (_controller != null && _initialized && !_disposed) {
-      _controller!.pause();
-      _stopSoundAnimations();
-      setState(() {
-        _isPlaying = false;
-      });
-    }
-  }
-
-  void _resumeVideo() {
-    if (_controller != null && _initialized && !_disposed) {
-      _controller!.play();
-      if (!_isMuted) {
-        _startSoundAnimations();
-      }
-      setState(() {
-        _isPlaying = true;
-      });
-    }
+    _controller!.seekTo(target);
+    setState(() => _position = target);
   }
 
   @override
   void dispose() {
     _disposed = true;
-    _initTimer?.cancel();
-    _qualityCheckTimer?.cancel();
-    _bufferMonitor?.cancel();
-    _controller?.removeListener(_onVideoPlayerStateChange);
-    _soundWaveController.dispose();
-    _volumeBarController.dispose();
-    _qualityIndicatorController.dispose();
     WidgetsBinding.instance.removeObserver(this);
-    _speedMonitor.stopMonitoring();
+    _progressTimer?.cancel();
+    _controller?.pause();
     _controller?.dispose();
     _controller = null;
+    _heartCtrl.dispose();
+    _removeReactionOverlay();
     super.dispose();
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_controller == null || _disposed) return;
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _pause();
+    } else if (state == AppLifecycleState.resumed && widget.isActive) {
+      _play();
+    }
+  }
+
+  // ── Gestures ──────────────────────────────────────────────────────────────
+
+  void _onTap() {
+    _removeReactionOverlay();
+    if (_isPlaying) {
+      _pause();
+      _flashControls();
+    } else {
+      _play();
+      _flashControls();
+    }
+  }
+
+  void _flashControls() {
+    if (mounted) setState(() => _showControls = true);
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _showControls = false);
+    });
+  }
+
+  void _onDoubleTap(TapDownDetails details) {
+    HapticFeedback.mediumImpact();
+    _removeReactionOverlay();
+    setState(() {
+      _heartPosition = details.localPosition;
+      _showHeartBurst = true;
+    });
+    _heartCtrl.forward(from: 0).then((_) {
+      if (mounted) setState(() => _showHeartBurst = false);
+    });
+    if (!widget.reel.isLiked) {
+      _applyReaction(ReactionType.like);
+    }
+  }
+
+  void _onLongPressStart(LongPressStartDetails _) => _pause();
+  void _onLongPressEnd(LongPressEndDetails _) {
+    if (widget.isActive) _play();
+  }
+
+  // ── Reaction logic ────────────────────────────────────────────────────────
+
+  Future<void> _applyReaction(ReactionType type) async {
+    final reel = widget.reel;
+    final wasLiked = reel.isLiked;
+    final isSameType = reel.currentUserReaction == type.value;
+
+    if (wasLiked && isSameType) {
+      ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, null);
+    } else {
+      ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, type.value);
+    }
+
+    final result = await _likeService.react(reel.id, type);
+    if (result.success) {
+      final serverType = result.reactionType?.value;
+      ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, serverType);
+    } else {
+      ref
+          .read(reelsFeedProvider.notifier)
+          .applyReaction(reel.id, reel.currentUserReaction);
+    }
+  }
+
+  // ── Reaction Overlay ──────────────────────────────────────────────────────
+
+  void _showReactionPicker() {
+    if (_reactionOverlay != null) {
+      _removeReactionOverlay();
+      return;
+    }
+    HapticFeedback.mediumImpact();
+    _reactionOverlay = OverlayEntry(
+      builder:
+          (_) => _VerticalReactionPicker(
+            layerLink: _reactionLayerLink,
+            currentReaction: widget.reel.currentReactionType,
+            onSelect: (type) {
+              _removeReactionOverlay();
+              _applyReaction(type);
+            },
+            onDismiss: _removeReactionOverlay,
+          ),
+    );
+    Overlay.of(context).insert(_reactionOverlay!);
+  }
+
+  void _removeReactionOverlay() {
+    _reactionOverlay?.remove();
+    _reactionOverlay = null;
+  }
+
+  // ── More options sheet (edit / delete / repost) ───────────────────────────
+
+  void _showMoreOptions() {
+    _pause();
+    _removeReactionOverlay();
+    final isOwner = _isCurrentUser();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder:
+          (ctx) => _ReelOptionsSheet(
+            isOwner: isOwner,
+            reel: widget.reel,
+            onEdit: isOwner ? () => _showEditDialog() : null,
+            onDelete: isOwner ? () => _confirmDelete() : null,
+            onRepost: !isOwner ? () => _doRepost() : null,
+          ),
+    ).then((_) {
+      if (widget.isActive && mounted) _play();
+    });
+  }
+
+  void _showEditDialog() {
+    final ctrl = TextEditingController(text: widget.reel.caption);
+    showDialog(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            backgroundColor: const Color(0xFF1C1C1E),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: const Text(
+              'Edit Caption',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            content: TextField(
+              controller: ctrl,
+              maxLines: 4,
+              minLines: 1,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Write a caption…',
+                hintStyle: const TextStyle(color: Colors.white38),
+                filled: true,
+                fillColor: Colors.white10,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: Colors.white54),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF48706),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () async {
+                  final newCaption = ctrl.text.trim();
+                  Navigator.pop(ctx);
+                  final err = await ref
+                      .read(reelsFeedProvider.notifier)
+                      .editReel(widget.reel.id, newCaption);
+                  if (err != null && mounted) {
+                    _showSnack(err, isError: true);
+                  } else if (mounted) {
+                    _showSnack('Caption updated!');
+                  }
+                },
+                child: const Text(
+                  'Save',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _confirmDelete() {
+    showDialog(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            backgroundColor: const Color(0xFF1C1C1E),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: const Text(
+              'Delete Reel',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            content: const Text(
+              'This reel will be permanently deleted. This action cannot be undone.',
+              style: TextStyle(color: Colors.white70),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: Colors.white54),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  final err = await ref
+                      .read(reelsFeedProvider.notifier)
+                      .deleteReel(widget.reel.id);
+                  if (err != null && mounted) {
+                    _showSnack(err, isError: true);
+                  }
+                  // Reel removed from state — PageView auto adjusts
+                },
+                child: const Text(
+                  'Delete',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+    );
+  }
+
+  Future<void> _doRepost() async {
+    _showSnack('Reposting…');
+    final err = await ref
+        .read(reelsFeedProvider.notifier)
+        .repostReel(widget.reel.id);
+    if (err != null && mounted) {
+      _showSnack(err, isError: true);
+    } else if (mounted) {
+      _showSnack('Reposted successfully!');
+    }
+  }
+
+  void _showSnack(String msg, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: isError ? Colors.redAccent : const Color(0xFFF48706),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
+
+  @override
   Widget build(BuildContext context) {
-    super.build(context);
+    final size = MediaQuery.of(context).size;
 
-    return Container(
-      height: widget.height ?? MediaQuery.of(context).size.height,
-      width: widget.width ?? MediaQuery.of(context).size.width,
-      color: Colors.black,
-      child: Stack(
-        children: [
-          // Video Player or Loading/Error  nState
-          if (!_initialized || _controller == null)
-            Stack(
-              children: [
-                if (widget.thumbnailUrl != null &&
-                    widget.thumbnailUrl!.isNotEmpty)
-                  CachedNetworkImage(
-                    imageUrl: widget.thumbnailUrl!,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
-                    placeholder:
-                        (context, url) => Container(
-                          color: Colors.grey.shade800,
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.deepOrange,
-                            ),
-                          ),
-                        ),
-                    errorWidget: (context, url, error) {
-                      return Container(
-                        color: Colors.grey.shade800,
-                        child: Center(
-                          child: Icon(
-                            Icons.broken_image,
-                            color: Colors.grey.shade600,
-                            size: 50,
-                          ),
-                        ),
-                      );
-                    },
-                  )
-                else
-                  Container(
-                    color: Colors.grey.shade800,
-                    child: Center(
-                      child: Icon(
-                        Icons.image_not_supported,
-                        color: Colors.grey.shade600,
-                        size: 50,
-                      ),
-                    ),
-                  ),
-                Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.deepOrange,
-                      ),
-                      if (_isQualityChanging) ...[
-                        SizedBox(height: 12),
-                        Text(
-                          'Adjusting quality...',
-                          style: TextStyle(
-                            color: AppColors.whitecolor,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        _buildVideoLayer(size),
+
+        Positioned.fill(
+          child: GestureDetector(
+            onTap: _onTap,
+            onDoubleTapDown: _onDoubleTap,
+            onDoubleTap: () {},
+            onLongPressStart: _onLongPressStart,
+            onLongPressEnd: _onLongPressEnd,
+            behavior: HitTestBehavior.translucent,
+            child: Container(color: Colors.transparent),
+          ),
+        ),
+
+        _buildGradients(),
+        _buildTopBar(),
+        _buildBottomLeft(size),
+        _buildActionBar(size),
+        _buildProgressBar(size),
+
+        if (_showControls) _buildPlayPauseIndicator(),
+        if (_showHeartBurst) _buildHeartBurst(),
+        if (_showComments) _buildCommentsSheet(),
+      ],
+    );
+  }
+
+  // ── Video layer ───────────────────────────────────────────────────────────
+
+  Widget _buildVideoLayer(Size size) {
+    if (_initialized && _controller != null) {
+      return Center(
+        child: AspectRatio(
+          aspectRatio:
+              _controller!.value.aspectRatio > 0
+                  ? _controller!.value.aspectRatio
+                  : 9 / 16,
+          child: VideoPlayer(_controller!),
+        ),
+      );
+    }
+    if (widget.reel.thumbnail != null && widget.reel.thumbnail!.isNotEmpty) {
+      return CachedNetworkImage(
+        imageUrl: widget.reel.thumbnail!,
+        fit: BoxFit.cover,
+        width: size.width,
+        height: size.height,
+        placeholder: (_, __) => _blackPlaceholder(),
+        errorWidget: (_, __, ___) => _blackPlaceholder(),
+      );
+    }
+    return _blackPlaceholder();
+  }
+
+  Widget _blackPlaceholder() => Container(
+    color: Colors.black,
+    child:
+        widget.reel.hasVideo
+            ? const Center(
+              child: SizedBox(
+                width: 36,
+                height: 36,
+                child: CircularProgressIndicator(
+                  color: Colors.white54,
+                  strokeWidth: 2,
                 ),
-              ],
+              ),
             )
-          else
-            SizedBox(
-              width: double.infinity,
-              height: double.infinity,
-              child: FittedBox(
-                fit: BoxFit.contain,
-                child: SizedBox(
-                  width: _controller!.value.size.width,
-                  height: _controller!.value.size.height,
-                  child: VideoPlayer(_controller!),
+            : const Center(
+              child: Icon(Icons.videocam_off, color: Colors.white38, size: 48),
+            ),
+  );
+
+  // ── Gradients ─────────────────────────────────────────────────────────────
+
+  Widget _buildGradients() => Stack(
+    children: [
+      Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 120,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.black.withOpacity(0.5), Colors.transparent],
+            ),
+          ),
+        ),
+      ),
+      Positioned(
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 320,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.bottomCenter,
+              end: Alignment.topCenter,
+              colors: [Colors.black.withOpacity(0.8), Colors.transparent],
+            ),
+          ),
+        ),
+      ),
+    ],
+  );
+
+  // ── Top bar ───────────────────────────────────────────────────────────────
+
+  Widget _buildTopBar() => Positioned(
+    top: MediaQuery.of(context).padding.top + 8,
+    left: 8,
+    right: 16,
+    child: Row(
+      children: [
+        IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white,
+            size: 22,
+          ),
+          onPressed: () => Navigator.maybePop(context),
+        ),
+        const Spacer(),
+        const Text(
+          'Reels',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const Spacer(),
+        // ── More options (⋮) ──────────────────────────────────────────
+        IconButton(
+          icon: const Icon(
+            Icons.more_vert_rounded,
+            color: Colors.white,
+            size: 24,
+          ),
+          onPressed: _showMoreOptions,
+        ),
+      ],
+    ),
+  );
+
+  // ── Bottom-left ───────────────────────────────────────────────────────────
+
+  Widget _buildBottomLeft(Size size) => Positioned(
+    bottom: 70,
+    left: 12,
+    right: 80,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Repost badge
+        if (widget.reel.isRepost && widget.reel.sharedReelDetails != null)
+          _buildRepostBadge(),
+
+        GestureDetector(
+          onTap:
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (_) =>
+                          SpecificUserProfilePage(userId: widget.reel.userId),
                 ),
               ),
-            ),
-
-          // Play/Pause overlay
-          if (!_isPlaying && _initialized)
-            Center(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.black.withAlpha(30),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.play_arrow,
-                  size: 50,
-                  color: AppColors.whitecolor.withAlpha(90),
-                ),
-              ),
-            ),
-
-          // Network Speed and Quality Indicator
-          Positioned(top: 20, left: 20, child: _buildNetworkSpeedIndicator()),
-
-          // Sound wave indicator when unmuted and playing
-          if (!_isMuted && _isPlaying && _initialized)
-            Positioned(
-              top: 20,
-              right: 100, // Leave space for HD button
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.black.withAlpha(60),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: Colors.green.withAlpha(50),
-                    width: 1,
+          child: Row(
+            children: [
+              _buildAvatar(),
+              const SizedBox(width: 10),
+              Flexible(
+                child: Text(
+                  widget.reel.username,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    shadows: [Shadow(blurRadius: 4)],
                   ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.volume_up, color: Colors.green, size: 16),
-                    SizedBox(width: 6),
-                    _buildSoundWaveIndicator(),
-                    SizedBox(width: 6),
-                    Text(
-                      'SOUND ON',
-                      style: TextStyle(
-                        color: AppColors.whitecolor,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-            ),
+              const SizedBox(width: 10),
+              if (!_isCurrentUser())
+                _InlineFollowButton(
+                  reel: widget.reel,
+                  onFollowChanged:
+                      (v) => ref
+                          .read(reelsFeedProvider.notifier)
+                          .updateFollow(widget.reel.userId, v),
+                ),
+            ],
+          ),
+        ),
+        if (widget.reel.caption.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          _ExpandableCaption(caption: widget.reel.caption),
+        ],
+      ],
+    ),
+  );
 
-          // Quality selector button (HD Button)
-          Positioned(
-            top: 20,
-            right: 20,
+  /// Small banner shown when this reel is a repost
+  Widget _buildRepostBadge() {
+    final original = widget.reel.sharedReelDetails!;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          const Icon(Icons.repeat_rounded, color: Colors.white70, size: 14),
+          const SizedBox(width: 4),
+          Text(
+            'Reposted from @${original.username}',
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              shadows: [Shadow(blurRadius: 3)],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatar() {
+    final url = widget.reel.avatar;
+    final initial =
+        widget.reel.username.isNotEmpty
+            ? widget.reel.username[0].toUpperCase()
+            : '?';
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 1.5),
+      ),
+      child: ClipOval(
+        child:
+            url.isNotEmpty
+                ? CachedNetworkImage(
+                  imageUrl: url,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => _avatarFallback(initial),
+                  errorWidget: (_, __, ___) => _avatarFallback(initial),
+                )
+                : _avatarFallback(initial),
+      ),
+    );
+  }
+
+  Widget _avatarFallback(String initial) => Container(
+    color: Colors.grey.shade700,
+    alignment: Alignment.center,
+    child: Text(
+      initial,
+      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+    ),
+  );
+
+  bool _isCurrentUser() =>
+      AppData().isMe(widget.reel.userId) ||
+      AppData().isMe(widget.reel.username);
+
+  // ── Right action bar ──────────────────────────────────────────────────────
+
+  Widget _buildActionBar(Size size) {
+    final reel = widget.reel;
+    final currentReaction = reel.currentReactionType;
+    final hasReaction = currentReaction != null;
+
+    return Positioned(
+      right: 8,
+      bottom: 80,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ── Like / Reaction button ──────────────────────────────────────
+          CompositedTransformTarget(
+            link: _reactionLayerLink,
             child: GestureDetector(
               onTap: () {
-                setState(() {
-                  _showQualitySelector = !_showQualitySelector;
-                });
+                if (hasReaction) {
+                  _applyReaction(currentReaction);
+                } else {
+                  _applyReaction(ReactionType.like);
+                }
               },
-              child: Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withAlpha(60),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color:
-                        _showQualitySelector
-                            ? Colors.deepOrange
-                            : AppColors.whitecolor.withAlpha(30),
-                    width: 1,
+              onLongPress: _showReactionPicker,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    alignment: Alignment.center,
+                    child:
+                        hasReaction
+                            ? Text(
+                              currentReaction.emoji,
+                              style: const TextStyle(fontSize: 28),
+                            )
+                            : const Icon(
+                              Icons.favorite_border_rounded,
+                              color: Colors.white,
+                              size: 30,
+                              shadows: [Shadow(blurRadius: 6)],
+                            ),
                   ),
-                ),
-                child: Icon(
-                  Icons.hd,
-                  color:
-                      _showQualitySelector
-                          ? Colors.deepOrange
-                          : AppColors.whitecolor,
-                  size: 20,
-                ),
+                  Text(
+                    _formatCount(reel.reactionsCount),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      shadows: [Shadow(blurRadius: 4)],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
 
-          // Quality selector dropdown
-          _buildQualitySelector(),
+          const SizedBox(height: 20),
 
-          // Volume control (if controls enabled)
-          if (widget.playbackSettings?.controls ?? true)
-            Positioned(
-              bottom: 20,
-              right: 20,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.black.withAlpha(50),
-                  shape: BoxShape.circle,
-                  border:
-                      _isMuted
-                          ? null
-                          : Border.all(
-                            color: Colors.green.withAlpha(70),
-                            width: 2,
-                          ),
-                ),
-                child: Stack(
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        _isMuted ? Icons.volume_off : Icons.volume_up,
-                        color: _isMuted ? AppColors.whitecolor : Colors.green,
-                        size: 28,
-                      ),
-                      onPressed: _toggleMute,
-                    ),
-                    // Volume bar indicator
-                    if (!_isMuted && _isPlaying)
-                      Positioned(
-                        right: 2,
-                        top: 6,
-                        child: _buildVolumeBarIndicator(),
-                      ),
-                  ],
-                ),
-              ),
+          // ── Comment button ─────────────────────────────────────────────
+          _ActionButton(
+            icon: Icons.chat_bubble_outline_rounded,
+            label: _formatCount(reel.commentsCount),
+            onTap: () => setState(() => _showComments = !_showComments),
+          ),
+
+          const SizedBox(height: 20),
+
+          // ── Repost button (non-owners only) ────────────────────────────
+          if (!_isCurrentUser())
+            _ActionButton(
+              icon: Icons.repeat_rounded,
+              label: 'Repost',
+              onTap: _doRepost,
             ),
 
-          // Loading overlay during quality change
-          if (_isQualityChanging)
-            Container(
-              color: Colors.black.withAlpha(50),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(color: Colors.deepOrange),
-                    SizedBox(height: 12),
-                    Text(
-                      'Switching to ${_qualityManager.getQualityLabel(_currentVideoQuality)}...',
-                      style: TextStyle(
-                        color: AppColors.whitecolor,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          if (!_isCurrentUser()) const SizedBox(height: 20),
 
-          // Buffering indicator
-          if (_isBuffering && _initialized && !_isQualityChanging)
-            Positioned(
-              bottom: 60,
-              left: 0,
-              right: 0,
-              child: Center(
+          // ── Share ──────────────────────────────────────────────────────
+          _ActionButton(
+            icon: Icons.send_rounded,
+            label: 'Share',
+            onTap: _shareReel,
+          ),
+
+          const SizedBox(height: 20),
+
+          // ── Mute ───────────────────────────────────────────────────────
+          _ActionButton(
+            icon:
+                (_controller?.value.volume ?? 1.0) > 0
+                    ? Icons.volume_up_rounded
+                    : Icons.volume_off_rounded,
+            label: '',
+            onTap: _toggleMute,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _toggleMute() {
+    if (_controller == null) return;
+    final current = _controller!.value.volume;
+    _controller!.setVolume(current > 0 ? 0.0 : 1.0);
+    setState(() {});
+  }
+
+  void _shareReel() {
+    Share.share(
+      'Check out this reel by @${widget.reel.username}!\n'
+      '${widget.reel.bestVideoUrl ?? ''}',
+    );
+  }
+
+  String _formatCount(int count) {
+    if (count >= 1000000) return '${(count / 1000000).toStringAsFixed(1)}M';
+    if (count >= 1000) return '${(count / 1000).toStringAsFixed(1)}K';
+    return count > 0 ? '$count' : '';
+  }
+
+  // ── Progress bar ──────────────────────────────────────────────────────────
+
+  Widget _buildProgressBar(Size size) {
+    final total = _duration.inMilliseconds;
+    final pos = _position.inMilliseconds.clamp(0, total > 0 ? total : 1);
+    final fraction = total > 0 ? pos / total : 0.0;
+
+    return Positioned(
+      bottom: 52,
+      left: 0,
+      right: 0,
+      child: GestureDetector(
+        onHorizontalDragStart: (_) => setState(() => _isSeeking = true),
+        onHorizontalDragUpdate: (d) {
+          final dx = d.localPosition.dx.clamp(0.0, size.width);
+          _seekTo(dx / size.width);
+        },
+        onHorizontalDragEnd: (_) => setState(() => _isSeeking = false),
+        onTapDown: (d) {
+          final dx = d.localPosition.dx.clamp(0.0, size.width);
+          _seekTo(dx / size.width);
+        },
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox(
+          height: 20,
+          child: Stack(
+            alignment: Alignment.centerLeft,
+            children: [
+              Container(height: 2, color: Colors.white24),
+              FractionallySizedBox(
+                widthFactor: fraction.clamp(0.0, 1.0),
+                child: Container(height: 2, color: Colors.white),
+              ),
+              Positioned(
+                left: (fraction * size.width - 6).clamp(0.0, size.width - 12),
                 child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withAlpha(70),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: 12,
-                        height: 12,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.whitecolor,
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        'Buffering...',
-                        style: TextStyle(
-                          color: AppColors.whitecolor,
-                          fontSize: 10,
-                        ),
-                      ),
-                    ],
+                  width: 12,
+                  height: 12,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
                   ),
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Play/pause indicator ──────────────────────────────────────────────────
+
+  Widget _buildPlayPauseIndicator() => Center(
+    child: AnimatedOpacity(
+      opacity: _showControls ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 200),
+      child: Container(
+        width: 72,
+        height: 72,
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.55),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+          color: Colors.white,
+          size: 42,
+        ),
+      ),
+    ),
+  );
+
+  // ── Heart burst ───────────────────────────────────────────────────────────
+
+  Widget _buildHeartBurst() => Positioned(
+    left: _heartPosition.dx - 48,
+    top: _heartPosition.dy - 48,
+    child: IgnorePointer(
+      child: AnimatedBuilder(
+        animation: _heartCtrl,
+        builder:
+            (_, __) => Opacity(
+              opacity: _heartOpacity.value,
+              child: Transform.scale(
+                scale: _heartScale.value,
+                child: const Icon(
+                  Icons.favorite_rounded,
+                  color: Colors.white,
+                  size: 96,
+                  shadows: [
+                    Shadow(color: Colors.red, blurRadius: 20),
+                    Shadow(blurRadius: 8),
+                  ],
+                ),
+              ),
             ),
+      ),
+    ),
+  );
+
+  // ── Comments sheet ────────────────────────────────────────────────────────
+
+  Widget _buildCommentsSheet() => Positioned(
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: MediaQuery.of(context).size.height * 0.6,
+    child: GestureDetector(
+      onTap: () {},
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                children: [
+                  const Spacer(),
+                  Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => setState(() => _showComments = false),
+                    child: const Icon(Icons.close, size: 20),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: CommentSection(
+                contentId: widget.reel.id,
+                onCommentAdded:
+                    () => ref
+                        .read(reelsFeedProvider.notifier)
+                        .incrementComments(widget.reel.id),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REEL OPTIONS BOTTOM SHEET
+// Shown when user taps the ⋮ button — owner sees Edit/Delete, others see Repost
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ReelOptionsSheet extends StatelessWidget {
+  final bool isOwner;
+  final ReelModel reel;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
+  final VoidCallback? onRepost;
+
+  const _ReelOptionsSheet({
+    required this.isOwner,
+    required this.reel,
+    this.onEdit,
+    this.onDelete,
+    this.onRepost,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF1C1C1E),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: const EdgeInsets.fromLTRB(0, 12, 0, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle
+          Container(
+            width: 36,
+            height: 4,
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: Colors.white24,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+
+          if (isOwner) ...[
+            _OptionTile(
+              icon: Icons.edit_rounded,
+              label: 'Edit Caption',
+              onTap: () {
+                Navigator.pop(context);
+                onEdit?.call();
+              },
+            ),
+            _OptionTile(
+              icon: Icons.delete_outline_rounded,
+              label: 'Delete Reel',
+              color: Colors.redAccent,
+              onTap: () {
+                Navigator.pop(context);
+                onDelete?.call();
+              },
+            ),
+          ] else ...[
+            _OptionTile(
+              icon: Icons.repeat_rounded,
+              label: 'Repost',
+              onTap: () {
+                Navigator.pop(context);
+                onRepost?.call();
+              },
+            ),
+          ],
+
+          _OptionTile(
+            icon: Icons.close_rounded,
+            label: 'Cancel',
+            color: Colors.white54,
+            onTap: () => Navigator.pop(context),
+          ),
         ],
       ),
     );
   }
 }
 
-class AdaptiveVideoSystem {
-  static void initialize() {
-    //final speedMonitor = NetworkSpeedMonitor();
-    final qualityManager = VideoQualityManager();
+class _OptionTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
 
-    //speedMonitor.startMonitoring();
-
-    // Set up automatic quality adjustment
-    Timer.periodic(Duration(seconds: 25), (timer) {
-      qualityManager.updateQualityBasedOnSpeed();
-    });
-
-    print('Frontend Adaptive Video Quality System initialized');
-  }
-
-  static void dispose() {
-    final speedMonitor = NetworkSpeedMonitor();
-    speedMonitor.stopMonitoring();
-    print('Frontend Adaptive Video Quality System disposed');
-  }
-}
-
-// Expandable Status Text Widget
-class ExpandableStatusText extends StatefulWidget {
-  final String text;
-  final int maxLines;
-  final TextStyle? style;
-
-  const ExpandableStatusText({
-    Key? key,
-    required this.text,
-    this.maxLines = 2,
-    this.style,
-  }) : super(key: key);
+  const _OptionTile({
+    required this.icon,
+    required this.label,
+    this.color = Colors.white,
+    required this.onTap,
+  });
 
   @override
-  _ExpandableStatusTextState createState() => _ExpandableStatusTextState();
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(width: 16),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _ExpandableStatusTextState extends State<ExpandableStatusText> {
-  bool _isExpanded = false;
-  bool _isTextOverflowing = false;
+// ─────────────────────────────────────────────────────────────────────────────
+// VERTICAL REACTION PICKER OVERLAY
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _VerticalReactionPicker extends StatefulWidget {
+  final LayerLink layerLink;
+  final ReactionType? currentReaction;
+  final void Function(ReactionType) onSelect;
+  final VoidCallback onDismiss;
+
+  const _VerticalReactionPicker({
+    required this.layerLink,
+    required this.currentReaction,
+    required this.onSelect,
+    required this.onDismiss,
+  });
+
+  @override
+  State<_VerticalReactionPicker> createState() =>
+      _VerticalReactionPickerState();
+}
+
+class _VerticalReactionPickerState extends State<_VerticalReactionPicker>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scale;
+  late Animation<double> _fade;
+  ReactionType? _hovered;
+
+  static const _reactions = ReactionType.values;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkTextOverflow();
-    });
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
+    _scale = CurvedAnimation(parent: _ctrl, curve: Curves.easeOutBack);
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _ctrl.forward();
   }
 
-  void _checkTextOverflow() {
-    final TextPainter textPainter = TextPainter(
-      text: TextSpan(
-        text: widget.text,
-        style: widget.style ?? TextStyle(color: AppColors.whitecolor),
-      ),
-      maxLines: widget.maxLines,
-      textDirection: TextDirection.ltr,
-    );
-
-    textPainter.layout(maxWidth: MediaQuery.of(context).size.width - 120);
-
-    if (textPainter.didExceedMaxLines) {
-      setState(() {
-        _isTextOverflowing = true;
-      });
-    }
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    const double itemH = 52.0;
+    final double pillH = _reactions.length * itemH + 16;
+
+    return Stack(
       children: [
-        Text(
-          widget.text,
-          style: widget.style ?? TextStyle(color: AppColors.whitecolor),
-          maxLines: _isExpanded ? null : widget.maxLines,
-          overflow: _isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+        Positioned.fill(
+          child: GestureDetector(
+            onTap: widget.onDismiss,
+            behavior: HitTestBehavior.translucent,
+            child: Container(color: Colors.transparent),
+          ),
         ),
-        if (_isTextOverflowing)
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                _isExpanded = !_isExpanded;
-              });
-            },
-            child: Padding(
-              padding: const EdgeInsets.only(top: 4.0),
-              child: Text(
-                _isExpanded ? 'Show Less' : 'Show More',
-                style: TextStyle(
-                  color: Colors.blue,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 13,
+        CompositedTransformFollower(
+          link: widget.layerLink,
+          showWhenUnlinked: false,
+          offset: Offset(-68, -(pillH / 2) + 22),
+          child: FadeTransition(
+            opacity: _fade,
+            child: ScaleTransition(
+              scale: _scale,
+              alignment: Alignment.centerRight,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  width: 56,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.75),
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.4),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children:
+                        _reactions.map((r) => _buildItem(r, itemH)).toList(),
+                  ),
                 ),
               ),
             ),
           ),
+        ),
       ],
     );
+  }
 
-    /// Initlizing the App the And o ro98z ro br  ibir n bdicrf j ihhsdf j   hro  iu zh  ejnichve
+  Widget _buildItem(ReactionType r, double itemH) {
+    final isActive = widget.currentReaction == r;
+    final isHovered = _hovered == r;
+    final targetScale = isHovered ? 1.4 : (isActive ? 1.15 : 1.0);
+
+    return GestureDetector(
+      onTap: () => widget.onSelect(r),
+      onTapDown: (_) => setState(() => _hovered = r),
+      onTapCancel: () => setState(() => _hovered = null),
+      child: SizedBox(
+        width: 56,
+        height: itemH,
+        child: Stack(
+          alignment: Alignment.center,
+          clipBehavior: Clip.none,
+          children: [
+            if (isActive)
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 1.0, end: targetScale),
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutBack,
+              builder:
+                  (_, scale, child) =>
+                      Transform.scale(scale: scale, child: child),
+              child: Text(r.emoji, style: const TextStyle(fontSize: 26)),
+            ),
+            if (isHovered)
+              Positioned(
+                left: -72,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black87,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    r.label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ACTION BUTTON
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ActionButton extends StatefulWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final VoidCallback onTap;
+
+  const _ActionButton({
+    required this.icon,
+    this.iconColor = Colors.white,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  State<_ActionButton> createState() => _ActionButtonState();
+}
+
+class _ActionButtonState extends State<_ActionButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 120),
+      lowerBound: 0.9,
+      upperBound: 1.0,
+      value: 1.0,
+    );
+    _scale = _ctrl;
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleTap() async {
+    await _ctrl.reverse();
+    _ctrl.forward();
+    HapticFeedback.lightImpact();
+    widget.onTap();
+  }
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: _handleTap,
+    behavior: HitTestBehavior.opaque,
+    child: ScaleTransition(
+      scale: _scale,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            widget.icon,
+            color: widget.iconColor,
+            size: 30,
+            shadows: const [Shadow(blurRadius: 6)],
+          ),
+          if (widget.label.isNotEmpty) ...[
+            const SizedBox(height: 3),
+            Text(
+              widget.label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                shadows: [Shadow(blurRadius: 4)],
+              ),
+            ),
+          ],
+        ],
+      ),
+    ),
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INLINE FOLLOW BUTTON
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _InlineFollowButton extends StatefulWidget {
+  final ReelModel reel;
+  final ValueChanged<bool> onFollowChanged;
+  const _InlineFollowButton({
+    required this.reel,
+    required this.onFollowChanged,
+  });
+
+  @override
+  State<_InlineFollowButton> createState() => _InlineFollowButtonState();
+}
+
+class _InlineFollowButtonState extends State<_InlineFollowButton> {
+  @override
+  Widget build(BuildContext context) {
+    return FollowButton(
+      targetUserId: widget.reel.userId,
+      initialFollowStatus: widget.reel.isFollowed,
+      onFollowSuccess: () {
+        widget.reel.isFollowed = true;
+        widget.onFollowChanged(true);
+      },
+      onUnfollowSuccess: () {
+        widget.reel.isFollowed = false;
+        widget.onFollowChanged(false);
+      },
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EXPANDABLE CAPTION
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ExpandableCaption extends StatefulWidget {
+  final String caption;
+  const _ExpandableCaption({required this.caption});
+
+  @override
+  State<_ExpandableCaption> createState() => _ExpandableCaptionState();
+}
+
+class _ExpandableCaptionState extends State<_ExpandableCaption> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => setState(() => _expanded = !_expanded),
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        child: RichText(
+          maxLines: _expanded ? null : 2,
+          overflow: _expanded ? TextOverflow.visible : TextOverflow.ellipsis,
+          text: TextSpan(
+            children: [
+              TextSpan(
+                text: widget.caption,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  height: 1.45,
+                  shadows: [Shadow(blurRadius: 4)],
+                ),
+              ),
+              if (!_expanded)
+                const TextSpan(
+                  text: ' more',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SHIMMER LOADING
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ReelsShimmer extends StatelessWidget {
+  const _ReelsShimmer();
+
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade900,
+      highlightColor: Colors.grey.shade700,
+      period: const Duration(milliseconds: 1400),
+      child: Container(color: Colors.black),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ERROR STATE
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ReelsError extends StatelessWidget {
+  final VoidCallback onRetry;
+  const _ReelsError({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, color: Colors.white54, size: 56),
+          const SizedBox(height: 16),
+          const Text(
+            'Could not load reels',
+            style: TextStyle(color: Colors.white70, fontSize: 16),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Retry'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF48706),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

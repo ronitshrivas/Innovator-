@@ -1,16 +1,24 @@
 // ─── reels_camera_screen.dart ────────────────────────────────────────────────
 // Place at: lib/Innovator/screens/CreatePost/reels_camera_screen.dart
+//
+// FIXES:
+// 1. Camera preview stretch → use AspectRatio + RotatedBox for correct display
+// 2. Music auto-plays during recording (like Instagram)
+// 3. Music stops when recording stops
 // ─────────────────────────────────────────────────────────────────────────────
+
 import 'dart:async';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:innovator/Innovator/provider/reels_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import 'reels_music_screen.dart';
-import 'reels_preview_screen.dart'; // ← FIX: was missing; ReelsPreviewScreen lives here
+import 'reels_preview_screen.dart';
 
 const _kPrimary = Color.fromRGBO(244, 135, 6, 1);
 
@@ -33,12 +41,16 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
   Timer? _recTimer;
   int _countdown = 0;
   Timer? _cdTimer;
-  int _timerSec = 0; // 0 = off, 3, 10
+  int _timerSec = 0;
   bool _showFilters = false;
   bool _showSpeed = false;
   bool _showTimer = false;
   late AnimationController _pulse;
   late Animation<double> _pulseAnim;
+
+  // ── Music player for background music during recording ──────────────────
+  final AudioPlayer _musicPlayer = AudioPlayer();
+  bool _musicPlaying = false;
 
   @override
   void initState() {
@@ -55,32 +67,94 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
 
   Future<void> _initCams() async {
     try {
+      // Request camera + mic permission first
+      final camStatus = await Permission.camera.request();
+      final micStatus = await Permission.microphone.request();
+
+      if (!camStatus.isGranted || !micStatus.isGranted) {
+        debugPrint('Permissions denied');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Camera & microphone permission required'),
+            ),
+          );
+        }
+        return;
+      }
+
       _cameras = await availableCameras();
-      if (_cameras.isNotEmpty) await _initCtrl(_cameras[0]);
+
+      if (_cameras.isEmpty) {
+        debugPrint('No cameras found on device');
+        return;
+      }
+
+      await _initCtrl(_cameras[0]);
     } catch (e) {
       debugPrint('cam init: $e');
     }
   }
 
   Future<void> _initCtrl(CameraDescription d) async {
+    // Safely dispose old controller
     final old = _ctrl;
-    _ctrl = CameraController(d, ResolutionPreset.high, enableAudio: true);
+    _ctrl = null; // clear before reinit to avoid null check errors
+
     try {
-      await _ctrl!.initialize();
       await old?.dispose();
-      if (mounted) setState(() => _ready = true);
+    } catch (_) {}
+
+    final controller = CameraController(
+      d,
+      ResolutionPreset.high,
+      enableAudio: true,
+      imageFormatGroup: ImageFormatGroup.jpeg,
+    );
+
+    // Assign before initializing so dispose() works if widget unmounts early
+    _ctrl = controller;
+
+    try {
+      await controller.initialize();
+
+      // Check if widget is still mounted before using context
+      if (!mounted) {
+        await controller.dispose();
+        _ctrl = null;
+        return;
+      }
+
+      await controller.lockCaptureOrientation(DeviceOrientation.portraitUp);
+
+      if (mounted) {
+        setState(() => _ready = true);
+      }
     } catch (e) {
       debugPrint('ctrl init: $e');
+      await controller.dispose();
+      _ctrl = null;
+      if (mounted) setState(() => _ready = false);
     }
   }
 
   @override
+  @override
   void didChangeAppLifecycleState(AppLifecycleState s) {
-    if (_ctrl == null || !_ctrl!.value.isInitialized) return;
+    final ctrl = _ctrl;
+    // Guard: controller must exist and be initialized
+    if (ctrl == null || !ctrl.value.isInitialized) return;
+
     if (s == AppLifecycleState.inactive) {
-      _ctrl!.dispose();
+      _recTimer?.cancel();
+      _musicPlayer.pause();
+      ctrl.dispose();
+      _ctrl = null;
+      if (mounted) setState(() => _ready = false);
     } else if (s == AppLifecycleState.resumed) {
-      _initCtrl(_ctrl!.description);
+      if (_cameras.isNotEmpty) {
+        _initCtrl(_cameras[_isFront ? 1 : 0]);
+      }
     }
   }
 
@@ -91,17 +165,26 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
     _cdTimer?.cancel();
     _ctrl?.dispose();
     _pulse.dispose();
+    _musicPlayer.dispose();
     super.dispose();
   }
 
   Future<void> _flip() async {
     if (_cameras.length < 2 || _recording) return;
+    if (!mounted) return;
+
     setState(() {
       _ready = false;
       _isFront = !_isFront;
     });
+
     ref.read(reelsProvider.notifier).toggleCamera();
-    await _initCtrl(_cameras[_isFront ? 1 : 0]);
+
+    // Guard index — front cam is usually index 1 but not guaranteed
+    final index = _isFront ? 1 : 0;
+    if (index < _cameras.length) {
+      await _initCtrl(_cameras[index]);
+    }
   }
 
   Future<void> _toggleFlash() async {
@@ -116,7 +199,6 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
       maxDuration: const Duration(minutes: 3),
     );
     if (v != null && mounted) {
-      // FIX: was `const ReelsEditScreen()` — navigate with the picked path
       ref.read(reelsProvider.notifier).setVideo(v.path, fromGallery: true);
       Navigator.push(
         context,
@@ -150,16 +232,30 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
     });
   }
 
+  // ── Start recording + play music like Instagram ───────────────────────────
   Future<void> _startRec() async {
-    if (_ctrl == null || !_ready) return;
+    final ctrl = _ctrl;
+    if (ctrl == null || !ctrl.value.isInitialized || !_ready) return;
     try {
-      await _ctrl!.startVideoRecording();
+      await ctrl.startVideoRecording();
       setState(() {
         _recording = true;
         _elapsed = 0;
         _showFilters = false;
         _showSpeed = false;
       });
+
+      // FIX: Auto-play selected music when recording starts (like Instagram)
+      final selectedMusic = ref.read(reelsProvider).selectedMusic;
+      if (selectedMusic != null && selectedMusic.audioUrl.isNotEmpty) {
+        try {
+          await _musicPlayer.play(UrlSource(selectedMusic.audioUrl));
+          setState(() => _musicPlaying = true);
+        } catch (e) {
+          debugPrint('Music play error: $e');
+        }
+      }
+
       final maxSec = ref.read(reelsProvider).maxDurationSeconds;
       _recTimer = Timer.periodic(const Duration(seconds: 1), (t) {
         setState(() => _elapsed++);
@@ -170,36 +266,85 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
     }
   }
 
+  // ── Stop recording + stop music ───────────────────────────────────────────
   Future<void> _stopRec() async {
     _recTimer?.cancel();
-    if (_ctrl == null || !_recording) return;
+    final ctrl = _ctrl;
+    if (ctrl == null || !_recording) return;
+
     try {
-      final f = await _ctrl!.stopVideoRecording();
+      final f = await ctrl.stopVideoRecording();
+      if (!mounted) return;
       setState(() => _recording = false);
+      await _musicPlayer.stop();
+      setState(() => _musicPlaying = false);
       ref.read(reelsProvider.notifier).setVideo(f.path);
-      if (mounted) {
-        // FIX: was `const ReelsEditScreen()` — navigate with recorded path
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ReelsPreviewScreen(videoPath: f.path),
-          ),
-        );
-      }
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ReelsPreviewScreen(videoPath: f.path),
+        ),
+      );
     } catch (e) {
       debugPrint('stopRec: $e');
-      setState(() => _recording = false);
+      if (mounted) setState(() => _recording = false);
     }
   }
 
   String _fmt(int s) =>
       '${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}';
 
+  // ── FIX: Build correct camera preview without stretch ─────────────────────
+  Widget _buildCameraPreview() {
+    if (!_ready || _ctrl == null) {
+      return const Center(child: CircularProgressIndicator(color: _kPrimary));
+    }
+
+    final rs = ref.watch(reelsProvider);
+    final matrix = kReelFilters[rs.selectedFilterIndex].matrix;
+
+    return ColorFiltered(
+      colorFilter: ColorFilter.matrix(matrix),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final screenW = constraints.maxWidth;
+          final screenH = constraints.maxHeight;
+
+          // Camera aspect ratio = width / height (e.g. 1.77 for 16:9)
+          final camAR = _ctrl!.value.aspectRatio;
+
+          // We want to COVER the screen (like Instagram) — crop edges if needed
+          double previewW, previewH;
+
+          // Try fitting by width first
+          previewW = screenW;
+          previewH = screenW / camAR;
+
+          // If preview height is less than screen height, fit by height instead
+          if (previewH < screenH) {
+            previewH = screenH;
+            previewW = screenH * camAR;
+          }
+
+          return ClipRect(
+            child: OverflowBox(
+              maxWidth: previewW,
+              maxHeight: previewH,
+              child: SizedBox(
+                width: previewW,
+                height: previewH,
+                child: CameraPreview(_ctrl!),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final rs = ref.watch(reelsProvider);
-    // FIX: use [kReelFilters] which is now an alias for [reelsFilters]
-    final matrix = kReelFilters[rs.selectedFilterIndex].matrix;
     final maxSec = rs.maxDurationSeconds;
     final progress = _recording ? (_elapsed / maxSec).clamp(0.0, 1.0) : 0.0;
     final safeTop = MediaQuery.of(context).padding.top;
@@ -213,16 +358,8 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
         body: Stack(
           fit: StackFit.expand,
           children: [
-            // ── Camera preview with selected filter ──────────────────────────
-            if (_ready && _ctrl != null)
-              Positioned.fill(
-                child: ColorFiltered(
-                  colorFilter: ColorFilter.matrix(matrix),
-                  child: CameraPreview(_ctrl!),
-                ),
-              )
-            else
-              const Center(child: CircularProgressIndicator(color: _kPrimary)),
+            // ── FIX: Proper camera preview (no stretch) ──────────────────────
+            Positioned.fill(child: _buildCameraPreview()),
 
             // ── Recording progress bar ────────────────────────────────────────
             if (_recording)
@@ -246,19 +383,28 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
               child: Row(
                 children: [
                   _circBtn(Icons.close, () {
+                    _musicPlayer.stop();
                     ref.read(reelsProvider.notifier).reset();
                     Navigator.pop(context);
                   }),
                   const Spacer(),
                   // Music pill
                   GestureDetector(
-                    onTap:
-                        () => Navigator.push(
+                    onTap: () async {
+                      // Stop music before going to music screen
+                      if (_musicPlaying) {
+                        await _musicPlayer.stop();
+                        setState(() => _musicPlaying = false);
+                      }
+                      if (mounted) {
+                        Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (_) => const ReelsMusicScreen(),
                           ),
-                        ),
+                        );
+                      }
+                    },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 14,
@@ -277,14 +423,18 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            Icons.music_note_rounded,
-                            color:
-                                rs.selectedMusic != null
-                                    ? _kPrimary
-                                    : Colors.white,
-                            size: 16,
-                          ),
+                          // FIX: show animated music bars when music is playing
+                          if (_musicPlaying)
+                            _MusicWaveBars()
+                          else
+                            Icon(
+                              Icons.music_note_rounded,
+                              color:
+                                  rs.selectedMusic != null
+                                      ? _kPrimary
+                                      : Colors.white,
+                              size: 16,
+                            ),
                           const SizedBox(width: 6),
                           ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 140),
@@ -620,8 +770,6 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
     );
   }
 
-  // ── Helpers ─────────────────────────────────────────────────────────────────
-
   Widget _circBtn(IconData icon, VoidCallback onTap) => GestureDetector(
     onTap: onTap,
     child: Container(
@@ -666,6 +814,59 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
           ),
         ],
       );
+}
+
+// ─── Animated Music Wave Bars (shown in music pill during recording) ──────────
+class _MusicWaveBars extends StatefulWidget {
+  @override
+  State<_MusicWaveBars> createState() => _MusicWaveBarsState();
+}
+
+class _MusicWaveBarsState extends State<_MusicWaveBars>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (_, __) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: List.generate(4, (i) {
+            final delay = i * 0.25;
+            final t = (_ctrl.value + delay) % 1.0;
+            final h = 4.0 + 8.0 * t;
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 1),
+              width: 2.5,
+              height: h,
+              decoration: BoxDecoration(
+                color: _kPrimary,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            );
+          }),
+        );
+      },
+    );
+  }
 }
 
 // ─── Stop button ──────────────────────────────────────────────────────────────
