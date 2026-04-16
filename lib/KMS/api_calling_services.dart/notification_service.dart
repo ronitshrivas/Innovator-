@@ -1,17 +1,17 @@
+
 import 'dart:developer';
 import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:dio/dio.dart';
-import 'package:innovator/elearning/core/constants/api_constants.dart';
-import 'package:innovator/elearning/core/constants/network/base_api_service.dart';
-import 'package:innovator/elearning/model/notification_model.dart';
+import 'package:innovator/KMS/core/constants/api_constants.dart';
+import 'package:innovator/KMS/core/constants/network/base_api_service.dart';
+import 'package:innovator/KMS/model/notification_model.dart';  
 import 'package:shared_preferences/shared_preferences.dart';
 
-class ElearningNotificationService extends ElearningBaseApiService {
-  // ElearningNotificationService() : super(dio: DioClient.instance);
-    ElearningNotificationService() : super(silent: true);
+class KMSNotificationService extends BaseApiService{
+  // KMSNotificationService() : super(dio: DioClient.instance);
+    KMSNotificationService() : super(silent: true);
 
-  static const String _prefKey = 'elearning_fcm_token_id';
+  static const String _prefKey = 'kms_fcm_token_id';
 
   Future<void> registerFcmToken(String token) async {
     try {
@@ -30,7 +30,7 @@ class ElearningNotificationService extends ElearningBaseApiService {
         );
       }
     } catch (e) {
-      log('ElearningFCM: registerFcmToken error: $e');
+      log('KMS: registerFcmToken error: $e');
     }
   }
 
@@ -40,14 +40,13 @@ class ElearningNotificationService extends ElearningBaseApiService {
     required SharedPreferences prefs,
   }) async {
     final data = await post(
-      ElearningApi.fcmTokens,
+      ApiConstants.fcmTokens,
       data: {'token': token, 'device_name': device},
-      //options: Options(extra: {'silent': true}),
     );
     final id = data?['id']?.toString();
     if (id != null) {
       await prefs.setString(_prefKey, id);
-      log('ElearningFCM: Created — id: $id');
+      log('KMS: Created — id: $id');
     }
   }
 
@@ -59,11 +58,10 @@ class ElearningNotificationService extends ElearningBaseApiService {
   }) async {
     try {
       await patch(
-        '${ElearningApi.fcmTokens}$id/',
+        '${ApiConstants.fcmTokens}$id/',
         data: {'token': token, 'device_name': device},
-        // options: Options(extra: {'silent': true}),
       );
-      log('ElearningFCM: Updated — id: $id');
+      log('KMS: Updated — id: $id');
     } catch (e) {
       await prefs.remove(_prefKey);
       await _createToken(token: token, device: device, prefs: prefs);
@@ -75,12 +73,12 @@ class ElearningNotificationService extends ElearningBaseApiService {
       final prefs = await SharedPreferences.getInstance();
       final id = prefs.getString(_prefKey);
       if (id != null) {
-        await delete('${ElearningApi.fcmTokens}$id/');
+        await delete('${ApiConstants.fcmTokens}$id/');
         await prefs.remove(_prefKey);
-        log('ElearningFCM: Cleared');
+        log('KMS: Cleared');
       }
     } catch (e) {
-      log('ElearningFCM: clearToken error: $e');
+      log('KMS: clearToken error: $e');
     }
   }
 
@@ -100,20 +98,20 @@ class ElearningNotificationService extends ElearningBaseApiService {
 
   // List of notifications
 
-  Future<List<ElearningNotificationModel>> getNotifications() async {
-    final data = await get<List<dynamic>>(ElearningApi.notificationsList);
+  Future<List<KMSNotificationModel>> getNotifications() async {
+    final data = await get<List<dynamic>>(ApiConstants.notificationsList);
     return data
-        .map((e) => ElearningNotificationModel.fromJson(e as Map<String, dynamic>))
+        .map((e) => KMSNotificationModel.fromJson(e as Map<String, dynamic>))
         .toList();
   }
 
   //Mark as read
   Future<void> markAsRead(String notificationId) async {
-    await post(ElearningApi.markNotificationAsRead(notificationId));
+    await patch(ApiConstants.markNotificationAsRead(notificationId));
   }
 
   // Mark all as read
   Future<void> markAllAsRead() async {
-    await post(ElearningApi.markAllNotificationsAsRead);
+    await patch(ApiConstants.markAllNotificationsAsRead);
   }
 }

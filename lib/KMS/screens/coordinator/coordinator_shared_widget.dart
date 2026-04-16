@@ -5,7 +5,6 @@ import 'package:innovator/KMS/core/constants/app_style.dart';
 import 'package:innovator/KMS/model/coordinator_model/coordinator_teacher_response_model.dart';
 import 'package:innovator/KMS/provider/coordinator_provider.dart';
 
-// ─── Filter chips ─────────────────────────────────────────────────────────────
 
 class CoordinatorFilterChips extends ConsumerWidget {
   final StateProvider<String> provider;
@@ -72,7 +71,6 @@ class CoordinatorFilterChips extends ConsumerWidget {
   }
 }
 
-// ─── Empty state ──────────────────────────────────────────────────────────────
 
 class CoordinatorEmptyState extends StatelessWidget {
   final IconData icon;
@@ -99,7 +97,6 @@ class CoordinatorEmptyState extends StatelessWidget {
   }
 }
 
-// ─── Error box ────────────────────────────────────────────────────────────────
 
 class CoordinatorErrorBox extends StatelessWidget {
   final Object? error;
@@ -129,7 +126,6 @@ class CoordinatorErrorBox extends StatelessWidget {
   }
 }
 
-// ─── Attendance tile ──────────────────────────────────────────────────────────
 
 class CoordinatorAttendanceTile extends ConsumerStatefulWidget {
   final CoordinatorAttendanceModel item;
@@ -436,7 +432,6 @@ class _CoordinatorAttendanceTileState
   }
 }
 
-// Add this class to the existing coordinator_shared_widgets.dart file:
 
 class CoordinatorMiniStat extends StatelessWidget {
   final String label;

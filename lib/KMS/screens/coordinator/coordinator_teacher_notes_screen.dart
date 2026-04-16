@@ -67,13 +67,13 @@ class CoordinatorSessionsScreen extends ConsumerWidget {
                   CoordinatorMiniStat(
                       label: 'Teachers',
                       value:
-                          '${data.sessions.map((s) => s.teacherId).toSet().length}',
+                          '${data.sessions!.map((s) => s.teacherId).toSet().length}',
                       color: Colors.amberAccent.shade100),
                   const SizedBox(width: 10),
                   CoordinatorMiniStat(
                       label: 'Students',
                       value:
-                          '${data.sessions.fold(0, (sum, s) => sum + s.studentCount)}',
+                          '${data.sessions!.fold(0, (sum, s) => sum + s.studentCount!)}',
                       color: Colors.greenAccent.shade200),
                 ],
               ),
@@ -106,7 +106,7 @@ class CoordinatorSessionsScreen extends ConsumerWidget {
                         child: CoordinatorErrorBox(error: e)
                       ),
                       data: (data) {
-                        if (data.sessions.isEmpty) {
+                        if (data.sessions!.isEmpty) {
                           return const CoordinatorEmptyState(
                             icon: Icons.menu_book_rounded,
                             message: 'No teaching logs yet',
@@ -116,9 +116,9 @@ class CoordinatorSessionsScreen extends ConsumerWidget {
                         return ListView.builder(
                           padding:
                               const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                          itemCount: data.sessions.length,
+                          itemCount: data.sessions!.length,
                           itemBuilder: (context, i) {
-                            final session = data.sessions[i];
+                            final session = data.sessions![i];
                             return GestureDetector(
                               onTap: () => Navigator.push(
                                 context,
@@ -252,20 +252,20 @@ class _SessionListTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(session.teacherName,
+                Text(session.teacherName ?? 'Unknown Teacher',
                     style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 14,
                         fontFamily: 'Inter',
                         color: Colors.black87)),
-                Text(session.classroomName,
+                Text(session.classroomName ?? 'Unknown Classroom',
                     style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey.shade500,
                         fontFamily: 'Inter')),
                 const SizedBox(height: 4),
                 Text(
-                  session.notes,
+                  session.notes ?? 'No notes available',
                   style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey.shade600,
@@ -280,7 +280,7 @@ class _SessionListTile extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(session.date,
+              Text(session.date ?? 'No Date',
                   style: TextStyle(
                       fontSize: 11,
                       color: Colors.grey.shade400,
@@ -500,14 +500,14 @@ class _CoordinatorSessionDetailScreenState
                           color: AppStyle.primaryColor, size: 32),
                     ),
                     const SizedBox(height: 12),
-                    Text(widget.session.teacherName,
+                    Text(widget.session.teacherName ?? 'Unknown Teacher',
                         style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 18,
                             fontFamily: 'Inter',
                             color: Colors.black87)),
                     const SizedBox(height: 4),
-                    Text(widget.session.classroomName,
+                    Text(widget.session.classroomName ?? 'Unknown Classroom',
                         style: TextStyle(
                             fontSize: 13,
                             color: Colors.grey.shade500,
@@ -537,18 +537,18 @@ class _CoordinatorSessionDetailScreenState
                     _InfoRow(
                         icon: Icons.calendar_today_rounded,
                         label: 'Date',
-                        value: widget.session.date),
+                        value: widget.session.date ?? 'No Date'),
                     const Divider(height: 20),
                     _InfoRow(
                         icon: Icons.people_rounded,
                         label: 'Students',
                         value:
-                            '${widget.session.studentCount} students'),
+                            '${widget.session.studentCount ?? 0} students'),
                     const Divider(height: 20),
                     _InfoRow(
                         icon: Icons.class_rounded,
                         label: 'Classroom',
-                        value: widget.session.classroomName),
+                        value: widget.session.classroomName ?? 'Unknown Classroom'),
                   ],
                 ),
               ),
@@ -599,7 +599,7 @@ class _CoordinatorSessionDetailScreenState
                         ),
                       ),
                       child: Text(
-                        widget.session.notes,
+                        widget.session.notes ?? 'No notes available',
                         style: const TextStyle(
                             fontSize: 14,
                             fontFamily: 'Inter',

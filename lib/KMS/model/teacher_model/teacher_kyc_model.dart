@@ -9,7 +9,7 @@ class KycModel {
   final String? photo;
   final String? address;
   final String status;
-  final String kycPercentage;
+  final String? kycPercentage;
   final bool phoneVerified;
   final bool documentVerified;
   final DateTime? submittedAt;

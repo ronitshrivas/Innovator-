@@ -37,8 +37,8 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
   @override
   void initState() {
     super.initState();
-    ref.refresh(unreadCountProvider);
-    ref.refresh(notificationListProvider);
+    ref.refresh(elearningUnreadCountProvider);
+    ref.refresh(elearningNotificationListProvider);
     _tabController = TabController(length: _tabs.length, vsync: this);
   WidgetsBinding.instance.addPostFrameCallback((_) async {
     await ref.refresh(enrollmentProvider.future); 
@@ -61,7 +61,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
 
       if (isNowEnrolled) {
         setState(() => _isVerifyingPayment = false);
-         ref.read(notificationListProvider.notifier).refresh();
+         ref.read(elearningNotificationListProvider.notifier).refresh();
         _videoStarted = true;
         if (widget.course.contents.isNotEmpty) {
           _initVideo(widget.course.contents.first);
@@ -185,7 +185,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
         await ref.read(courseServiceProvider).enrollCourse(courseId);
         await ref.refresh(enrollmentProvider.future);
         ref.read(enrollLoadingProvider(courseId).notifier).setLoading(false);
- ref.read(notificationListProvider.notifier).refresh();
+ ref.read(elearningNotificationListProvider.notifier).refresh();
 
         _videoStarted = true;
         if (widget.course.contents.isNotEmpty) {
@@ -252,7 +252,15 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
   Widget build(BuildContext context) {
     final enrolledIds = ref.watch(enrolledCoursesProvider);
     final isEnrolled = enrolledIds.contains(widget.course.id);
- 
+
+    // if (isEnrolled && !_videoStarted) {
+    //   _videoStarted = true;
+    //   WidgetsBinding.instance.addPostFrameCallback((_) {
+    //     if (mounted && widget.course.contents.isNotEmpty) {
+    //       _initVideo(widget.course.contents.first);
+    //     }
+    //   });
+    // }
     final unreadCount = ref.watch(chatUnreadCountProvider);
 
     return Scaffold(

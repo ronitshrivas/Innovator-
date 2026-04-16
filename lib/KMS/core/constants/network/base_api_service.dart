@@ -5,7 +5,9 @@ import 'dio_client.dart';
 abstract class BaseApiService {
   final Dio _dio;
 
-  BaseApiService({Dio? dio}) : _dio = dio ?? DioClient.instance;
+  // BaseApiService({Dio? dio}) : _dio = dio ?? DioClient.instance;
+   BaseApiService({Dio? dio, bool silent = false})
+      : _dio = dio ?? (silent ? DioClient.silent : DioClient.instance);
  
   Future<T> get<T>(
     String endpoint, {

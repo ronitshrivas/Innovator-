@@ -1,11 +1,12 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/KMS/core/constants/app_style.dart';
 import 'package:innovator/KMS/provider/auth_provider.dart';
+import 'package:innovator/KMS/provider/notificationProvider.dart';
 import 'package:innovator/KMS/provider/teacher_provider.dart';
 import 'package:innovator/KMS/provider/user_provider.dart';
 import 'package:innovator/KMS/screens/auth/login_screen.dart';
+import 'package:innovator/KMS/screens/constant_screen/notifications_screen.dart';
 
 class AppbarScreen extends ConsumerWidget {
   const AppbarScreen({super.key});
@@ -31,31 +32,28 @@ class AppbarScreen extends ConsumerWidget {
         elevation: WidgetStatePropertyAll(0),
       ),
       actions: [
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            IconButton(
-              onPressed: () {},
-              icon: Icon(
-                CupertinoIcons.bell_fill,
-                color: AppStyle.primaryColor,
-              ),
-            ),
-            Positioned(
-              right: 12,
-              top: 10,
-              child: Container(
-                width: 10,
-                height: 10,
-                decoration: const BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
+        InkWell(
+          onTap:
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const KMSNotificationScreen(),
                 ),
               ),
-            ),
-          ],
+          child: Consumer(
+            builder: (context, ref, _) {
+              final unreadAsync = ref.watch(kmsUnreadCountProvider);
+              final count = unreadAsync;
+              return count > 0
+                  ? Badge.count(
+                    count: count,
+                    child: const Icon(Icons.notifications_outlined, size: 25),
+                  )
+                  : const Icon(Icons.notifications_outlined, size: 25);
+            },
+          ),
         ),
-
+        SizedBox(width: 15),
         Container(
           height: 40,
           width: 80,
