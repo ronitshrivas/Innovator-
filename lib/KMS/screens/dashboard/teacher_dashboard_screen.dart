@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/KMS/core/constants/app_style.dart';
 import 'package:innovator/KMS/core/constants/mediaquery.dart';
 import 'package:innovator/KMS/model/teacher_model/teacher_kyc_model.dart';
+import 'package:innovator/KMS/model/teacher_model/teacher_profile_model.dart';
 import 'package:innovator/KMS/screens/constant_screen/custom_scroll.dart';
 import 'package:innovator/KMS/provider/teacher_provider.dart';
 import 'package:innovator/KMS/screens/teacher/kyc_upload_screen.dart';
+import 'package:innovator/KMS/screens/teacher/teacher_review_screen.dart';
 
 class TeacherDashboardScreen extends ConsumerStatefulWidget {
   const TeacherDashboardScreen({super.key});
@@ -22,9 +24,7 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
   late AnimationController _flipController;
   late Animation<double> _flipAnimation;
   final Map<String, bool> _checkedInMap = {};
-
   final Map<String, bool> _loadingMap = {};
-
   final Map<String, dynamic> _checkInIdMap = {};
 
   @override
@@ -55,16 +55,16 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
   Future<void> _handleCheckIn(String schoolId) async {
     setState(() => _loadingMap[schoolId] = true);
     try {
-      final response = await ref.read(checkInProvider(schoolId).future);
+      final response = await ref
+          .read(teacherServiceProvider)
+          .checkIn(schoolId: schoolId);
 
       final attendanceId =
           response['id'] ?? response['_id'] ?? response['attendance_id'];
 
       setState(() {
         _checkedInMap[schoolId] = true;
-        if (attendanceId != null) {
-          _checkInIdMap[schoolId] = attendanceId;
-        }
+        if (attendanceId != null) _checkInIdMap[schoolId] = attendanceId;
       });
 
       if (mounted) _showSnack('Checked in successfully!', isError: false);
@@ -77,7 +77,6 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
 
   Future<void> _handleCheckOut(String schoolId) async {
     final id = _checkInIdMap[schoolId];
-
     if (id == null) {
       _showSnack(
         'Cannot check out: attendance record not found. Please check in first.',
@@ -88,13 +87,11 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
 
     setState(() => _loadingMap[schoolId] = true);
     try {
-      await ref.read(checkOutProvider(id).future);
-
+      await ref.read(teacherServiceProvider).checkOut(id: id);
       setState(() {
         _checkedInMap[schoolId] = false;
-        _checkInIdMap.remove(schoolId); // clear once checked out
+        _checkInIdMap.remove(schoolId);
       });
-
       if (mounted) _showSnack('Checked out successfully!', isError: false);
     } catch (e) {
       if (mounted) _showSnack('Check-out failed: $e', isError: true);
@@ -138,6 +135,7 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Watch once at the top — pass typed data down, no more dynamic
     final profileAsync = ref.watch(teacherProfileProvider);
 
     return RefreshIndicator(
@@ -156,19 +154,14 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
               error: (_, __) => _buildGrid(context, null),
               data: (profile) => _buildGrid(context, profile),
             ),
-
             const SizedBox(height: 24),
-
             profileAsync.when(
               loading: () => const _AttendanceSkeleton(),
               error: (_, __) => _buildAttendanceSection(null),
               data: (profile) => _buildAttendanceSection(profile),
             ),
-
             const SizedBox(height: 20),
-
             _buildKycBanner(context),
-
             const SizedBox(height: 20),
           ],
         ),
@@ -176,13 +169,10 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
     );
   }
 
-  Widget _buildAttendanceSection(dynamic profile) {
-    List schools = [];
-    if (profile != null) {
-      try {
-        schools = profile.earnings.schools as List;
-      } catch (_) {}
-    }
+  // ─── Attendance Section ───────────────────────────────────────────────────
+
+  Widget _buildAttendanceSection(TeacherProfileModel? profile) {
+    final schools = profile?.earnings.schools ?? <TeacherSchoolEarning>[];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -230,33 +220,23 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
             onCheckOut: () => _handleCheckOut('default'),
           )
         else
-          ...schools.map((school) {
-            String schoolId = 'default';
-            String schoolName = 'School';
-            try {
-              schoolId = school.schoolId as String;
-              schoolName = school.schoolName as String;
-            } catch (_) {
-              try {
-                schoolId = school.id as String;
-                schoolName = school.name as String;
-              } catch (_) {}
-            }
-            return _AttendanceCard(
-              schoolName: schoolName,
-              isCheckedIn: _checkedInMap[schoolId] ?? false,
-              isLoading: _loadingMap[schoolId] ?? false,
-              onCheckIn: () => _handleCheckIn(schoolId),
-              onCheckOut: () => _handleCheckOut(schoolId),
-            );
-          }),
+          ...schools.map(
+            (school) => _AttendanceCard(
+              schoolName: school.schoolName,
+              isCheckedIn: _checkedInMap[school.schoolId] ?? false,
+              isLoading: _loadingMap[school.schoolId] ?? false,
+              onCheckIn: () => _handleCheckIn(school.schoolId),
+              onCheckOut: () => _handleCheckOut(school.schoolId),
+            ),
+          ),
       ],
     );
   }
 
+  // ─── KYC Banner ───────────────────────────────────────────────────────────
+
   Widget _buildKycBanner(BuildContext context) {
     final kycAsync = ref.watch(kycStatusProvider);
-
     return kycAsync.when(
       loading: () => const SizedBox.shrink(),
       error:
@@ -273,7 +253,6 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
           ),
       data: (kyc) {
         if (kyc.isApproved) return const SizedBox.shrink();
-
         if (kyc.isPending) {
           return _kycBannerTile(
             context,
@@ -284,7 +263,6 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
             onTap: () => _showKycStatusDialog(context, kyc),
           );
         }
-
         if (kyc.isRejected) {
           return _kycBannerTile(
             context,
@@ -299,7 +277,6 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                 ),
           );
         }
-
         return _kycBannerTile(
           context,
           title: 'KYC Verification',
@@ -460,7 +437,6 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
     );
   }
 
-  // helper (add at class level or reuse existing _monthName)
   static String _monthName(int month) {
     const months = [
       'Jan',
@@ -479,20 +455,21 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
     return months[month - 1];
   }
 
-  Widget _buildGrid(BuildContext context, dynamic profile) {
+  // ─── Stats Grid ───────────────────────────────────────────────────────────
+
+  Widget _buildGrid(BuildContext context, TeacherProfileModel? profile) {
     final kycAsync = ref.watch(kycStatusProvider);
-    final int schoolCount = profile?.earnings.schools.length ?? 0;
+
+    final earnings = profile?.earnings;
+    final rating = profile?.rating;
+
+    final int schoolCount = earnings?.schools.length ?? 0;
     final int totalClasses =
-        profile == null
-            ? 0
-            : (profile.earnings.schools as List).fold<int>(
-              0,
-              (sum, s) => sum + (s.classesCount as int),
-            );
-    final double totalEarnings = profile?.earnings.totalEarnings ?? 0.0;
-    final double paid = profile?.earnings.totalPaid ?? 0.0;
-    final double pending = profile?.earnings.totalPending ?? 0.0;
-    final double projected = profile?.earnings.projectedEarnings ?? 0.0;
+        earnings?.schools.fold<int>(0, (sum, s) => sum + s.classesCount) ?? 0;
+    final double totalEarnings = earnings?.totalEarnings ?? 0.0;
+    final double paid = earnings?.totalPaid ?? 0.0;
+    final double pending = earnings?.totalPending ?? 0.0;
+    final double projected = earnings?.projectedEarnings ?? 0.0;
     final double paidPct =
         totalEarnings > 0 ? (paid / totalEarnings) * 100 : 0.0;
     final double pendingPct =
@@ -510,6 +487,7 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
         mainAxisSpacing: 10,
       ),
       children: [
+        // ── Card 1: Profile / KYC Status ────────────────────────────────
         Card(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(25),
@@ -533,8 +511,55 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                 ),
                 kycAsync.when(
                   loading: () => const SizedBox.shrink(),
-                  error: (_, __) => const SizedBox.shrink(),
+                  // KYC not found → show 0% ring + prompt
+                  error:
+                      (_, __) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CustomPaint(
+                              painter: const ProfileStatusCircularPercentage(
+                                percentage: 0,
+                              ),
+                              size: Size(
+                                context.screenWidth * 0.2,
+                                context.screenHeight * 0.08,
+                              ),
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 7,
+                                  height: 7,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.orange,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 5),
+                                const Text(
+                                  'Upload KYC',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.orange,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
                   data: (kyc) {
+                    final percentage =
+                        double.tryParse(
+                          (kyc.kycPercentage ?? '0').replaceAll('%', '').trim(),
+                        ) ??
+                        0.0;
+
                     final config = switch (kyc.status) {
                       'approved' => (
                         label: 'KYC Verified',
@@ -543,14 +568,15 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                       'rejected' => (label: 'KYC Rejected', color: Colors.red),
                       _ => (label: 'KYC Pending', color: Colors.blue),
                     };
+
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           CustomPaint(
-                            painter: const ProfileStatusCircularPercentage(
-                              percentage: 75,
+                            painter: ProfileStatusCircularPercentage(
+                              percentage: percentage,
                             ),
                             size: Size(
                               context.screenWidth * 0.2,
@@ -558,7 +584,6 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                             ),
                           ),
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
@@ -590,7 +615,8 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
             ),
           ),
         ),
-        // Assigned Schools
+
+        // ── Card 2: Assigned Schools ─────────────────────────────────────
         Card(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(25),
@@ -667,7 +693,7 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
           ),
         ),
 
-        // Payment (flip card)
+        // ── Card 3: Payment (flip card) ──────────────────────────────────
         GestureDetector(
           onTap: _togglePaymentCard,
           child: AnimatedBuilder(
@@ -700,9 +726,102 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
             },
           ),
         ),
+
+        // ── Card 4: Rating ───────────────────────────────────────────────
+        GestureDetector(
+          onTap:
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => TeacherReviewsScreen()),
+              ),
+          child: Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(25),
+            ),
+            color: Colors.white,
+            elevation: 5,
+            child: Padding(
+              padding: const EdgeInsets.only(
+                right: 15,
+                left: 15,
+                top: 10,
+                bottom: 10,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  FittedBox(
+                    child: Text(
+                      'My Rating',
+                      style: AppStyle.heading2.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontFamily: AppStyle.fontFamilySecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  if (noData || rating == null)
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          'No ratings yet',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade400,
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                      ),
+                    )
+                  else ...[
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          rating.averageRating.toStringAsFixed(1),
+                          style: const TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Inter',
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 4),
+                          child: Icon(
+                            Icons.star_rounded,
+                            color: Color(0xffF8BD00),
+                            size: 18,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    // Star row
+                    _StarRow(rating: rating.averageRating),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${rating.totalRatings} review${rating.totalRatings == 1 ? '' : 's'}',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontFamily: 'Inter',
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
+
+  // ─── Payment card faces ───────────────────────────────────────────────────
 
   Widget _paymentFront(
     BuildContext context,
@@ -740,6 +859,20 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                 child: Center(
                   child: Text(
                     'No payment\ndata yet',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey.shade400,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                ),
+              )
+            else if (paidPct == 0 && pendingPct == 0)
+              Expanded(
+                child: Center(
+                  child: Text(
+                    'No earnings\nrecorded yet',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 11,
@@ -844,8 +977,6 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
   Widget _amountRow(String label, double amount, Color color) => Padding(
     padding: const EdgeInsets.all(2.0),
     child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           label,
@@ -855,7 +986,7 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
             color: Colors.black87,
           ),
         ),
-        Spacer(),
+        const Spacer(),
         Text(
           'Rs. ${amount.toStringAsFixed(1)}',
           style: TextStyle(
@@ -881,6 +1012,34 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
     ],
   );
 }
+
+// ─── Star Row Widget ──────────────────────────────────────────────────────────
+
+class _StarRow extends StatelessWidget {
+  final double rating;
+  const _StarRow({required this.rating});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (i) {
+        final fill = (rating - i).clamp(0.0, 1.0);
+        return Icon(
+          fill >= 1.0
+              ? Icons.star_rounded
+              : fill >= 0.5
+              ? Icons.star_half_rounded
+              : Icons.star_outline_rounded,
+          color: const Color(0xffF8BD00),
+          size: 14,
+        );
+      }),
+    );
+  }
+}
+
+// ─── Attendance Card ──────────────────────────────────────────────────────────
 
 class _AttendanceCard extends StatelessWidget {
   final String schoolName;
@@ -929,7 +1088,6 @@ class _AttendanceCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // School header
             Row(
               children: [
                 Container(
@@ -1000,10 +1158,7 @@ class _AttendanceCard extends StatelessWidget {
                 ),
               ],
             ),
-
             const SizedBox(height: 16),
-
-            // Buttons
             isLoading
                 ? const SizedBox(
                   height: 44,
@@ -1020,7 +1175,6 @@ class _AttendanceCard extends StatelessWidget {
                 )
                 : Row(
                   children: [
-                    // Check In
                     Expanded(
                       child: GestureDetector(
                         onTap: isCheckedIn ? null : onCheckIn,
@@ -1081,7 +1235,6 @@ class _AttendanceCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 10),
-                    // Check Out
                     Expanded(
                       child: GestureDetector(
                         onTap: isCheckedIn ? onCheckOut : null,
@@ -1166,6 +1319,8 @@ class _AttendanceCard extends StatelessWidget {
     return months[month - 1];
   }
 }
+
+// ─── Skeleton Widgets ─────────────────────────────────────────────────────────
 
 class _AttendanceSkeleton extends StatelessWidget {
   const _AttendanceSkeleton();
@@ -1271,20 +1426,20 @@ class _SkeletonGridState extends State<_SkeletonGrid>
                 const SizedBox(height: 10),
                 Center(child: _box(width: 100, height: 18, radius: 9)),
               ] else ...[
+                // Rating skeleton: big number + star row
+                _box(width: 48, height: 24, radius: 6),
+                const SizedBox(height: 8),
                 Row(
-                  children: [
-                    _circle(48),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _box(width: 52, height: 8),
-                        const SizedBox(height: 8),
-                        _box(width: 52, height: 8),
-                      ],
+                  children: List.generate(
+                    5,
+                    (_) => Padding(
+                      padding: const EdgeInsets.only(right: 3),
+                      child: _circle(12),
                     ),
-                  ],
+                  ),
                 ),
+                const SizedBox(height: 8),
+                _box(width: 60, height: 9),
               ],
             ],
           ),
@@ -1312,6 +1467,8 @@ class _SkeletonGridState extends State<_SkeletonGrid>
     ),
   );
 }
+
+// ─── Custom Painters ──────────────────────────────────────────────────────────
 
 class ProfileStatusCircularPercentage extends CustomPainter {
   final double percentage;

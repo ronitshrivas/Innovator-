@@ -1,41 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/Innovator/widget/Custom_refresh_Indicator.dart';
-import 'package:innovator/elearning/model/notification_model.dart';
-import 'package:innovator/elearning/provider/notificationProvider.dart';
+import 'package:innovator/KMS/model/notification_model.dart';
+import 'package:innovator/KMS/provider/notificationProvider.dart'; 
 
-class NotificationScreen extends ConsumerStatefulWidget {
-  const NotificationScreen({super.key});
+class KMSNotificationScreen extends ConsumerStatefulWidget {
+  const KMSNotificationScreen({super.key});
 
   @override
-  ConsumerState<NotificationScreen> createState() => _NotificationScreenState();
+  ConsumerState<KMSNotificationScreen> createState() =>
+      _KMSNotificationScreenState();
 }
 
-class _NotificationScreenState extends ConsumerState<NotificationScreen> {
+class _KMSNotificationScreenState
+    extends ConsumerState<KMSNotificationScreen> {
   @override
   void initState() {
     super.initState();
-    ref.read(elearningNotificationListProvider.notifier).refresh();
+    ref.read(kmsNotificationListProvider.notifier).refresh();
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(elearningNotificationListProvider);
+    final state = ref.watch(kmsNotificationListProvider);
     final notifications = state.notifications;
 
     return Material(
       child: CustomRefreshIndicator(
-        onRefresh: () => ref.read(elearningNotificationListProvider.notifier).refresh(),
+        onRefresh:
+            () =>
+                ref.read(kmsNotificationListProvider.notifier).refresh(),
         child: Scaffold(
           backgroundColor: Colors.white,
           appBar: AppBar(
             elevation: 0,
-            // scrolledUnderElevation: 0,
-            backgroundColor: Colors.transparent,
-            // title: const Text(
-            //   'Notifications',
-            //   style: TextStyle(color: Colors.black87),
-            // ),
+            backgroundColor: Colors.white,
+            title: const Text(
+              'Notifications',
+              style: TextStyle(color: Colors.black87),
+            ),
             leading: IconButton(
               onPressed: () => Navigator.of(context).pop(),
               icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),
@@ -53,7 +56,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                     ],
                 onSelected: (value) {
                   if (value == 'mark_all_read') {
-                    ref.read(elearningMarkAllAsReadProvider)();
+                    ref.read(kmsMarkAllAsReadProvider)();
                   }
                 },
               ),
@@ -71,7 +74,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
 
 class _NotificationList extends StatelessWidget {
   const _NotificationList({required this.notifications});
-  final List<ElearningNotificationModel> notifications;
+  final List<KMSNotificationModel> notifications;
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +91,7 @@ class _NotificationList extends StatelessWidget {
 
 class _NotificationTile extends ConsumerStatefulWidget {
   const _NotificationTile({required this.notification});
-  final ElearningNotificationModel notification;
+  final KMSNotificationModel notification;
 
   @override
   ConsumerState<_NotificationTile> createState() => _NotificationTileState();
@@ -163,7 +166,14 @@ class _NotificationTileState extends ConsumerState<_NotificationTile> {
         ],
       ),
       onTap: () {
-        ref.read(elearningMarkAsReadProvider(widget.notification.id));
+        ref.read(kmsMarkAsReadProvider(widget.notification.id));
+        // Navigator.push(
+        //   context,
+        //   MaterialPageRoute(
+        //     builder:
+        //         (_) => ProductDetailPage(productId: widget.notification.data.productId),
+        //   ),
+        // );
       },
     );
   }

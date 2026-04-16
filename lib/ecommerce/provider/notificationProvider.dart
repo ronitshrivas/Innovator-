@@ -1,35 +1,38 @@
 import 'dart:async';
 import 'dart:developer' as developer;
-
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:innovator/elearning/api_calling_service/notification_service.dart';
-import 'package:innovator/elearning/model/notification_model.dart';
+import 'package:innovator/ecommerce/api_calling_service/notification_service.dart';
+import 'package:innovator/ecommerce/model/notification_model.dart';
 
-final elearningNotificationServiceProvider = Provider<ElearningNotificationService>(
-  (ref) => ElearningNotificationService(),
-);
+final ecommerceNotificationServiceProvider =
+    Provider<EcommerceNotificationService>(
+      (ref) => EcommerceNotificationService(),
+    );
 
-class ElearningNotificationState {
-  final List<ElearningNotificationModel> notifications;
-  const ElearningNotificationState({required this.notifications});
+class EcommerceNotificationState {
+  final List<EcommerceNotificationModel> notifications;
+  const EcommerceNotificationState({required this.notifications});
 
-  ElearningNotificationState copyWith({List<ElearningNotificationModel>? notifications}) {
-    return ElearningNotificationState(
+  EcommerceNotificationState copyWith({
+    List<EcommerceNotificationModel>? notifications,
+  }) {
+    return EcommerceNotificationState(
       notifications: notifications ?? this.notifications,
     );
   }
 }
 
-class ElearningNotificationNotifier extends StateNotifier<ElearningNotificationState> {
-  final ElearningNotificationService service;
+class EcommerceNotificcationNotifier
+    extends StateNotifier<EcommerceNotificationState> {
+  final EcommerceNotificationService service;
   Timer? _timer;
 
   static final Set<String> _seenIds = {};
-  static final List<String> _enrollmentMessages = [];
+  static final List<String> _ecommerceMessages = [];
 
-  ElearningNotificationNotifier(this.service)
-    : super(const ElearningNotificationState(notifications: []));
+  EcommerceNotificcationNotifier(this.service)
+    : super(const EcommerceNotificationState(notifications: []));
 
   final _plugin = FlutterLocalNotificationsPlugin();
 
@@ -95,16 +98,16 @@ class ElearningNotificationNotifier extends StateNotifier<ElearningNotificationS
     }
   }
 
-  void _showSystemNotification(ElearningNotificationModel n) {
-    const groupKey = 'course_enrollment_group';
+  void _showSystemNotification(EcommerceNotificationModel n) {
+    const groupKey = 'product_group';
 
-    _enrollmentMessages.add(n.message);
+    _ecommerceMessages.add(n.message);
 
     final inboxStyle = InboxStyleInformation(
-      _enrollmentMessages,
-      contentTitle: 'Course Enrollments',
+      _ecommerceMessages,
+      contentTitle: 'Product Notifications',
       summaryText:
-          '${_enrollmentMessages.length} enrollment${_enrollmentMessages.length > 1 ? 's' : ''}',
+          '${_ecommerceMessages.length} notification${_ecommerceMessages.length > 1 ? 's' : ''}',
     );
 
     final androidDetails = AndroidNotificationDetails(
@@ -133,47 +136,54 @@ class ElearningNotificationNotifier extends StateNotifier<ElearningNotificationS
       groupKey: groupKey,
       setAsGroupSummary: true,
       styleInformation: InboxStyleInformation(
-        _enrollmentMessages,
+        _ecommerceMessages,
         summaryText:
-            '${_enrollmentMessages.length} enrollment${_enrollmentMessages.length > 1 ? 's' : ''}',
+            '${_ecommerceMessages.length} notification${_ecommerceMessages.length > 1 ? 's' : ''}',
       ),
     );
 
     _plugin.show(
       0,
-      'Course Enrollments',
-      '${_enrollmentMessages.length} new enrollment${_enrollmentMessages.length > 1 ? 's' : ''}',
+      'Product Notifications',
+      '${_ecommerceMessages.length} new notification${_ecommerceMessages.length > 1 ? 's' : ''}',
       NotificationDetails(android: summaryDetails),
     );
 
     developer.log(
-      'Notification shown: ${n.title} | type: ${n.notificationType} | course: ${n.data.courseId}',
+      'Notification shown: ${n.title} | type: ${n.notificationType} | product: ${n.data.productId}| category: ${n.data.categroy}  ',
     );
   }
 }
 
-final elearningNotificationListProvider =
-    StateNotifierProvider<ElearningNotificationNotifier, ElearningNotificationState>((ref) {
-      final service = ref.watch(elearningNotificationServiceProvider);
-      final notifier = ElearningNotificationNotifier(service);
-      notifier.init();
-      return notifier;
-    });
+final ecommerceNotificationListProvider = StateNotifierProvider<
+  EcommerceNotificcationNotifier,
+  EcommerceNotificationState
+>((ref) {
+  final service = ref.watch(ecommerceNotificationServiceProvider);
+  final notifier = EcommerceNotificcationNotifier(service);
+  notifier.init();
+  return notifier;
+});
 
-final elearningUnreadCountProvider = Provider<int>((ref) {
-  final state = ref.watch(elearningNotificationListProvider);
+final ecommerceUnreadCountProvider = Provider<int>((ref) {
+  final state = ref.watch(ecommerceNotificationListProvider);
   return state.notifications.where((n) => !n.isRead).length;
 });
 
-final elearningMarkAsReadProvider = Provider.family((ref, String notificationId) async {
-  await ref.read(elearningNotificationServiceProvider).markAsRead(notificationId);
-  await ref.read(elearningNotificationListProvider.notifier).refresh();
+final ecommerceMarkAsReadProvider = Provider.family((
+  ref,
+  String notificationId,
+) async {
+  await ref
+      .read(ecommerceNotificationServiceProvider)
+      .markAsRead(notificationId);
+  await ref.read(ecommerceNotificationListProvider.notifier).refresh();
 });
 
-final elearningMarkAllAsReadProvider = Provider((ref) {
-  final service = ref.watch(elearningNotificationServiceProvider);
+final ecommerceMarkAllAsReadProvider = Provider((ref) {
+  final service = ref.watch(ecommerceNotificationServiceProvider);
   return () async {
     await service.markAllAsRead();
-    await ref.read(elearningNotificationListProvider.notifier).refresh();
+    await ref.read(ecommerceNotificationListProvider.notifier).refresh();
   };
 });

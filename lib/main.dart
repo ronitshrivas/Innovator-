@@ -17,6 +17,7 @@ import 'package:innovator/KMS/screens/auth/login_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/admin_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/teacher_dashboard_screen.dart';
 import 'package:innovator/KMS/screens/student/student_attendance_screen.dart';
+import 'package:innovator/ecommerce/provider/notificationProvider.dart';
 import 'dart:developer' as developer;
 import 'package:innovator/ecommerce/screens/Shop/Shop_Page.dart';
 import 'package:innovator/elearning/provider/notificationProvider.dart';
@@ -83,7 +84,12 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
       _setupFCM();
       // ref.read(notificationProvider.notifier).startPolling();
       final fcmToken = await FirebaseMessaging.instance.getToken();
-      ref.read(notificationServiceProvider).registerFcmToken(fcmToken ?? '');
+      ref
+          .read(elearningNotificationServiceProvider)
+          .registerFcmToken(fcmToken ?? '');
+      ref
+          .read(ecommerceNotificationServiceProvider)
+          .registerFcmToken(fcmToken ?? '');
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(globalChatListenerProvider);
@@ -165,7 +171,7 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
       // if (fcmToken != null) {
       //   await Future.wait([
       //     FCMService().registerToken(),
-      //     ref.read(notificationServiceProvider).registerFcmToken(fcmToken),
+      //     ref.read(elearningNotificationServiceProvider).registerFcmToken(fcmToken),
       //   ]);
       // }
       final accessToken = AppData().accessToken;
@@ -174,7 +180,12 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
         if (fcmToken != null) {
           await Future.wait([
             FCMService().registerToken(),
-            ref.read(notificationServiceProvider).registerFcmToken(fcmToken),
+            ref
+                .read(elearningNotificationServiceProvider)
+                .registerFcmToken(fcmToken),
+            ref
+                .read(ecommerceNotificationServiceProvider)
+                .registerFcmToken(fcmToken),
           ]);
         }
       } else {
@@ -184,13 +195,17 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
         developer.log('FCM Token refreshed: $newToken');
         await Future.wait([
           FCMService().registerToken(),
-          ref.read(notificationServiceProvider).registerFcmToken(newToken),
+          ref
+              .read(elearningNotificationServiceProvider)
+              .registerFcmToken(newToken),
+          ref
+              .read(ecommerceNotificationServiceProvider)
+              .registerFcmToken(newToken),
         ]);
       });
 
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         _showForegroundNotification(message);
-        ref.read(notificationListProvider.notifier).refresh();
       });
 
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
@@ -307,6 +322,7 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
       title: 'Innovator',
       theme: _buildAppTheme(),
       debugShowCheckedModeBanner: false,
+
       getPages: [GetPage(name: '/shop', page: () => const ShopPage())],
     );
   }

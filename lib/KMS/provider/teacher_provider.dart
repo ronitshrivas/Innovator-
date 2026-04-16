@@ -4,7 +4,7 @@ import 'package:innovator/KMS/api_calling_services.dart/teacher_service.dart';
 import 'package:innovator/KMS/core/constants/service/token_service.dart';
 import 'package:innovator/KMS/model/teacher_model/student_attendance_model.dart';
 import 'package:innovator/KMS/model/teacher_model/student_model.dart';
-import 'package:innovator/KMS/model/teacher_model/teacher-profile.dart';
+import 'package:innovator/KMS/model/teacher_model/teacher_profile_model.dart';
 import 'package:innovator/KMS/model/teacher_model/teacher_attendance_model.dart';
 import 'package:innovator/KMS/model/teacher_model/teacher_kyc_model.dart';
 import 'package:innovator/KMS/model/teacher_model/teacher_salary_slips.dart';
@@ -96,12 +96,9 @@ final teacherAttendanceProvider = FutureProvider.family<
       ),
 );
 
+final csvUploadProvider =
+    FutureProvider.family<Map<String, dynamic>, File>((ref, file) {
+  return ref.read(teacherServiceProvider).csvUpload(file: file);
+});
 
-//can also be used this way above is checking for the token 
-// final teacherProfileProvider = FutureProvider<TeacherProfileModel>((ref) {
-//   return ref.watch(teacherServiceProvider).teacherProfile();
-// });
-
-// final kycStatusProvider = FutureProvider<KycModel>((ref) {
-//   return ref.watch(teacherServiceProvider).checkKycStatus();
-// });
+ 

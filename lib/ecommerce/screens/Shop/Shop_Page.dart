@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/Innovator/widget/Custom_refresh_Indicator.dart';
+import 'package:innovator/ecommerce/provider/notificationProvider.dart';
 import 'package:innovator/ecommerce/screens/Shop/cart_screen.dart';
 import 'package:innovator/ecommerce/screens/Shop/Product_detail_Page.dart';
+import 'package:innovator/ecommerce/screens/notifications_screen.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:innovator/ecommerce/model/product_model.dart';
 import 'package:innovator/ecommerce/provider/product_provider.dart';
@@ -406,6 +408,32 @@ class _ShopPageState extends ConsumerState<ShopPage> {
                           ),
                         ),
                     ],
+                  ),
+                ),
+                InkWell(
+                  onTap:
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const EcommerceNotificationScreen(),
+                        ),
+                      ),
+                  child: Consumer(
+                    builder: (context, ref, _) {
+                      final unreadAsync = ref.watch(
+                        ecommerceUnreadCountProvider,
+                      );
+                      final count = unreadAsync;
+                      return count > 0
+                          ? Badge.count(
+                            count: count,
+                            child: const Icon(
+                              Icons.notifications_outlined,
+                              size: 25,
+                            ),
+                          )
+                          : const Icon(Icons.notifications_outlined, size: 25);
+                    },
                   ),
                 ),
               ],

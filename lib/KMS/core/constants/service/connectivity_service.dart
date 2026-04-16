@@ -1,6 +1,5 @@
- import 'dart:async';
+import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter/material.dart';
 
 class ConnectivityService {
   static final ConnectivityService _instance = ConnectivityService._internal();
@@ -17,7 +16,6 @@ class ConnectivityService {
 
   bool _isConnected = true;
   bool get isConnected => _isConnected;
-
   Future<void> initialize() async {
     _isConnected = await checkConnection();
     

@@ -35,6 +35,8 @@ class ApiConstants {
     final query = params.isEmpty ? '' : '?${params.join('&')}';
     return '$baseUrl/teacher/attendance/$query';
   }
+
+  static String get csvUpload => '$baseUrl/students/csv-upload/';
   //admin endpoints
 
   // Coordinator endpoints
@@ -48,6 +50,8 @@ class ApiConstants {
   static String get getTeacherNotesVerification =>
       '$baseUrl/coordinator/teaching-notes/';
   static String get teacherNotes => '$baseUrl/coordinator/teaching-notes/';
+  static String get teacherRating => '$baseUrl/coordinator/teacher-rating/';
+  
 
   //student endpoints
   static String get schoolList => '$baseUrl/public/registration-metadata/';
@@ -58,6 +62,14 @@ class ApiConstants {
   static String postAttendanceApprove(String attendanceId) =>
       '$baseUrl/attendance/approve/$attendanceId/';
   static String get postAttendanceUpload => '$baseUrl/attendance/upload/';
+
+  // notification endpoints
+  static String fcmTokens = '$baseUrl/fcm-tokens/';
+  static String notificationsList = '$baseUrl/notifications/';
+  static String markNotificationAsRead(String notificationId) =>
+      '$baseUrl/notifications/$notificationId/mark-read/';
+  static String markAllNotificationsAsRead =
+      '$baseUrl/notifications/mark-all-read/';
 
   // Timeout configurations
   static const Duration defaultTimeout = Duration(seconds: 30);
