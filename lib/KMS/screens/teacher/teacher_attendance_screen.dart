@@ -10,10 +10,10 @@ class TeacherAttendanceScreen extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<TeacherAttendanceScreen> createState() =>
-      _TeacherAttendanceScreenState();
+      TeacherAttendanceScreenState();
 }
 
-class _TeacherAttendanceScreenState
+class TeacherAttendanceScreenState
     extends ConsumerState<TeacherAttendanceScreen> {
   TeacherSchoolEarning? _selectedSchool;
   DateTime? _selectedDate;
@@ -90,7 +90,7 @@ class _TeacherAttendanceScreenState
 
           return Column(
             children: [
-              _FilterBar(
+              FilterBar(
                 schools: schools,
                 selectedSchool: _selectedSchool,
                 dateLabel: _dateLabel,
@@ -102,7 +102,7 @@ class _TeacherAttendanceScreenState
                 onClearSchool: () => setState(() => _selectedSchool = null),
               ),
               Expanded(
-                child: _RecordsBody(
+                child: RecordsBody(
                   school: _selectedSchool?.schoolName,
                   date: _apiDate,
                 ),
@@ -117,7 +117,7 @@ class _TeacherAttendanceScreenState
 
 // Filter Bar
 
-class _FilterBar extends StatelessWidget {
+class FilterBar extends StatelessWidget {
   final List<TeacherSchoolEarning> schools;
   final TeacherSchoolEarning? selectedSchool;
   final String dateLabel;
@@ -128,7 +128,7 @@ class _FilterBar extends StatelessWidget {
   final VoidCallback onClearDate;
   final VoidCallback onClearSchool;
 
-  const _FilterBar({
+  const FilterBar({
     required this.schools,
     required this.selectedSchool,
     required this.dateLabel,
@@ -305,37 +305,35 @@ class _FilterBar extends StatelessWidget {
   }
 }
 
-// Records Body
-// Isolated ConsumerWidget — rebuilds only when school/date changes
+ 
 
-class _RecordsBody extends ConsumerWidget {
-  final String? school; // null → no school filter
-  final String? date; // null → no date filter
+class RecordsBody extends ConsumerWidget {
+  final String? school; 
+  final String? date;  
 
-  const _RecordsBody({this.school, this.date});
+  const RecordsBody({this.school, this.date});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Using Dart record as family key — (school: null, date: null) = fetch all
-    final filter = (school: school, date: date);
+     final filter = (school: school, date: date);
     final attendanceAsync = ref.watch(teacherAttendanceProvider(filter));
 
     return RefreshIndicator(
       color: AppStyle.primaryColor,
       onRefresh: () async => ref.invalidate(teacherAttendanceProvider(filter)),
       child: attendanceAsync.when(
-        loading: () => _buildSkeleton(),
+        loading: () => buildSkeleton(),
         error: (e, _) => _ErrorState(message: e.toString()),
         data:
             (records) =>
                 records.isEmpty
                     ? _EmptyState(hasFilters: school != null || date != null)
-                    : _buildList(records),
+                    : buildList(records),
       ),
     );
   }
 
-  Widget _buildList(List<TeacherAttendanceRecord> records) {
+  Widget buildList(List<TeacherAttendanceRecord> records) {
     return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
@@ -343,7 +341,7 @@ class _RecordsBody extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
-              _SummaryRow(records: records),
+              SummaryRow(records: records),
               const SizedBox(height: 16),
               Text(
                 '${records.length} Record${records.length != 1 ? 's' : ''}',
@@ -355,7 +353,7 @@ class _RecordsBody extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 10),
-              ...records.map((r) => _RecordCard(record: r)),
+              ...records.map((r) => RecordCard(record: r)),
             ]),
           ),
         ),
@@ -363,7 +361,7 @@ class _RecordsBody extends ConsumerWidget {
     );
   }
 
-  Widget _buildSkeleton() {
+  Widget buildSkeleton() {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -384,9 +382,9 @@ class _RecordsBody extends ConsumerWidget {
 
 // Summary Row
 
-class _SummaryRow extends StatelessWidget {
+class SummaryRow extends StatelessWidget {
   final List<TeacherAttendanceRecord> records;
-  const _SummaryRow({required this.records});
+  const SummaryRow({required this.records});
 
   @override
   Widget build(BuildContext context) {
@@ -396,7 +394,7 @@ class _SummaryRow extends StatelessWidget {
 
     return Row(
       children: [
-        _SummaryChip(
+        SummaryChip(
           label: 'Pending',
           count: pending,
           color: const Color(0xffF8BD00),
@@ -404,7 +402,7 @@ class _SummaryRow extends StatelessWidget {
           icon: Icons.hourglass_top_rounded,
         ),
         const SizedBox(width: 10),
-        _SummaryChip(
+        SummaryChip(
           label: 'Approved',
           count: approved,
           color: AppStyle.primaryColor,
@@ -412,7 +410,7 @@ class _SummaryRow extends StatelessWidget {
           icon: Icons.check_circle_rounded,
         ),
         const SizedBox(width: 10),
-        _SummaryChip(
+        SummaryChip(
           label: 'Rejected',
           count: rejected,
           color: Colors.red.shade400,
@@ -424,13 +422,13 @@ class _SummaryRow extends StatelessWidget {
   }
 }
 
-class _SummaryChip extends StatelessWidget {
+class SummaryChip extends StatelessWidget {
   final String label;
   final int count;
   final Color color, bg;
   final IconData icon;
 
-  const _SummaryChip({
+  const SummaryChip({
     required this.label,
     required this.count,
     required this.color,
@@ -483,9 +481,9 @@ class _SummaryChip extends StatelessWidget {
 
 // Record Card
 
-class _RecordCard extends StatelessWidget {
+class RecordCard extends StatelessWidget {
   final TeacherAttendanceRecord record;
-  const _RecordCard({required this.record});
+  const RecordCard({required this.record});
 
   @override
   Widget build(BuildContext context) {

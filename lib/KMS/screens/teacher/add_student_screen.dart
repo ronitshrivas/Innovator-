@@ -46,20 +46,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
     _fileName = null;
   });
 
-  // Future<void> _upload() async {
-  //   if (_file == null) {}
-  //   setState(() => _isUploading = true);
-  //   try {
-  //     await ref.read(csvUploadProvider(_file!).future);
-  //     if (!mounted) return;
-
-  //     _clearFile();
-  //   } catch (e) {
-  //     if (!mounted) return;
-  //   } finally {
-  //     if (mounted) setState(() => _isUploading = false);
-  //   }
-  // }
+ 
   
   Future<void> _upload() async {
   if (_file == null) return;

@@ -35,9 +35,9 @@ class TeacherReviewsScreen extends ConsumerWidget {
               ),
               flexibleSpace: FlexibleSpaceBar(
                 background: profileAsync.when(
-                  loading: () => const _HeaderSkeleton(),
-                  error: (_, __) => const _HeaderSkeleton(),
-                  data: (profile) => _RatingHeader(rating: profile.rating),
+                  loading: () => const HeaderSkeleton(),
+                  error: (_, __) => const HeaderSkeleton(),
+                  data: (profile) => RatingHeader(rating: profile.rating),
                 ),
               ),
               title: const Text(
@@ -89,14 +89,14 @@ class TeacherReviewsScreen extends ConsumerWidget {
                 final rating = profile.rating;
 
                 if (rating.totalRatings == 0) {
-                  return const SliverFillRemaining(child: _EmptyRatings());
+                  return const SliverFillRemaining(child: EmptyRatings());
                 }
 
                 return SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
-                      _StarBreakdownCard(rating: rating),
+                      StarBreakdownCard(rating: rating),
                       const SizedBox(height: 20),
 
                       Row(
@@ -137,7 +137,7 @@ class TeacherReviewsScreen extends ConsumerWidget {
                       const SizedBox(height: 14),
 
                       ...rating.schools.map(
-                        (school) => _SchoolRatingCard(school: school),
+                        (school) => SchoolRatingCard(school: school),
                       ),
                     ]),
                   ),
@@ -151,9 +151,9 @@ class TeacherReviewsScreen extends ConsumerWidget {
   }
 }
 
-class _RatingHeader extends StatelessWidget {
+class RatingHeader extends StatelessWidget {
   final TeacherRating rating;
-  const _RatingHeader({required this.rating});
+  const RatingHeader({required this.rating});
 
   @override
   Widget build(BuildContext context) {
@@ -184,7 +184,7 @@ class _RatingHeader extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            _LargeStarRow(rating: rating.averageRating),
+            LargeStarRow(rating: rating.averageRating),
             const SizedBox(height: 8),
             Text(
               '${rating.totalRatings} review${rating.totalRatings == 1 ? '' : 's'} '
@@ -202,9 +202,9 @@ class _RatingHeader extends StatelessWidget {
   }
 }
 
-class _StarBreakdownCard extends StatelessWidget {
+class StarBreakdownCard extends StatelessWidget {
   final TeacherRating rating;
-  const _StarBreakdownCard({required this.rating});
+  const StarBreakdownCard({required this.rating});
 
   @override
   Widget build(BuildContext context) {
@@ -245,7 +245,7 @@ class _StarBreakdownCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 6),
-              _LargeStarRow(rating: rating.averageRating, size: 16),
+              LargeStarRow(rating: rating.averageRating, size: 16),
               const SizedBox(height: 4),
               Text(
                 '${rating.totalRatings} total',
@@ -322,9 +322,9 @@ class _StarBreakdownCard extends StatelessWidget {
   }
 }
 
-class _SchoolRatingCard extends StatelessWidget {
+class SchoolRatingCard extends StatelessWidget {
   final TeacherSchoolRating school;
-  const _SchoolRatingCard({required this.school});
+  const SchoolRatingCard({required this.school});
 
   @override
   Widget build(BuildContext context) {
@@ -406,7 +406,7 @@ class _SchoolRatingCard extends StatelessWidget {
                         color: Colors.black87,
                       ),
                     ),
-                    _MiniStarRow(rating: school.averageRating),
+                    MiniStarRow(rating: school.averageRating),
                   ],
                 ),
               ],
@@ -624,8 +624,8 @@ class _SchoolRatingCard extends StatelessWidget {
   }
 }
 
-class _EmptyRatings extends StatelessWidget {
-  const _EmptyRatings();
+class EmptyRatings extends StatelessWidget {
+  const EmptyRatings();
 
   @override
   Widget build(BuildContext context) {
@@ -663,8 +663,8 @@ class _EmptyRatings extends StatelessWidget {
   }
 }
 
-class _HeaderSkeleton extends StatelessWidget {
-  const _HeaderSkeleton();
+class HeaderSkeleton extends StatelessWidget {
+  const HeaderSkeleton();
 
   @override
   Widget build(BuildContext context) {
@@ -708,10 +708,10 @@ class _HeaderSkeleton extends StatelessWidget {
   }
 }
 
-class _LargeStarRow extends StatelessWidget {
+class LargeStarRow extends StatelessWidget {
   final double rating;
   final double size;
-  const _LargeStarRow({required this.rating, this.size = 22});
+  const LargeStarRow({required this.rating, this.size = 22});
 
   @override
   Widget build(BuildContext context) {
@@ -733,9 +733,9 @@ class _LargeStarRow extends StatelessWidget {
   }
 }
 
-class _MiniStarRow extends StatelessWidget {
+class MiniStarRow extends StatelessWidget {
   final double rating;
-  const _MiniStarRow({required this.rating});
+  const MiniStarRow({required this.rating});
 
   @override
   Widget build(BuildContext context) {

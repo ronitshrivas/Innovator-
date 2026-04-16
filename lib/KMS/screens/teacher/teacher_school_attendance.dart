@@ -5,7 +5,7 @@ import 'package:innovator/KMS/model/teacher_model/student_model.dart';
 import 'package:innovator/KMS/model/teacher_model/teacher_profile_model.dart';
 import 'package:innovator/KMS/provider/teacher_provider.dart';
 
-// Screen 1: School List 
+// Screen 1: School List
 
 class TeacherSchoolAttendanceScreen extends ConsumerWidget {
   const TeacherSchoolAttendanceScreen({super.key});
@@ -81,8 +81,7 @@ class TeacherSchoolAttendanceScreen extends ConsumerWidget {
                   return ListView.builder(
                     padding: const EdgeInsets.all(20),
                     itemCount: schools.length,
-                    itemBuilder:
-                        (context, i) => _SchoolCard(school: schools[i]),
+                    itemBuilder: (context, i) => SchoolCard(school: schools[i]),
                   );
                 },
               ),
@@ -94,9 +93,9 @@ class TeacherSchoolAttendanceScreen extends ConsumerWidget {
   }
 }
 
-class _SchoolCard extends StatelessWidget {
+class SchoolCard extends StatelessWidget {
   final TeacherSchoolEarning school;
-  const _SchoolCard({required this.school});
+  const SchoolCard({required this.school});
 
   @override
   Widget build(BuildContext context) {
@@ -372,7 +371,7 @@ class ClassSelectionScreen extends ConsumerWidget {
                           const SizedBox(height: 6),
                           GestureDetector(
                             onTap:
-                                () => _showAddStudentSheet(
+                                () => addStudentSheet(
                                   context,
                                   ref,
                                   schoolId: school.schoolId,
@@ -425,7 +424,7 @@ class ClassSelectionScreen extends ConsumerWidget {
     );
   }
 
-  void _showAddStudentSheet(
+  void addStudentSheet(
     BuildContext context,
     WidgetRef ref, {
     required String schoolId,
@@ -471,7 +470,6 @@ class _AttendanceMarkingScreenState
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _homeworkController = TextEditingController();
 
-  /// 'absent' | 'present' | 'present_with_homework'
   final Map<String, String> _statusMap = {};
 
   bool _isSubmitting = false;
@@ -597,7 +595,7 @@ class _AttendanceMarkingScreenState
         ),
         actions: [
           IconButton(
-            onPressed: () => _showAddStudentSheet(context),
+            onPressed: () => addStudentSheet(context),
             icon: const Icon(Icons.person_add_rounded, color: Colors.white),
             tooltip: 'Add Student',
           ),
@@ -605,11 +603,11 @@ class _AttendanceMarkingScreenState
       ),
       body: studentsAsync.when(
         loading:
-            () => _whiteBody(
+            () => whiteBody(
               child: const Center(child: CircularProgressIndicator()),
             ),
         error:
-            (e, _) => _whiteBody(
+            (e, _) => whiteBody(
               child: Center(
                 child: Text(
                   'Error loading students: $e',
@@ -637,7 +635,7 @@ class _AttendanceMarkingScreenState
                   .where((v) => v == 'present_with_homework')
                   .length;
 
-          return _whiteBody(
+          return whiteBody(
             child: Column(
               children: [
                 // Stats Bar
@@ -661,14 +659,14 @@ class _AttendanceMarkingScreenState
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _statItem('Total', '${students.length}', Colors.black87),
-                      _statItem(
+                      statItem('Total', '${students.length}', Colors.black87),
+                      statItem(
                         'Present',
                         '$presentCount',
                         Colors.green.shade600,
                       ),
-                      _statItem('Absent', '$absentCount', Colors.red.shade400),
-                      _statItem('With HW', '$pwCount', Colors.orange.shade600),
+                      statItem('Absent', '$absentCount', Colors.red.shade400),
+                      statItem('With HW', '$pwCount', Colors.orange.shade600),
                     ],
                   ),
                 ),
@@ -697,8 +695,7 @@ class _AttendanceMarkingScreenState
                                 ),
                                 const SizedBox(height: 8),
                                 TextButton.icon(
-                                  onPressed:
-                                      () => _showAddStudentSheet(context),
+                                  onPressed: () => addStudentSheet(context),
                                   icon: Icon(
                                     Icons.person_add_rounded,
                                     color: AppStyle.primaryColor,
@@ -866,7 +863,7 @@ class _AttendanceMarkingScreenState
     );
   }
 
-  Widget _whiteBody({required Widget child}) => Container(
+  Widget whiteBody({required Widget child}) => Container(
     decoration: const BoxDecoration(
       color: Color(0xFFF5F7FA),
       borderRadius: BorderRadius.only(
@@ -877,7 +874,7 @@ class _AttendanceMarkingScreenState
     child: child,
   );
 
-  Widget _statItem(String label, String value, Color color) => Column(
+  Widget statItem(String label, String value, Color color) => Column(
     children: [
       Text(
         value,
@@ -899,7 +896,7 @@ class _AttendanceMarkingScreenState
     ],
   );
 
-  void _showAddStudentSheet(BuildContext context) {
+  void addStudentSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -920,7 +917,6 @@ class _AttendanceMarkingScreenState
 class _StudentAttendanceTile extends StatelessWidget {
   final StudentModel student;
 
-  /// 'absent' | 'present' | 'present_with_homework'
   final String status;
   final ValueChanged<String> onStatusChanged;
 
