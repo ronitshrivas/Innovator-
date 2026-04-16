@@ -30,11 +30,12 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
           backgroundColor: Colors.white,
           appBar: AppBar(
             elevation: 0,
-            backgroundColor: Colors.white,
-            title: const Text(
-              'Notifications',
-              style: TextStyle(color: Colors.black87),
-            ),
+            // scrolledUnderElevation: 0,
+            backgroundColor: Colors.transparent,
+            // title: const Text(
+            //   'Notifications',
+            //   style: TextStyle(color: Colors.black87),
+            // ),
             leading: IconButton(
               onPressed: () => Navigator.of(context).pop(),
               icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),

@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:developer';
-import 'dart:io'; 
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -9,10 +9,10 @@ import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Login.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
-import 'package:innovator/Innovator/models/Feed_Content_Model.dart'; 
+import 'package:innovator/Innovator/models/Feed_Content_Model.dart';
 import 'package:innovator/Innovator/screens/Feed/Inner_Homepage.dart';
 import 'package:innovator/Innovator/screens/Feed/Video_Feed.dart'
-    show VideoFeedPage;
+    show ReelsScreen, VideoFeedPage;
 import 'package:innovator/Innovator/screens/Follow/follow_Button.dart';
 import 'package:innovator/Innovator/screens/Profile/Edit_Profile.dart';
 import 'package:innovator/Innovator/screens/SHow_Specific_Profile/Show_Specific_Profile.dart';
@@ -858,7 +858,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
         //     ),
         //   ],
         // ),
-
         const SizedBox(height: 30),
 
         // ── Posts header ─────────────────────────────────────────────────────
@@ -875,7 +874,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                 onPressed:
                     () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => VideoFeedPage()),
+                      MaterialPageRoute(builder: (_) => ReelsScreen()),
                     ),
                 label: const Text(
                   'Reels',

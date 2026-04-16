@@ -26,13 +26,13 @@ class AuthInterceptor extends Interceptor {
     handler.next(options);
   }
 
-//  On Response
+  //  On Response
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
     handler.next(response);
   }
 
-// On Error
+  // On Error
   @override
   Future<void> onError(
     DioException err,
@@ -44,23 +44,20 @@ class AuthInterceptor extends Interceptor {
       try {
         final newToken = await _tryRefreshToken();
 
-        if (newToken != null) { 
+        if (newToken != null) {
           await _appData.saveAccessToken(newToken);
 
-         
-          final retryOptions = err.requestOptions
-            ..headers['Authorization'] = 'Bearer $newToken';
+          final retryOptions =
+              err.requestOptions..headers['Authorization'] = 'Bearer $newToken';
 
-         
-          final retryResponse = await _dio.fetch(retryOptions); 
+          final retryResponse = await _dio.fetch(retryOptions);
           handler.resolve(retryResponse);
           return;
         }
-      } catch (_) { 
+      } catch (_) {
       } finally {
         _isRefreshing = false;
       }
-
 
       await _onSessionExpired();
       handler.reject(err);
@@ -95,7 +92,6 @@ class AuthInterceptor extends Interceptor {
         data: {'refresh': refreshToken}, 
       );
 
-
       return response.data['access'] as String?;
     } catch (_) {
       return null;
@@ -107,7 +103,6 @@ class AuthInterceptor extends Interceptor {
     ToastUtils.showError('Session expired. Please login again.');
   }
 }
-
 
 AppException mapDioError(DioException e) {
   switch (e.type) {
@@ -135,27 +130,37 @@ AppException mapDioError(DioException e) {
 }
 
 AppException _mapStatusCode(DioException e) {
-  final code      = e.response?.statusCode;
+  final code = e.response?.statusCode;
   final serverMsg = _extractServerMessage(e.response?.data);
 
   switch (code) {
-    case 400: return BadRequestException(serverMsg ?? 'Invalid request.');
-    case 401: return UnauthorizedException();
-    case 403: return AppException('You do not have permission.', statusCode: 403);
-    case 404: return NotFoundException(serverMsg ?? 'Not found.');
-    case 408: return TimeoutException('Request timed out.');
-    case 422: return BadRequestException(serverMsg ?? 'Validation error.');
-    case 429: return AppException('Too many requests. Slow down.', statusCode: 429);
+    case 400:
+      return BadRequestException(serverMsg ?? 'Invalid request.');
+    case 401:
+      return UnauthorizedException();
+    case 403:
+      return AppException('You do not have permission.', statusCode: 403);
+    case 404:
+      return NotFoundException(serverMsg ?? 'Not found.');
+    case 408:
+      return TimeoutException('Request timed out.');
+    case 422:
+      return BadRequestException(serverMsg ?? 'Validation error.');
+    case 429:
+      return AppException('Too many requests. Slow down.', statusCode: 429);
     case 500:
     case 502:
-    case 503: return ServerException(serverMsg ?? 'Server error. Please try again later.');
-    default:  return AppException(
+    case 503:
+      return ServerException(
+        serverMsg ?? 'Server error. Please try again later.',
+      );
+    default:
+      return AppException(
         serverMsg ?? 'Request failed (HTTP $code).',
         statusCode: code,
       );
   }
 }
-
 
 String? _extractServerMessage(dynamic data) {
   if (data == null) return null;

@@ -1,6 +1,7 @@
 import 'dart:developer';
 import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:dio/dio.dart';
 import 'package:innovator/elearning/core/constants/api_constants.dart';
 import 'package:innovator/elearning/core/constants/network/base_api_service.dart';
 import 'package:innovator/elearning/model/notification_model.dart';
@@ -41,6 +42,7 @@ class ElearningNotificationService extends ElearningBaseApiService {
     final data = await post(
       ElearningApi.fcmTokens,
       data: {'token': token, 'device_name': device},
+      //options: Options(extra: {'silent': true}),
     );
     final id = data?['id']?.toString();
     if (id != null) {
@@ -59,6 +61,7 @@ class ElearningNotificationService extends ElearningBaseApiService {
       await patch(
         '${ElearningApi.fcmTokens}$id/',
         data: {'token': token, 'device_name': device},
+        // options: Options(extra: {'silent': true}),
       );
       log('ElearningFCM: Updated — id: $id');
     } catch (e) {
