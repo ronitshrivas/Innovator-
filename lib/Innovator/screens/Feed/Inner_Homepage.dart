@@ -18,8 +18,6 @@ import 'package:innovator/Innovator/provider/unread_count_provider.dart';
 import 'package:innovator/Innovator/screens/Feed/Optimize%20Media/OptimizeMediaScreen.dart';
 import 'package:innovator/Innovator/screens/Feed/Optimize%20Media/full_screen_image_viewer.dart';
 import 'package:innovator/Innovator/screens/Feed/facebook_video_widget.dart';
-import 'package:innovator/Innovator/screens/Feed/video_play_widget.dart'
-    hide FacebookFullscreenPage;
 import 'package:innovator/Innovator/screens/chatrrom/screen/chatlistscreen.dart';
 import 'package:innovator/Innovator/widget/CustomizeFAB.dart';
 import 'package:innovator/Innovator/widget/repost_button.dart';
