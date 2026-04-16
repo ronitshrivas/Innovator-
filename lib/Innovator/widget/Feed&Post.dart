@@ -120,7 +120,7 @@ class _FeedNavigatorState extends State<FeedNavigator> {
         },
         children: [
           Homepage(), // This would be the modified Homepage without toggle button
-          VideoFeedPage(), // This would be the modified VideoFeedPage without toggle button
+          ReelsScreen(), // This would be the modified VideoFeedPage without toggle button
         ],
       ),
     );
