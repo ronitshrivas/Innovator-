@@ -11,26 +11,19 @@ import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/models/Feed_Content_Model.dart';
 import 'package:innovator/Innovator/screens/Feed/Inner_Homepage.dart';
-import 'package:innovator/Innovator/screens/Feed/Video_Feed.dart'
-    show ReelsScreen, VideoFeedPage;
+import 'package:innovator/Innovator/screens/Feed/Video_Feed.dart';
 import 'package:innovator/Innovator/screens/Follow/follow_Button.dart';
 import 'package:innovator/Innovator/screens/Profile/Edit_Profile.dart';
 import 'package:innovator/Innovator/screens/SHow_Specific_Profile/Show_Specific_Profile.dart';
 import 'package:innovator/Innovator/screens/chatrrom/screen/chatlistscreen.dart';
 import 'package:innovator/Innovator/utils/Drawer/custom_drawer.dart';
+import 'package:innovator/Innovator/widget/Custom_refresh_Indicator.dart';
 import 'package:innovator/Innovator/widget/CustomizeFAB.dart';
 import 'package:path/path.dart' as path;
 import 'package:http_parser/http_parser.dart';
 import 'package:get/get.dart';
 import 'package:innovator/Innovator/controllers/user_controller.dart';
-
-// ── New API base (avatar server) ─────────────────────────────────────────────
-
-// ── Legacy API base (feed / follow) ──────────────────────────────────────────
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Models
-// ─────────────────────────────────────────────────────────────────────────────
+ 
 
 class UserProfileData {
   final String id;
@@ -46,7 +39,6 @@ class UserProfileData {
   final List<String> followerUsernames;
   final List<String> followingUsernames;
   final DateTime createdAt;
-  // Posts embedded in the /api/users/me/ response
   final List<FeedContent> posts;
 
   UserProfileData({
@@ -69,7 +61,6 @@ class UserProfileData {
   factory UserProfileData.fromJson(Map<String, dynamic> json) {
     final profile = json['profile'] as Map<String, dynamic>? ?? {};
 
-    // Parse embedded posts array
     final rawPosts = json['posts'] as List<dynamic>? ?? [];
     final posts =
         rawPosts
@@ -105,7 +96,6 @@ class UserProfileData {
     );
   }
 
-  /// Returns a full URL for the avatar suitable for [NetworkImage].
   String? get avatarUrl {
     if (avatar == null || avatar!.isEmpty) return null;
     if (avatar!.startsWith('http://') || avatar!.startsWith('https://')) {
@@ -115,7 +105,6 @@ class UserProfileData {
   }
 }
 
-// Simple model reused for follower / following rows in the dialog.
 class FollowerFollowing {
   final String id;
   final String name;
@@ -131,38 +120,31 @@ class FollowerFollowing {
     this.username,
   });
 
-  /// Parses a single entry from the new API's followers[] / following[] array
   factory FollowerFollowing.fromNewApi(Map<String, dynamic> json) {
     final profile = json['profile'] as Map<String, dynamic>? ?? {};
-
-    // avatar lives in profile.avatar (relative path)
     final avatar = profile['avatar']?.toString();
-
-    // full_name can be null in new API (e.g. ronit12345 has null full_name)
     final fullName = json['full_name']?.toString() ?? '';
     final username = json['username']?.toString() ?? '';
 
     return FollowerFollowing(
       id: json['id']?.toString() ?? '',
-      name: fullName.isNotEmpty ? fullName : username, // fallback to username
+      name: fullName.isNotEmpty ? fullName : username,
       email: json['email']?.toString() ?? '',
       picture: avatar,
       username: username,
     );
   }
 
-  /// Resolves the avatar to a full URL
   String? get fullPictureUrl {
     if (picture == null || picture!.isEmpty) return null;
     if (picture!.startsWith('http://') || picture!.startsWith('https://')) {
       return picture;
     }
-    return '${ApiConstants.userBase}$picture'; // e.g. http://182.93.94.220:8005/media/avatars/IMG.jpg
+    return '${ApiConstants.userBase}$picture';
   }
 }
-// ─────────────────────────────────────────────────────────────────────────────
-// Exceptions
-// ─────────────────────────────────────────────────────────────────────────────
+
+ 
 
 class AuthException implements Exception {
   final String message;
@@ -172,14 +154,8 @@ class AuthException implements Exception {
   String toString() => 'AuthException: $message';
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Service
-// ─────────────────────────────────────────────────────────────────────────────
-
+ 
 class UserProfileService {
-  // ── New endpoints ──────────────────────────────────────────────────────────
-
-  /// Fetches the current user's profile from the new API.
   static Future<UserProfileData> getUserProfile() async {
     final token = AppData().accessToken;
     if (token == null || token.isEmpty) {
@@ -200,7 +176,6 @@ class UserProfileService {
     }
   }
 
-  /// Uploads a new avatar to `POST /api/users/me/avatar/` and returns the URL.
   static Future<String> uploadProfilePicture(File imageFile) async {
     final token = AppData().accessToken;
     if (token == null || token.isEmpty) {
@@ -209,7 +184,6 @@ class UserProfileService {
 
     final filename = path.basename(imageFile.path);
     final url = Uri.parse(ApiConstants.updateuserprofilepicture);
-
     final mimeType =
         filename.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
 
@@ -218,7 +192,7 @@ class UserProfileService {
           ..headers['authorization'] = 'Bearer $token'
           ..files.add(
             http.MultipartFile(
-              'avatar', // field name per new API
+              'avatar',
               http.ByteStream(imageFile.openRead()),
               await imageFile.length(),
               filename: filename,
@@ -233,7 +207,6 @@ class UserProfileService {
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       final data = json.decode(response.body) as Map<String, dynamic>;
-      // Accept various possible response shapes
       final avatarPath =
           data['avatar']?.toString() ??
           data['data']?['avatar']?.toString() ??
@@ -249,14 +222,12 @@ class UserProfileService {
     }
   }
 
-  // ── Legacy endpoints (followers / following lists) ─────────────────────────
-
   static Future<List<FollowerFollowing>> getFollowers() async {
     final token = AppData().accessToken;
     if (token == null || token.isEmpty) throw AuthException('No token');
 
     final response = await http.get(
-      Uri.parse(ApiConstants.getfollowers), // ← new endpoint
+      Uri.parse(ApiConstants.getfollowers),
       headers: _authHeaders(token),
     );
 
@@ -264,7 +235,6 @@ class UserProfileService {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body) as Map<String, dynamic>;
-      // New shape: { "followers_count": 1, "followers": [...] }
       final list = data['followers'] as List<dynamic>? ?? [];
       return list
           .whereType<Map<String, dynamic>>()
@@ -283,7 +253,7 @@ class UserProfileService {
     if (token == null || token.isEmpty) throw AuthException('No token');
 
     final response = await http.get(
-      Uri.parse(ApiConstants.getfollowing), // ← new endpoint
+      Uri.parse(ApiConstants.getfollowing),
       headers: _authHeaders(token),
     );
 
@@ -291,7 +261,6 @@ class UserProfileService {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body) as Map<String, dynamic>;
-      // New shape: { "following_count": 1, "following": [...] }
       final list = data['following'] as List<dynamic>? ?? [];
       return list
           .whereType<Map<String, dynamic>>()
@@ -305,18 +274,220 @@ class UserProfileService {
     }
   }
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
-
   static Map<String, String> _authHeaders(String token) => {
     'Content-Type': 'application/json',
     'authorization': 'Bearer $token',
   };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Screen
-// ─────────────────────────────────────────────────────────────────────────────
+ 
+class _SkeletonBox extends StatefulWidget {
+  final double width;
+  final double height;
+  final BorderRadius borderRadius;
 
+  const _SkeletonBox({
+    required this.width,
+    required this.height,
+    this.borderRadius = const BorderRadius.all(Radius.circular(8)),
+  });
+
+  @override
+  State<_SkeletonBox> createState() => _SkeletonBoxState();
+}
+
+class _SkeletonBoxState extends State<_SkeletonBox>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    _animation = Tween<double>(
+      begin: 0.4,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder:
+          (_, __) => Opacity(
+            opacity: _animation.value,
+            child: Container(
+              width: widget.width,
+              height: widget.height,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: widget.borderRadius,
+              ),
+            ),
+          ),
+    );
+  }
+}
+
+class _ProfileSkeleton extends StatelessWidget {
+  const _ProfileSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 20),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Avatar + name row
+              Row(
+                children: [
+                  const _SkeletonBox(
+                    width: 120,
+                    height: 120,
+                    borderRadius: BorderRadius.all(Radius.circular(60)),
+                  ),
+                  const SizedBox(width: 15),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const _SkeletonBox(width: 140, height: 20),
+                      const SizedBox(height: 8),
+                      const _SkeletonBox(width: 180, height: 14),
+                      const SizedBox(height: 12),
+                      _SkeletonBox(
+                        width: 80,
+                        height: 26,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Divider(thickness: 0.8, color: Colors.grey[300]),
+              // Followers / Following / More row
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Column(
+                          children: const [
+                            _SkeletonBox(width: 30, height: 18),
+                            SizedBox(height: 4),
+                            _SkeletonBox(width: 60, height: 12),
+                          ],
+                        ),
+                        const SizedBox(width: 40),
+                        Column(
+                          children: const [
+                            _SkeletonBox(width: 30, height: 18),
+                            SizedBox(height: 4),
+                            _SkeletonBox(width: 60, height: 12),
+                          ],
+                        ),
+                      ],
+                    ),
+                    _SkeletonBox(
+                      width: 35,
+                      height: 35,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        // Posts header skeleton
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const _SkeletonBox(width: 60, height: 20),
+              _SkeletonBox(
+                width: 90,
+                height: 36,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ],
+          ),
+        ),
+        Divider(thickness: 0.8, color: Colors.grey[300]),
+        const SizedBox(height: 12),
+        // Post card skeletons
+        ...List.generate(3, (_) => const _PostCardSkeleton()),
+      ],
+    );
+  }
+}
+
+class _PostCardSkeleton extends StatelessWidget {
+  const _PostCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const _SkeletonBox(
+                width: 40,
+                height: 40,
+                borderRadius: BorderRadius.all(Radius.circular(20)),
+              ),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  _SkeletonBox(width: 120, height: 14),
+                  SizedBox(height: 4),
+                  _SkeletonBox(width: 80, height: 11),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _SkeletonBox(
+            width: double.infinity,
+            height: 200,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          const SizedBox(height: 10),
+          const _SkeletonBox(width: double.infinity, height: 13),
+          const SizedBox(height: 6),
+          const _SkeletonBox(width: 220, height: 13),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+}
+
+ 
 class UserProfileScreen extends ConsumerStatefulWidget {
   final String userId;
 
@@ -330,26 +501,22 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     with SingleTickerProviderStateMixin {
   late Future<UserProfileData> _profileFuture;
   bool _isUploading = false;
+  bool _isPickingImage = false;
   String? _errorMessage;
+  bool _postsLoaded = false;
 
   late TabController _tabController;
   final UserController _userController = Get.put(UserController());
 
   final List<FeedContent> _contents = [];
   final ScrollController _scrollController = ScrollController();
-  bool _isLoading = false;
-  bool _hasError = false;
-  bool _hasMoreData = true;
-  bool _isPickingImage = false; // Add this field
 
-  // ── Lifecycle ──────────────────────────────────────────────────────────────
-
+  
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadProfile();
-    // Posts come bundled inside /api/users/me/ — no separate feed call needed.
   }
 
   @override
@@ -358,37 +525,50 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     _scrollController.dispose();
     super.dispose();
   }
+ 
+  void _loadProfile({bool showSkeletonImmediately = true}) {
+    setState(() {
+      if (showSkeletonImmediately) _contents.clear();
+      _postsLoaded = false;
+      _isLoading = true;  
+    });
+    _profileFuture = UserProfileService.getUserProfile();
+  }
+ 
+  bool _isLoading = false;
+ 
+  Future<void> _refresh() async {
+    setState(() {
+      _contents.clear();
+      _postsLoaded = false;
+    });
+ 
+    final newFuture = UserProfileService.getUserProfile();
+    setState(() => _profileFuture = newFuture);
 
-  // ── Posts: populated from profile response ─────────────────────────────────
-
-  /// Called once the profile FutureBuilder resolves.
-  /// Fills [_contents] from the posts embedded in the API response.
+    try {
+      final freshProfile = await newFuture;
+      _populatePostsFromProfile(freshProfile);
+    } catch (_) { 
+    }
+  }
+ 
   void _populatePostsFromProfile(UserProfileData profile) {
     if (!mounted) return;
     setState(() {
-      _contents.clear();
-      _contents.addAll(profile.posts);
-      _hasMoreData = false;
-      _isLoading = false;
+      _contents
+        ..clear()
+        ..addAll(profile.posts);
+      _postsLoaded = true;
     });
-  }
-
-  // ── Profile ────────────────────────────────────────────────────────────────
-
-  void _loadProfile() {
-    setState(() {
-      _contents.clear();
-      _hasMoreData = false;
-      _isLoading = true;
-    });
-    _profileFuture = UserProfileService.getUserProfile();
   }
 
   String _formatDate(DateTime date) =>
       '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
+ 
   Future<void> _pickAndUploadImage() async {
-    if (_isPickingImage || _isUploading) return; // ← guard
+    if (_isPickingImage || _isUploading) return;
 
     setState(() => _isPickingImage = true);
     try {
@@ -407,7 +587,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
         _errorMessage = null;
       });
 
-      // Evict old cached images
       final oldPath = _userController.getFullProfilePicturePath();
       if (oldPath != null) {
         imageCache.evict(NetworkImage(oldPath));
@@ -425,14 +604,13 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       _userController.updateProfilePicture(newAvatarPath);
       await AppData().updateProfilePicture(newAvatarPath);
 
-      // ← ADD THIS: tells the drawer to re-read from AppData
       InstantCache.invalidate();
 
       imageCache.evict(NetworkImage(newAvatarPath));
       _userController.profilePictureVersion.value++;
 
       setState(() {
-        _isUploading = false;
+        _isUploading = false; 
         _loadProfile();
       });
     } catch (e) {
@@ -443,8 +621,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       });
     }
   }
-
-  // ── Followers / Following dialog ───────────────────────────────────────────
+ 
 
   void _showFollowersFollowingDialog(BuildContext context) {
     showDialog(
@@ -502,20 +679,17 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     );
   }
 
-  void _refreshFollowers() => setState(() {});
-  void _refreshFollowing() => setState(() {});
-
   Widget _buildFollowersList() => _buildFollowList(
     future: UserProfileService.getFollowers(),
     emptyText: 'No followers found',
-    onRefresh: _refreshFollowers,
+    onRefresh: () => setState(() {}),
     initialFollowStatus: false,
   );
 
   Widget _buildFollowingList() => _buildFollowList(
     future: UserProfileService.getFollowing(),
     emptyText: 'Not following anyone yet',
-    onRefresh: _refreshFollowing,
+    onRefresh: () => setState(() {}),
     initialFollowStatus: true,
   );
 
@@ -542,8 +716,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
           itemBuilder: (context, index) {
             final person = list[index];
             final pictureUrl = person.fullPictureUrl;
-
-            // Display name: full_name if available, else @username
             final displayName =
                 person.name.isNotEmpty
                     ? person.name
@@ -594,8 +766,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     );
   }
 
-  // ── Profile section ────────────────────────────────────────────────────────
-
+ 
   Widget _buildProfileSection(UserProfileData profile) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -604,8 +775,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),
           child: Column(
-            children: [
-              // Avatar + name row
+            children: [ 
               Row(
                 children: [
                   Stack(
@@ -729,8 +899,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                 ),
 
               Divider(thickness: 0.8, color: Colors.grey[300]),
-
-              // Followers / Following / More
+ 
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
@@ -738,7 +907,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                   children: [
                     Row(
                       children: [
-                        // ── Followers count (from new API) ──────────────
                         GestureDetector(
                           onTap: () => _showFollowersFollowingDialog(context),
                           child: Column(
@@ -761,8 +929,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                           ),
                         ),
                         const SizedBox(width: 40),
-
-                        // ── Following count (from new API) ──────────────
                         GestureDetector(
                           onTap: () {
                             _tabController.index = 1;
@@ -789,8 +955,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                         ),
                       ],
                     ),
-
-                    // ── More options ──────────────────────────────────────
                     SizedBox(
                       height: 35,
                       width: 35,
@@ -816,51 +980,9 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
           ),
         ),
 
-        const SizedBox(height: 24),
-
-        // ── Create Post ─────────────────────────────────────────────────────
-        // Column(
-        //   crossAxisAlignment: CrossAxisAlignment.start,
-        //   children: [
-        //     const Text(
-        //       'Create New Post',
-        //       style: TextStyle(
-        //         fontSize: 18,
-        //         fontWeight: FontWeight.bold,
-        //         color: Colors.black,
-        //       ),
-        //     ),
-        //     const SizedBox(height: 10),
-        //     InkWell(
-        //       onTap:
-        //           () => Navigator.push(
-        //             context,
-        //             MaterialPageRoute(builder: (_) => CreatePostScreen()),
-        //           ),
-        //       child: Container(
-        //         height: 150,
-        //         width: double.infinity,
-        //         decoration: BoxDecoration(
-        //           color: Colors.grey.shade300,
-        //           borderRadius: BorderRadius.circular(8),
-        //         ),
-        //         child: const Center(
-        //           child: Text(
-        //             'Write Something...',
-        //             style: TextStyle(
-        //               fontSize: 16,
-        //               fontWeight: FontWeight.bold,
-        //               color: Colors.black45,
-        //             ),
-        //           ),
-        //         ),
-        //       ),
-        //     ),
-        //   ],
-        // ),
         const SizedBox(height: 30),
 
-        // ── Posts header ─────────────────────────────────────────────────────
+        // Posts header
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
           child: Row(
@@ -898,8 +1020,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     );
   }
 
-  /// Resolves which [ImageProvider] to use for the avatar, preferring
-  /// the controller's cached value, then falling back to the API response.
   ImageProvider? _resolveAvatarImage(UserProfileData profile) {
     final controllerPath = _userController.getFullProfilePicturePath();
     if (controllerPath != null && controllerPath.isNotEmpty) {
@@ -908,9 +1028,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       );
     }
     final url = profile.avatarUrl;
-    if (url != null && url.isNotEmpty) {
-      return NetworkImage(url);
-    }
+    if (url != null && url.isNotEmpty) return NetworkImage(url);
     return null;
   }
 
@@ -1033,8 +1151,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     );
   }
 
-  // ── Feed items ─────────────────────────────────────────────────────────────
-
+ 
   Widget _buildContentItem(int index) {
     final content = _contents[index];
     return RepaintBoundary(
@@ -1052,142 +1169,134 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     );
   }
 
-  // ── Build ──────────────────────────────────────────────────────────────────
-
+ 
   @override
   Widget build(BuildContext context) {
     final unreadCount = ref.watch(chatUnreadCountProvider);
 
     return Scaffold(
       backgroundColor: AppColors.whitecolor,
-
-      // appBar: AppBar(
-      //   backgroundColor: AppColors.whitecolor,
-      //   automaticallyImplyLeading: false,
-      //   leading: IconButton(
-      //     icon: const Icon(Icons.arrow_back_ios),
-      //     onPressed: () => Navigator.pop(context),
-      //   ),
-      //   title: const Text('My Profile'),
-      // ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 40),
-        child: CustomScrollView(
-          controller: _scrollController,
-          slivers: [
-            SliverToBoxAdapter(
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back_ios),
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                alignment: Alignment.centerLeft,
-                // padding: EdgeInsets.zero,
+        child: CustomRefreshIndicator( 
+          onRefresh: _refresh,
+          child: CustomScrollView(
+            controller: _scrollController, 
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [ 
+              SliverToBoxAdapter(
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back_ios),
+                  onPressed: () => Navigator.pop(context),
+                  alignment: Alignment.centerLeft,
+                ),
               ),
-            ),
-            SliverToBoxAdapter(
-              child: FutureBuilder<UserProfileData>(
-                future: _profileFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.error_outline,
-                            size: 48,
-                            color: Colors.red,
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Error loading profile',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+ 
+              SliverToBoxAdapter(
+                child: FutureBuilder<UserProfileData>(
+                  future: _profileFuture,
+                  builder: (context, snapshot) { 
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const _ProfileSkeleton();
+                    }
+ 
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              size: 48,
+                              color: Colors.red,
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          ElevatedButton(
-                            onPressed: () => setState(() => _loadProfile()),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color.fromRGBO(
-                                244,
-                                135,
-                                6,
-                                1,
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Error loading profile',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                            child: const Text(
-                              'Try Again',
-                              style: TextStyle(color: AppColors.whitecolor),
+                            const SizedBox(height: 8),
+                            ElevatedButton(
+                              onPressed: () => setState(() => _loadProfile()),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color.fromRGBO(
+                                  244,
+                                  135,
+                                  6,
+                                  1,
+                                ),
+                              ),
+                              child: const Text(
+                                'Try Again',
+                                style: TextStyle(color: AppColors.whitecolor),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+ 
+                    if (snapshot.hasData) { 
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _populatePostsFromProfile(snapshot.data!);
+                      });
+                      return _buildProfileSection(snapshot.data!);
+                    }
+
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ),
+
+             
+              if (!_postsLoaded)
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (_, __) => const _PostCardSkeleton(),
+                    childCount: 3,
+                  ),
+                )
+              else if (_contents.isEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.article_outlined,
+                            size: 48,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No posts yet',
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 16,
                             ),
                           ),
                         ],
                       ),
-                    );
-                  }
-                  if (snapshot.hasData) {
-                    // Populate posts on first resolve (and on refresh)
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (_contents.isEmpty) {
-                        _populatePostsFromProfile(snapshot.data!);
-                      }
-                    });
-                    return _buildProfileSection(snapshot.data!);
-                  }
-                  return const SizedBox.shrink();
-                },
-              ),
-            ),
-            // ── User's posts ────────────────────────────────────────────────
-            if (_isLoading && _contents.isEmpty)
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 32),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-              )
-            else if (_contents.isEmpty)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 40),
-                  child: Center(
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.article_outlined,
-                          size: 48,
-                          color: Colors.grey[350],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'No posts yet',
-                          style: TextStyle(
-                            color: Colors.grey[500],
-                            fontSize: 15,
-                          ),
-                        ),
-                      ],
                     ),
                   ),
+                )
+              else
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => _buildContentItem(index),
+                    childCount: _contents.length,
+                  ),
                 ),
-              )
-            else
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => _buildContentItem(index),
-                  childCount: _contents.length,
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
       floatingActionButton: CountBadgeFAB(
-        count: unreadCount, // ← real-time total
+        count: unreadCount,
         gifAsset: 'animation/chaticon.gif',
         backgroundColor: Colors.transparent,
         onPressed: () {
@@ -1197,7 +1306,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
             MaterialPageRoute(builder: (_) => const ChatListScreen()),
           ).then((_) {
             ref.invalidate(mutualFriendsProvider);
-            //ref.read(mutualFriendsProvider.notifier).refresh();
           });
         },
       ),
@@ -1205,9 +1313,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ProfileInfoCard (unchanged)
-// ─────────────────────────────────────────────────────────────────────────────
+ 
 
 class ProfileInfoCard extends StatelessWidget {
   final String title;

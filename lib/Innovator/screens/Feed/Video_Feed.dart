@@ -27,7 +27,7 @@ class ReelModel {
   final String userId;
   final String username;
   final String avatar;
-  String caption; 
+  String caption;
   final String? videoUrl;
   final String? hlsUrl;
   final String? thumbnail;
@@ -850,13 +850,11 @@ class _ReelItemState extends ConsumerState<_ReelItem>
   //   final reel = widget.reel;
   //   final wasLiked = reel.isLiked;
   //   final isSameType = reel.currentUserReaction == type.value;
-
   //   if (wasLiked && isSameType) {
   //     ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, null);
   //   } else {
   //     ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, type.value);
   //   }
-
   //   final result = await _likeService.reactReel(reel.id, type);
   //   if (result.success) {
   //     final serverType = result.reactionType?.value;
@@ -869,42 +867,39 @@ class _ReelItemState extends ConsumerState<_ReelItem>
   // }
 
   Future<void> _applyReaction(ReactionType type) async {
-  final reel = widget.reel;
-  final isSameType = reel.currentUserReaction == type.value;
-  final previousReaction = reel.currentUserReaction; // save for revert
+    final reel = widget.reel;
+    final isSameType = reel.currentUserReaction == type.value;
+    final previousReaction = reel.currentUserReaction;
 
-  if (isSameType) {
-    // ── REMOVE: optimistic null, POST same type to toggle off ──────────
-    ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, null);
-
-    final result = await _likeService.reactReel(reel.id, type);
-
-    if (result.success) {
-      // Force null locally — same as LikeButton._setReaction(null, previous)
-      // Don't trust result.reactionType here; server may return 200 or 204
+    if (isSameType) {
       ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, null);
-    } else {
-      // Revert on failure
-      ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, previousReaction);
-    }
-  } else {
-    // ── ADD / CHANGE: optimistic set, then sync from server ────────────
-    ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, type.value);
 
-    final result = await _likeService.reactReel(reel.id, type);
+      final result = await _likeService.reactReel(reel.id, type);
 
-    if (result.success) {
-      // Sync server's confirmed type (same as LikeButton: result.reactionType ?? type)
-      ref.read(reelsFeedProvider.notifier).applyReaction(
-        reel.id,
-        result.reactionType?.value ?? type.value,
-      );
+      if (result.success) {
+        ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, null);
+      } else {
+        ref
+            .read(reelsFeedProvider.notifier)
+            .applyReaction(reel.id, previousReaction);
+      }
     } else {
-      // Revert on failure
-      ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, previousReaction);
+      ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, type.value);
+
+      final result = await _likeService.reactReel(reel.id, type);
+
+      if (result.success) {
+        ref
+            .read(reelsFeedProvider.notifier)
+            .applyReaction(reel.id, result.reactionType?.value ?? type.value);
+      } else {
+        // Revert on failure
+        ref
+            .read(reelsFeedProvider.notifier)
+            .applyReaction(reel.id, previousReaction);
+      }
     }
   }
-}
 
   // ── Reaction Overlay ──────────────────────────────────────────────────────
 
