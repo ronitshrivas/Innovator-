@@ -16,7 +16,6 @@ import 'package:innovator/Innovator/screens/comment/comment_section.dart';
 import 'package:innovator/Innovator/widget/Custom_refresh_Indicator.dart';
 import 'package:innovator/Innovator/widget/CustomizeFAB.dart';
 
-// ── App colour constants ──────────────────────────────────────────────────────
 const _kOrange = Color.fromRGBO(244, 135, 6, 1);
 const _kOrangeLight = Color.fromRGBO(244, 135, 6, 0.10);
 const _kGold = Color.fromRGBO(255, 204, 0, 1);
