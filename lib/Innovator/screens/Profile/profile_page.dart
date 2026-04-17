@@ -23,7 +23,6 @@ import 'package:path/path.dart' as path;
 import 'package:http_parser/http_parser.dart';
 import 'package:get/get.dart';
 import 'package:innovator/Innovator/controllers/user_controller.dart';
- 
 
 class UserProfileData {
   final String id;
@@ -144,8 +143,6 @@ class FollowerFollowing {
   }
 }
 
- 
-
 class AuthException implements Exception {
   final String message;
   AuthException(this.message);
@@ -154,7 +151,6 @@ class AuthException implements Exception {
   String toString() => 'AuthException: $message';
 }
 
- 
 class UserProfileService {
   static Future<UserProfileData> getUserProfile() async {
     final token = AppData().accessToken;
@@ -280,7 +276,6 @@ class UserProfileService {
   };
 }
 
- 
 class _SkeletonBox extends StatefulWidget {
   final double width;
   final double height;
@@ -487,7 +482,6 @@ class _PostCardSkeleton extends StatelessWidget {
   }
 }
 
- 
 class UserProfileScreen extends ConsumerStatefulWidget {
   final String userId;
 
@@ -511,7 +505,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
   final List<FeedContent> _contents = [];
   final ScrollController _scrollController = ScrollController();
 
-  
   @override
   void initState() {
     super.initState();
@@ -525,34 +518,33 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     _scrollController.dispose();
     super.dispose();
   }
- 
+
   void _loadProfile({bool showSkeletonImmediately = true}) {
     setState(() {
       if (showSkeletonImmediately) _contents.clear();
       _postsLoaded = false;
-      _isLoading = true;  
+      _isLoading = true;
     });
     _profileFuture = UserProfileService.getUserProfile();
   }
- 
+
   bool _isLoading = false;
- 
+
   Future<void> _refresh() async {
     setState(() {
       _contents.clear();
       _postsLoaded = false;
     });
- 
+
     final newFuture = UserProfileService.getUserProfile();
     setState(() => _profileFuture = newFuture);
 
     try {
       final freshProfile = await newFuture;
       _populatePostsFromProfile(freshProfile);
-    } catch (_) { 
-    }
+    } catch (_) {}
   }
- 
+
   void _populatePostsFromProfile(UserProfileData profile) {
     if (!mounted) return;
     setState(() {
@@ -566,7 +558,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
   String _formatDate(DateTime date) =>
       '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
- 
   Future<void> _pickAndUploadImage() async {
     if (_isPickingImage || _isUploading) return;
 
@@ -610,7 +601,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       _userController.profilePictureVersion.value++;
 
       setState(() {
-        _isUploading = false; 
+        _isUploading = false;
         _loadProfile();
       });
     } catch (e) {
@@ -621,7 +612,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       });
     }
   }
- 
 
   void _showFollowersFollowingDialog(BuildContext context) {
     showDialog(
@@ -766,7 +756,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     );
   }
 
- 
   Widget _buildProfileSection(UserProfileData profile) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -775,7 +764,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),
           child: Column(
-            children: [ 
+            children: [
               Row(
                 children: [
                   Stack(
@@ -899,7 +888,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                 ),
 
               Divider(thickness: 0.8, color: Colors.grey[300]),
- 
+
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
@@ -988,10 +977,11 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Posts',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
+              Image.asset('assets/icon/repost.png', height: 35,color: Colors.grey,),
               ElevatedButton.icon(
                 onPressed:
                     () => Navigator.push(
@@ -1151,7 +1141,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     );
   }
 
- 
   Widget _buildContentItem(int index) {
     final content = _contents[index];
     return RepaintBoundary(
@@ -1169,7 +1158,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     );
   }
 
- 
   @override
   Widget build(BuildContext context) {
     final unreadCount = ref.watch(chatUnreadCountProvider);
@@ -1178,12 +1166,12 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       backgroundColor: AppColors.whitecolor,
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 40),
-        child: CustomRefreshIndicator( 
+        child: CustomRefreshIndicator(
           onRefresh: _refresh,
           child: CustomScrollView(
-            controller: _scrollController, 
+            controller: _scrollController,
             physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [ 
+            slivers: [
               SliverToBoxAdapter(
                 child: IconButton(
                   icon: const Icon(Icons.arrow_back_ios),
@@ -1191,15 +1179,15 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                   alignment: Alignment.centerLeft,
                 ),
               ),
- 
+
               SliverToBoxAdapter(
                 child: FutureBuilder<UserProfileData>(
                   future: _profileFuture,
-                  builder: (context, snapshot) { 
+                  builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const _ProfileSkeleton();
                     }
- 
+
                     if (snapshot.hasError) {
                       return Center(
                         child: Column(
@@ -1238,8 +1226,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                         ),
                       );
                     }
- 
-                    if (snapshot.hasData) { 
+
+                    if (snapshot.hasData) {
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         _populatePostsFromProfile(snapshot.data!);
                       });
@@ -1251,7 +1239,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                 ),
               ),
 
-             
               if (!_postsLoaded)
                 SliverList(
                   delegate: SliverChildBuilderDelegate(
@@ -1312,8 +1299,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     );
   }
 }
-
- 
 
 class ProfileInfoCard extends StatelessWidget {
   final String title;

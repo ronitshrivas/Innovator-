@@ -247,10 +247,7 @@ class AppData {
     await Future.wait([
       _prefs!.remove(keyAccessToken),
       _prefs!.remove(keyRefreshToken),
-      _prefs!.remove(keyUserData),
-      _prefs!.remove('email'),
-      _prefs!.remove('password'),
-      _prefs!.remove('rememberMe'),
+      _prefs!.remove(keyUserData), 
     ]);
     developer.log('AppData: logout complete ✓');
   }
