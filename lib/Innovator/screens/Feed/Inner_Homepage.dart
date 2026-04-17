@@ -1480,48 +1480,6 @@ class _FeedItemState extends State<FeedItem>
                 margin: EdgeInsets.symmetric(horizontal: 1.0),
                 child: _buildMediaPreview(),
               ),
-            // In your action bar section, ABOVE the Divider, add this:
-            // if (widget.content.likes > 0)
-            //   Padding(
-            //     padding: const EdgeInsets.symmetric(
-            //       horizontal: 16,
-            //       vertical: 6,
-            //     ),
-            //     child: Row(
-            //       children: [
-            //         GestureDetector(
-            //           onTap: () => _showReactionsList(context),
-            //           child: Row(
-            //             children: [
-            //               _buildReactionBubbles(),
-            //               const SizedBox(width: 6),
-            //               Text(
-            //                 '${widget.content.likes}',
-            //                 style: TextStyle(
-            //                   fontSize: 13,
-            //                   color: Colors.grey.shade600,
-            //                 ),
-            //               ),
-            //             ],
-            //           ),
-            //         ),
-            //         const Spacer(),
-            //         if (widget.content.comments > 0)
-            //           GestureDetector(
-            //             onTap:
-            //                 () =>
-            //                     setState(() => _showComments = !_showComments),
-            //             child: Text(
-            //               '${widget.content.comments} comments',
-            //               style: TextStyle(
-            //                 fontSize: 13,
-            //                 color: Colors.grey.shade600,
-            //               ),
-            //             ),
-            //           ),
-            //       ],
-            //     ),
-            //   ),
             const SizedBox(height: 10.0),
             Divider(
               color: Colors.grey.shade300,
@@ -1550,7 +1508,7 @@ class _FeedItemState extends State<FeedItem>
                         initialLikeStatus: widget.content.isLiked,
                         likeService: likeService,
                         initialReactionType:
-                            widget.content.currentUserReaction, // ← add this
+                            widget.content.currentUserReaction,  
                         onLikeToggled: (isLiked) {
                           widget.onLikeToggled(isLiked);
                           SoundPlayer().playlikeSound();
