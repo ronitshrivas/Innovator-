@@ -1,8 +1,10 @@
 class ApiConstants {
   //Auth Base Url
 
-  static String get authBaseUrl => 'http://182.93.94.220:8010/api';
-  static String get baseUrl => 'http://182.93.94.220:8002/api/kms';
+  // static String get authBaseUrl => 'http://182.93.94.220:8010/api';
+  // static String get baseUrl => 'http://182.93.94.220:8002/api/kms';
+  static String get authBaseUrl => 'http://36.253.137.34:8010/api';
+  static String get baseUrl => 'http://36.253.137.34:8002/api/kms';
 
   //auth EndPoints
   static String get register => '$authBaseUrl/auth/register/';
@@ -51,7 +53,6 @@ class ApiConstants {
       '$baseUrl/coordinator/teaching-notes/';
   static String get teacherNotes => '$baseUrl/coordinator/teaching-notes/';
   static String get teacherRating => '$baseUrl/coordinator/teacher-rating/';
-  
 
   //student endpoints
   static String get schoolList => '$baseUrl/public/registration-metadata/';
