@@ -5,15 +5,14 @@ import 'package:innovator/KMS/core/utils/toast_utils.dart';
 import 'package:innovator/ecommerce/core/constants/api_constants.dart';
 
 class AuthInterceptor extends Interceptor {
-  final Dio     _dio;   
-  final AppData _appData = AppData();   
+  final Dio _dio;
+  final AppData _appData = AppData();
   final bool showToasts;
-
 
   bool _isRefreshing = false;
 
-  AuthInterceptor(this._dio, {this.showToasts = true}); 
-  
+  AuthInterceptor(this._dio, {this.showToasts = true});
+
   // On Request
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
@@ -59,37 +58,39 @@ class AuthInterceptor extends Interceptor {
         _isRefreshing = false;
       }
 
-      await _onSessionExpired();
+      // await _onSessionExpired();
       handler.reject(err);
       return;
     }
-      final exception = mapDioError(err);
-  // ToastUtils.showError(exception.message);
+    final exception = mapDioError(err);
+    // ToastUtils.showError(exception.message);
     if (showToasts && _isUserFacingError(exception)) {
       ToastUtils.showError(exception.message);
     }
- 
+
     handler.next(err);
   }
+
   bool _isUserFacingError(AppException exception) {
-    return exception is! TimeoutException && 
-           exception is! NetworkException;
+    return exception is! TimeoutException && exception is! NetworkException;
   }
-  
+
   Future<String?> _tryRefreshToken() async {
     final refreshToken = _appData.refreshToken;
     if (refreshToken == null || refreshToken.isEmpty) return null;
 
     try {
-      final plainDio = Dio(BaseOptions(
-        baseUrl:        EcommerceApi.baseUrl,
-        connectTimeout: EcommerceApi.defaultTimeout,
-        receiveTimeout: EcommerceApi.uploadTimeout,
-      ));
+      final plainDio = Dio(
+        BaseOptions(
+          baseUrl: EcommerceApi.baseUrl,
+          connectTimeout: EcommerceApi.defaultTimeout,
+          receiveTimeout: EcommerceApi.uploadTimeout,
+        ),
+      );
 
       final response = await plainDio.post(
         EcommerceApi.baseUrl,
-        data: {'refresh': refreshToken}, 
+        data: {'refresh': refreshToken},
       );
 
       return response.data['access'] as String?;
@@ -100,7 +101,7 @@ class AuthInterceptor extends Interceptor {
 
   Future<void> _onSessionExpired() async {
     await _appData.logout();
-    ToastUtils.showError('Session expired. Please login again.');
+    ToastUtils.showError('Session expired. Please login again 1.');
   }
 }
 

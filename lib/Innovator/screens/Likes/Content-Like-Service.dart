@@ -151,6 +151,50 @@ class ContentLikeService {
     }
   }
 
+  Future<ReactionResult> reelreaction(String postId, ReactionType type) async {
+    final token = _appData.accessToken;
+    if (token == null || token.isEmpty) {
+      log('[Reaction] No auth token');
+      return const ReactionResult(success: false);
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConstants.sendreaction),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode({'reel': postId, 'type': type.value}),
+      );
+
+      log(
+        '[Reaction] POST /api/reactions/ → ${response.statusCode}: ${response.body}',
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        return ReactionResult(
+          success: true,
+          reactionType: ReactionTypeExtension.fromValue(
+            data['type']?.toString(),
+          ),
+          reactionId: data['id']?.toString(),
+        );
+      } else if (response.statusCode == 204) {
+        // Reaction removed (same type tapped again = toggle off)
+        return const ReactionResult(success: true, reactionType: null);
+      } else {
+        log('[Reaction] Unexpected status ${response.statusCode}');
+        return const ReactionResult(success: false);
+      }
+    } catch (e) {
+      log('[Reaction] Error: $e');
+      return const ReactionResult(success: false);
+    }
+  }
+
   // ── Remove reaction ──────────────────────────────────────────────────────────
   /// DELETE /api/reactions/{reactionId}/
   Future<bool> removeReaction(String reactionId) async {

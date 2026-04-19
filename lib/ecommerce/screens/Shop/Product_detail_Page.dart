@@ -67,7 +67,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
         );
       } else if (statusCode == 401 || statusCode == 403) {
         _showSnackBar(
-          message: 'Session expired. Please log in again.',
+          message: 'Session expired. Please log in again. 2',
           icon: Icons.lock_outline,
           color: Colors.red.shade600,
         );
@@ -194,10 +194,10 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     final imageUrls = product.allImageUrls;
     final price = double.tryParse(product.price) ?? 0.0;
     final inCart = _cartProductIds.contains(product.id);
-     return CustomScrollView(
+    return CustomScrollView(
       slivers: [
-         SliverAppBar(
-          leading:  IconButton(
+        SliverAppBar(
+          leading: IconButton(
             onPressed: () => Navigator.pop(context),
             icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),
           ),
@@ -328,7 +328,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                           Text(
                                             'Slug: ${product.categoryDetails!.slug}',
                                           ),
-                                           Text(
+                                          Text(
                                             'Description: ${product.categoryDetails!.description}',
                                           ),
                                           const SizedBox(height: 16),

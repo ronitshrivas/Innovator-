@@ -700,38 +700,116 @@ class _ReelItemState extends ConsumerState<_ReelItem>
   }
 
   Future<void> _initVideo() async {
-    if (_disposed || widget.reel.bestVideoUrl == null) return;
-    final url = widget.reel.bestVideoUrl!;
-    developer.log('[Reel] Init video: $url');
+    if (_disposed || !widget.reel.hasVideo) return;
 
-    VideoPlayerController ctrl;
-    if (url.endsWith('.m3u8')) {
-      ctrl = VideoPlayerController.networkUrl(
-        Uri.parse(url),
-        videoPlayerOptions: VideoPlayerOptions(
-          mixWithOthers: true,
-          allowBackgroundPlayback: false,
-        ),
-        httpHeaders: {'Authorization': 'Bearer ${AppData().accessToken ?? ''}'},
-      );
-    } else {
-      ctrl = VideoPlayerController.networkUrl(
-        Uri.parse(url),
-        videoPlayerOptions: VideoPlayerOptions(
-          mixWithOthers: true,
-          allowBackgroundPlayback: false,
-        ),
-      );
+    // Build URL priority list: HLS first, then MP4
+    final urls = <String>[
+      if (widget.reel.hlsUrl != null && widget.reel.hlsUrl!.isNotEmpty)
+        widget.reel.hlsUrl!,
+      if (widget.reel.videoUrl != null && widget.reel.videoUrl!.isNotEmpty)
+        widget.reel.videoUrl!,
+    ];
+
+    for (final url in urls) {
+      final success = await _tryInitVideo(url);
+      if (success) return; // ✅ worked — stop
     }
 
+    // All URLs failed
+    developer.log(
+      '[Reel] All video sources failed for reel: ${widget.reel.id}',
+    );
+    if (mounted) setState(() => _initialized = false);
+  }
+
+  /// Returns true if initialization succeeded, false otherwise.
+  Future<bool> _tryInitVideo(String url) async {
+    if (_disposed) return false;
+    developer.log('[Reel] Trying: $url');
+
+    // ── Fully clean up previous controller ───────────────────────────────────
+    final oldCtrl = _controller;
+    _controller = null;
+    if (oldCtrl != null) {
+      await oldCtrl.pause();
+      await oldCtrl.dispose();
+      // Small gap so ExoPlayer fully releases before new one inits
+      await Future.delayed(const Duration(milliseconds: 300));
+    }
+
+    if (_disposed) return false;
+
+    // ── Check URL reachability ────────────────────────────────────────────────
+    try {
+      final response = await http
+          .head(
+            Uri.parse(url),
+            headers:
+                url.endsWith('.m3u8')
+                    ? {'Authorization': 'Bearer ${AppData().accessToken ?? ''}'}
+                    : {},
+          )
+          .timeout(const Duration(seconds: 5));
+
+      developer.log(
+        '[Reel] HEAD $url → ${response.statusCode} | '
+        'Content-Type: ${response.headers['content-type']} | '
+        'Content-Length: ${response.headers['content-length']}',
+      );
+
+      if (response.statusCode != 200) {
+        developer.log('[Reel] ❌ Bad status ${response.statusCode}: $url');
+        return false;
+      }
+    } catch (e) {
+      developer.log('[Reel] ❌ URL unreachable: $url → $e');
+      return false;
+    }
+
+    if (_disposed) return false;
+
+    // ── Init new controller ───────────────────────────────────────────────────
+    // In _tryInitVideo(), replace the ctrl creation with:
+    final isHls = url.endsWith('.m3u8');
+    final ctrl = VideoPlayerController.networkUrl(
+      Uri.parse(url),
+      videoPlayerOptions: VideoPlayerOptions(
+        mixWithOthers: true,
+        allowBackgroundPlayback: false,
+      ),
+      httpHeaders:
+          isHls
+              ? {
+                'Authorization': 'Bearer ${AppData().accessToken ?? ''}',
+                // FIX: Some HLS servers need these headers too
+                'Accept': '*/*',
+                'Connection': 'keep-alive',
+              }
+              : {},
+    );
+
+    // Assign immediately so dispose() can clean it up if widget dies mid-init
     _controller = ctrl;
 
     try {
-      await ctrl.initialize();
-      if (_disposed) {
+      await ctrl.initialize().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw TimeoutException('Timed out: $url'),
+      );
+
+      // Verify THIS controller is still the active one (not replaced by dispose)
+      if (_disposed || _controller != ctrl) {
+        developer.log('[Reel] Widget disposed during init, releasing: $url');
         ctrl.dispose();
-        return;
+        return false;
       }
+
+      developer.log(
+        '[Reel] ✅ Success: $url | '
+        'Size: ${ctrl.value.size} | '
+        'Duration: ${ctrl.value.duration}',
+      );
+
       await ctrl.setLooping(true);
       await ctrl.setVolume(1.0);
 
@@ -740,12 +818,32 @@ class _ReelItemState extends ConsumerState<_ReelItem>
           _initialized = true;
           _duration = ctrl.value.duration;
         });
+        ctrl.addListener(() {
+          if (_disposed || !mounted) return;
+          final newSize = ctrl.value.size;
+          if (newSize.width > 0 && newSize.height > 0) {
+            // Trigger rebuild to recalculate cover scale with real dimensions
+            if (mounted) setState(() {});
+          }
+        });
         if (widget.isActive) _play();
         _startProgressTimer();
       }
+
+      return true;
     } catch (e) {
-      developer.log('[Reel] Init error: $e');
-      if (mounted) setState(() => _initialized = false);
+      developer.log(
+        '[Reel] ❌ Failed ($url):\n'
+        '  Type: ${e.runtimeType}\n'
+        '  Error: $e',
+      );
+
+      // Only dispose if this is still the active controller
+      if (_controller == ctrl) {
+        ctrl.dispose();
+        _controller = null;
+      }
+      return false;
     }
   }
 
@@ -785,11 +883,15 @@ class _ReelItemState extends ConsumerState<_ReelItem>
     _disposed = true;
     WidgetsBinding.instance.removeObserver(this);
     _progressTimer?.cancel();
-    _controller?.pause();
-    _controller?.dispose();
-    _controller = null;
     _heartCtrl.dispose();
     _removeReactionOverlay();
+
+    // Capture reference before nulling
+    final ctrl = _controller;
+    _controller = null;
+    ctrl?.pause();
+    ctrl?.dispose();
+
     super.dispose();
   }
 
@@ -857,7 +959,7 @@ class _ReelItemState extends ConsumerState<_ReelItem>
       ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, type.value);
     }
 
-    final result = await _likeService.react(reel.id, type);
+    final result = await _likeService.reelreaction(reel.id, type);
     if (result.success) {
       final serverType = result.reactionType?.value;
       ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, serverType);
@@ -1084,7 +1186,8 @@ class _ReelItemState extends ConsumerState<_ReelItem>
     return Stack(
       fit: StackFit.expand,
       children: [
-        _buildVideoLayer(size),
+        // FIX: Must be Positioned.fill so video truly fills the stack
+        Positioned.fill(child: _buildVideoLayer(size)),
 
         Positioned.fill(
           child: GestureDetector(
@@ -1115,16 +1218,75 @@ class _ReelItemState extends ConsumerState<_ReelItem>
 
   Widget _buildVideoLayer(Size size) {
     if (_initialized && _controller != null) {
-      return Center(
-        child: AspectRatio(
-          aspectRatio:
-              _controller!.value.aspectRatio > 0
-                  ? _controller!.value.aspectRatio
-                  : 9 / 16,
-          child: VideoPlayer(_controller!),
-        ),
+      final videoSize = _controller!.value.size;
+
+      // HLS streams sometimes report 0x0 before first frame
+      // Fall back to standard 9:16 portrait ratio in that case
+      final bool validSize = videoSize.width > 0 && videoSize.height > 0;
+
+      double videoW, videoH;
+      if (validSize) {
+        // Always use portrait orientation (larger = height)
+        videoW =
+            videoSize.width < videoSize.height
+                ? videoSize.width
+                : videoSize.height;
+        videoH =
+            videoSize.width > videoSize.height
+                ? videoSize.width
+                : videoSize.height;
+      } else {
+        // HLS default: assume 9:16 portrait
+        videoW = 9.0;
+        videoH = 16.0;
+      }
+
+      final videoAR = videoW / videoH;
+
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final screenW = constraints.maxWidth;
+          final screenH = constraints.maxHeight;
+          final screenAR = screenW / screenH;
+
+          double scale;
+          if (screenAR > videoAR) {
+            scale = screenW / (screenH * videoAR);
+          } else {
+            scale = (screenH * videoAR) / screenW;
+          }
+          // Never scale down
+          scale = scale < 1.0 ? 1.0 : scale;
+
+          // For HLS: also listen for size changes after first frame loads
+          if (!validSize) {
+            // Re-check size after short delay when HLS metadata arrives
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && _controller != null) {
+                final newSize = _controller!.value.size;
+                if (newSize.width > 0 && newSize.height > 0) {
+                  setState(() {}); // Rebuild with correct size
+                }
+              }
+            });
+          }
+
+          return ClipRect(
+            child: OverflowBox(
+              maxWidth: double.infinity,
+              maxHeight: double.infinity,
+              child: SizedBox(
+                width: screenW * scale,
+                height: screenH * scale,
+                child: VideoPlayer(_controller!),
+              ),
+            ),
+          );
+        },
       );
     }
+
+    // Thumbnail fallback
     if (widget.reel.thumbnail != null && widget.reel.thumbnail!.isNotEmpty) {
       return CachedNetworkImage(
         imageUrl: widget.reel.thumbnail!,
