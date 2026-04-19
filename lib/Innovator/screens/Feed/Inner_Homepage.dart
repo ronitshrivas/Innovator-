@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,7 +13,6 @@ import 'package:innovator/Innovator/Authorization/Login.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/controllers/user_controller.dart';
-import 'package:innovator/Innovator/provider/unread_count_provider.dart';
 import 'package:innovator/Innovator/screens/Feed/Optimize%20Media/OptimizeMediaScreen.dart';
 import 'package:innovator/Innovator/screens/Feed/Optimize%20Media/full_screen_image_viewer.dart';
 import 'package:innovator/Innovator/screens/Feed/facebook_video_widget.dart';
@@ -34,7 +32,6 @@ import 'package:innovator/Innovator/screens/chatrrom/sound/soundplayer.dart';
 import 'package:innovator/Innovator/screens/comment/comment_section.dart';
 import 'package:innovator/Innovator/widget/Custom_refresh_Indicator.dart';
 import 'dart:io';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:video_player/video_player.dart';
 import 'dart:developer' as developer;
@@ -903,9 +900,9 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
         onStatusUpdated: (newStatus) {
           if (mounted) setState(() => content.status = newStatus);
         },
-        onCommentAdded: () {
-          if (mounted) setState(() => content.comments++);
-        },
+        // onCommentAdded: () {
+        //   if (mounted) setState(() => content.comments++);
+        // },
       ),
     );
   }
@@ -1615,9 +1612,20 @@ class _FeedItemState extends State<FeedItem>
                         padding: const EdgeInsets.all(16.0),
                         child: CommentSection(
                           contentId: widget.content.id,
-                          onCommentAdded: () {
-                            setState(() => widget.content.comments++);
-                            widget.onCommentAdded?.call();
+
+                          // onCommentAdded: () {
+                          //   setState(() => widget.content.comments++);
+                          //   widget.onCommentAdded?.call();
+                          // },
+                          onCommentCountChanged: (delta) {
+                            setState(
+                              () =>
+                                  widget.content.comments =
+                                      (widget.content.comments + delta).clamp(
+                                        0,
+                                        999999,
+                                      ),
+                            );
                           },
                         ),
                       )

@@ -204,7 +204,7 @@ class FeedContent {
       thumbnailUrl: json['thumbnailUrl']?.toString(),
       likes: (json['likes'] as num?)?.toInt() ?? 0,
       isLiked: json['isLiked'] == true,
-      comments: (json['comments'] as num?)?.toInt() ?? 0,
+      comments: (json['comments_count'] as num?)?.toInt() ?? 0,
       isFollowed: json['isFollowed'] == true,
       createdAt:
           DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
@@ -323,7 +323,7 @@ class FeedContent {
     'thumbnailUrl': thumbnailUrl,
     'likes': likes,
     'isLiked': isLiked,
-    'comments': comments,
+    'comments_count': comments,
     'isFollowed': isFollowed,
     'createdAt': createdAt.toIso8601String(),
     'tags': tags,

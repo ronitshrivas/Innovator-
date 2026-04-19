@@ -103,6 +103,26 @@ class CommentService {
     throw Exception('addComment failed: ${response.statusCode}');
   }
 
+  Future<Comment> addCommentReel({
+    required String postId,
+    required String content,
+  }) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.addcomments),
+      headers: _headers(),
+      body: jsonEncode({'reel': postId, 'content': content}),
+    );
+    log(
+      '[Comment] POST /api/comments/ → ${response.statusCode}: ${response.body}',
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return Comment.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
+    }
+    throw Exception('addComment failed: ${response.statusCode}');
+  }
+
   // ── Add a reply to a comment ───────────────────────────────────────────────
   // POST /api/replies/  { "parent": commentId, "content": text }
   Future<Comment> addReply({
