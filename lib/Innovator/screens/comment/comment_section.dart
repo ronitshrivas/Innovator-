@@ -618,15 +618,29 @@ class _CommentSectionState extends State<CommentSection> {
                         //   },
                         // ),
                         ArrowPopupMenu(
-                          items:   [], // not needed, handled internally
-                          onSelected: (value) {
-                            if (value == 'edit') {
-                              _startEdit(comment, isReply: isReply);
-                            }
-                            if (value == 'delete') {
-                              _delete(comment);
-                            }
-                          },
+                          child: const Icon(
+                            Icons.more_horiz,
+                            color: Colors.grey,
+                          ),
+                          arrowPosition: ArrowPosition.topRight,
+                          arrowColor: Colors.white,
+                          backgroundColor: Colors.white,
+                          menuWidth: 140,
+                          items: [
+                            ArrowMenuItem(
+                              label: 'Edit',
+                              icon: Icons.edit_outlined,
+                              onTap:
+                                  () => _startEdit(comment, isReply: isReply),
+                            ),
+                            ArrowMenuItem(
+                              label: 'Delete',
+                              icon: Icons.delete_outlined,
+                              textColor: Colors.red,
+                              iconColor: Colors.red,
+                              onTap: () => _delete(comment),
+                            ),
+                          ],
                         ),
                       ],
                     ],
