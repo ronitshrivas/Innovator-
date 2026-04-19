@@ -6,7 +6,7 @@ import 'package:innovator/KMS/core/utils/toast_utils.dart';
 
 class AuthInterceptor extends Interceptor {
   final Dio _dio;
-   final bool showToasts;
+  final bool showToasts;
   final AppData _appData = AppData();
 
   bool _isRefreshing = false;
@@ -58,20 +58,20 @@ class AuthInterceptor extends Interceptor {
         _isRefreshing = false;
       }
 
-      await _onSessionExpired();
+      // await _onSessionExpired();
       handler.reject(err);
       return;
     }
     final exception = mapDioError(err);
     // ToastUtils.showError(exception.message);
-     if (showToasts && _isUserFacingError(exception)) {
+    if (showToasts && _isUserFacingError(exception)) {
       ToastUtils.showError(exception.message);
     }
     handler.next(err);
   }
-   bool _isUserFacingError(AppException exception) {
-    return exception is! TimeoutException && 
-           exception is! NetworkException;
+
+  bool _isUserFacingError(AppException exception) {
+    return exception is! TimeoutException && exception is! NetworkException;
   }
 
   Future<String?> _tryRefreshToken() async {
@@ -100,7 +100,7 @@ class AuthInterceptor extends Interceptor {
 
   Future<void> _onSessionExpired() async {
     await _appData.logout();
-    ToastUtils.showError('Session expired. Please login again.');
+    ToastUtils.showError('Session expired . Please login again. 0');
   }
 }
 

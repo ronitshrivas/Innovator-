@@ -9,7 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ElearningNotificationService extends ElearningBaseApiService {
   // ElearningNotificationService() : super(dio: DioClient.instance);
-    ElearningNotificationService() : super(silent: true);
+  ElearningNotificationService() : super(silent: true);
 
   static const String _prefKey = 'elearning_fcm_token_id';
 
@@ -103,7 +103,9 @@ class ElearningNotificationService extends ElearningBaseApiService {
   Future<List<ElearningNotificationModel>> getNotifications() async {
     final data = await get<List<dynamic>>(ElearningApi.notificationsList);
     return data
-        .map((e) => ElearningNotificationModel.fromJson(e as Map<String, dynamic>))
+        .map(
+          (e) => ElearningNotificationModel.fromJson(e as Map<String, dynamic>),
+        )
         .toList();
   }
 

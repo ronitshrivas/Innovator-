@@ -81,7 +81,7 @@ class ApiService {
         body?['error']?.toString() ??
         '$fallback (${r.statusCode})';
     throw switch (r.statusCode) {
-      401 => Exception('Session expired. Please login again.'),
+      401 => Exception('Session expired. Please login again. 3'),
       403 => Exception('Access denied. $msg'),
       404 => Exception('Not found.'),
       _ => Exception(msg),
