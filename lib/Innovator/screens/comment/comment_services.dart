@@ -52,6 +52,37 @@ class CommentService {
     }
   }
 
+
+    Future<List<Comment>> getReelComments(String reelId, {int page = 0}) async {
+    try {
+      final uri = Uri.parse(ApiConstants.getcomments).replace(
+        queryParameters: {
+          'reel': reelId,
+          if (page > 0) 'page': page.toString(),
+        },
+      );
+      final response = await http.get(uri, headers: _headers(json: false));
+      log('[Comment] GET $uri → ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        final List<dynamic> raw =
+            decoded is List
+                ? decoded
+                : (decoded['results'] ?? decoded['data'] ?? []);
+        return raw
+            .whereType<Map<String, dynamic>>()
+            .map(Comment.fromJson)
+            .toList();
+      } else {
+        throw Exception('getComments failed: ${response.statusCode}');
+      }
+    } catch (e) {
+      log('[Comment] getComments error: $e');
+      rethrow;
+    }
+  }
+
   // ── Fetch replies for a comment ────────────────────────────────────────────
   // GET /api/replies/?parent=<commentId>
   Future<List<Comment>> getReplies(String commentId) async {
