@@ -5,8 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 
 class ApiService {
-  static const String _base = 'http://182.93.94.220:8003/api/student';
-  static const String _authBase = 'http://182.93.94.220:8010/api/auth';
+  static const String _base = 'http://36.253.137.34:8003/api/student';
+  static const String _authBase = 'http://36.253.137.34:8010/api/auth';
 
   // ── Headers ───────────────────────────────────────────────────────────────
 
@@ -93,7 +93,7 @@ class ApiService {
   static String getFullMediaUrl(String path) {
     if (path.isEmpty) return '';
     if (path.startsWith('http')) return path;
-    return 'http://182.93.94.220:8003/${path.startsWith('/') ? path.substring(1) : path}';
+    return 'http://36.253.137.34:8003/${path.startsWith('/') ? path.substring(1) : path}';
   }
 
   /// Returns true when [url] is a YouTube link.

@@ -1,4 +1,4 @@
-const String _kBaseUrl = 'http://182.93.94.220:8005';
+const String _kBaseUrl = 'http://36.253.137.34:8005';
 
 String _resolveUrl(String? path) {
   if (path == null || path.isEmpty) return '';

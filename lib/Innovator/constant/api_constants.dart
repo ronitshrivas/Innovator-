@@ -1,7 +1,7 @@
 class ApiConstants {
   ApiConstants._(); // Private constructor to prevent instantiation
 
-  static const String _host = 'http://182.93.94.220';
+  static const String _host = 'http://36.253.137.34';
 
   //Base Urls
   static const String studentBase = '$_host:8003/api/student';

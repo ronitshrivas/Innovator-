@@ -1,5 +1,5 @@
 // comment_services.dart
-// All endpoints updated to http://182.93.94.220:8005
+// All endpoints updated to http://36.253.137.34:8005
 
 import 'dart:convert';
 import 'dart:developer';
@@ -9,7 +9,7 @@ import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/models/comment_Model.dart';
 
 class CommentService {
-  //static const String _base = 'http://182.93.94.220:8005';
+  //static const String _base = 'http://36.253.137.34:8005';
 
   Map<String, String> _headers({bool json = true}) {
     final token = AppData().accessToken ?? '';

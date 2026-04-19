@@ -138,7 +138,7 @@ class CursorHelper {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Feed API Service — GET http://182.93.94.220:8005/api/posts/
+// Feed API Service — GET http://36.253.137.34:8005/api/posts/
 // ─────────────────────────────────────────────────────────────────────────────
 
 class FeedApiResponse {
@@ -167,7 +167,7 @@ class FeedApiResponse {
 }
 
 class FeedApiService {
-  //static const String baseUrl = 'http://182.93.94.220:8005';
+  //static const String baseUrl = 'http://36.253.137.34:8005';
 
   static Map<String, String> _headers() {
     final token = AppData().accessToken ?? '';
@@ -977,7 +977,7 @@ class _FeedItemState extends State<FeedItem>
   // final List<RepostEntry> _entries = [];
 
   final ContentLikeService likeService = ContentLikeService(
-    baseUrl: 'http://182.93.94.220:8005',
+    baseUrl: 'http://36.253.137.34:8005',
   );
 
   @override
@@ -1507,8 +1507,7 @@ class _FeedItemState extends State<FeedItem>
                         contentId: widget.content.id,
                         initialLikeStatus: widget.content.isLiked,
                         likeService: likeService,
-                        initialReactionType:
-                            widget.content.currentUserReaction,  
+                        initialReactionType: widget.content.currentUserReaction,
                         onLikeToggled: (isLiked) {
                           widget.onLikeToggled(isLiked);
                           SoundPlayer().playlikeSound();

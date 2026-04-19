@@ -140,7 +140,7 @@
 // }
 
 // class NotificationNotifier extends Notifier<NotificationState> {
-//   static const String _apiUrl = 'http://182.93.94.220:8005/api/notifications/';
+//   static const String _apiUrl = 'http://36.253.137.34:8005/api/notifications/';
 //   static const Duration _foregroundInterval = Duration(seconds: 8);
 //   static const Duration _backgroundInterval = Duration(seconds: 30);
 

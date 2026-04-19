@@ -22,7 +22,7 @@
 //     seconds: 30,
 //   ); // Check every 30 seconds
 //   static const String _notificationsUrl =
-//       'http://182.93.94.220:8005/api/notifications/';
+//       'http://36.253.137.34:8005/api/notifications/';
 
 //   /// Start polling for new notifications
 //   void startPolling() {

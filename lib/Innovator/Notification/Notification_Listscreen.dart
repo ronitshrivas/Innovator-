@@ -13,7 +13,7 @@ import 'package:innovator/Innovator/screens/Feed/post_detail_screen.dart';
 // ─────────────────────────────────────────────
 //  Base URL for the new notification service
 // ─────────────────────────────────────────────
-const String _kBaseUrl = 'http://182.93.94.220:8005';
+const String _kBaseUrl = 'http://36.253.137.34:8005';
 
 class NotificationListScreen extends StatefulWidget {
   const NotificationListScreen({super.key});
