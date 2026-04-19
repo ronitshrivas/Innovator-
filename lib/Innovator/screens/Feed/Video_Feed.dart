@@ -319,6 +319,16 @@ class ReelsFeedNotifier extends StateNotifier<AsyncValue<List<ReelModel>>> {
     }
   }
 
+  void decrementComments(String reelId) {
+    final list = state.value;
+    if (list == null) return;
+    final idx = list.indexWhere((r) => r.id == reelId);
+    if (idx != -1) {
+      list[idx].commentsCount = (list[idx].commentsCount - 1).clamp(0, 999999);
+    }
+    state = AsyncValue.data(List.from(list));
+  }
+
   Future<void> refresh() async {
     _nextCursor = null;
     _hasMore = true;
@@ -1813,10 +1823,22 @@ class _ReelItemState extends ConsumerState<_ReelItem>
             Expanded(
               child: CommentSection(
                 contentId: widget.reel.id,
-                onCommentAdded:
-                    () => ref
+
+                // onCommentAdded:
+                //     () => ref
+                //         .read(reelsFeedProvider.notifier)
+                //         .incrementComments(widget.reel.id),
+                onCommentCountChanged: (delta) {
+                  if (delta > 0) {
+                    ref
                         .read(reelsFeedProvider.notifier)
-                        .incrementComments(widget.reel.id),
+                        .incrementComments(widget.reel.id);
+                  } else {
+                    ref
+                        .read(reelsFeedProvider.notifier)
+                        .decrementComments(widget.reel.id);
+                  }
+                },
               ),
             ),
           ],
