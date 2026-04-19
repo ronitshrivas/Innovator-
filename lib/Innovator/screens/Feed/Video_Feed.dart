@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
+import 'dart:math';
+import 'package:better_native_video_player/better_native_video_player.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -9,10 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:share_plus/share_plus.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:video_player/video_player.dart';
 import 'package:innovator/Innovator/App_data/App_data.dart';
-import 'package:innovator/Innovator/constant/api_constants.dart';
-import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/screens/comment/comment_section.dart';
 import 'package:innovator/Innovator/screens/Follow/follow_Button.dart';
 import 'package:innovator/Innovator/screens/Likes/Content-Like-Service.dart';
@@ -38,7 +37,6 @@ class ReelModel {
   int commentsCount;
   final DateTime createdAt;
 
-  // Repost fields
   final String? sharedReelId;
   final ReelModel? sharedReelDetails;
 
@@ -124,7 +122,7 @@ class ReelOperationResult {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class ReelsApiService {
-  static const String _baseUrl = 'http://36.253.137.34:8005';
+  static const String _baseUrl = 'http://182.93.94.220:8005';
   static const String _reelsUrl = '$_baseUrl/api/reels/';
 
   static Map<String, String> _headers() {
@@ -135,8 +133,6 @@ class ReelsApiService {
       if (token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
   }
-
-  // ── Fetch feed ────────────────────────────────────────────────────────────
 
   static Future<ReelsFeed> fetchReels({String? cursor}) async {
     final uri =
@@ -164,8 +160,6 @@ class ReelsApiService {
     throw Exception('Reels fetch failed: ${res.statusCode}');
   }
 
-  // ── Record view ───────────────────────────────────────────────────────────
-
   static Future<void> recordView(String reelId) async {
     try {
       await http
@@ -174,14 +168,11 @@ class ReelsApiService {
     } catch (_) {}
   }
 
-  // ── Edit reel (PATCH) ─────────────────────────────────────────────────────
-
   static Future<ReelOperationResult> editReel({
     required String reelId,
     required String caption,
   }) async {
     try {
-      developer.log('[Reels] PATCH $_reelsUrl$reelId/');
       final res = await http
           .patch(
             Uri.parse('$_reelsUrl$reelId/'),
@@ -189,7 +180,6 @@ class ReelsApiService {
             body: json.encode({'caption': caption}),
           )
           .timeout(const Duration(seconds: 15));
-
       if (res.statusCode == 200) {
         final data = json.decode(res.body) as Map<String, dynamic>;
         return ReelOperationResult(
@@ -197,40 +187,31 @@ class ReelsApiService {
           data: ReelModel.fromJson(data),
         );
       }
-      developer.log('[Reels] Edit failed: ${res.statusCode} ${res.body}');
       return ReelOperationResult(
         success: false,
         errorMessage: _parseError(res.body, res.statusCode),
       );
     } catch (e) {
-      developer.log('[Reels] Edit error: $e');
       return ReelOperationResult(
         success: false,
         errorMessage: 'Network error. Please try again.',
       );
     }
   }
-
-  // ── Delete reel (DELETE) ──────────────────────────────────────────────────
 
   static Future<ReelOperationResult> deleteReel(String reelId) async {
     try {
-      developer.log('[Reels] DELETE $_reelsUrl$reelId/');
       final res = await http
           .delete(Uri.parse('$_reelsUrl$reelId/'), headers: _headers())
           .timeout(const Duration(seconds: 15));
-
-      // 204 No Content = success
       if (res.statusCode == 204 || res.statusCode == 200) {
         return const ReelOperationResult(success: true);
       }
-      developer.log('[Reels] Delete failed: ${res.statusCode} ${res.body}');
       return ReelOperationResult(
         success: false,
         errorMessage: _parseError(res.body, res.statusCode),
       );
     } catch (e) {
-      developer.log('[Reels] Delete error: $e');
       return ReelOperationResult(
         success: false,
         errorMessage: 'Network error. Please try again.',
@@ -238,15 +219,11 @@ class ReelsApiService {
     }
   }
 
-  // ── Repost reel (POST /repost/) ───────────────────────────────────────────
-
   static Future<ReelOperationResult> repostReel(String reelId) async {
     try {
-      developer.log('[Reels] POST $_reelsUrl$reelId/repost/');
       final res = await http
           .post(Uri.parse('$_reelsUrl$reelId/repost/'), headers: _headers())
           .timeout(const Duration(seconds: 15));
-
       if (res.statusCode == 200 || res.statusCode == 201) {
         final data = json.decode(res.body) as Map<String, dynamic>;
         return ReelOperationResult(
@@ -254,21 +231,17 @@ class ReelsApiService {
           data: ReelModel.fromJson(data),
         );
       }
-      developer.log('[Reels] Repost failed: ${res.statusCode} ${res.body}');
       return ReelOperationResult(
         success: false,
         errorMessage: _parseError(res.body, res.statusCode),
       );
     } catch (e) {
-      developer.log('[Reels] Repost error: $e');
       return ReelOperationResult(
         success: false,
         errorMessage: 'Network error. Please try again.',
       );
     }
   }
-
-  // ── Helper ────────────────────────────────────────────────────────────────
 
   static String _parseError(String body, int statusCode) {
     try {
@@ -317,16 +290,6 @@ class ReelsFeedNotifier extends StateNotifier<AsyncValue<List<ReelModel>>> {
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
-  }
-
-  void decrementComments(String reelId) {
-    final list = state.value;
-    if (list == null) return;
-    final idx = list.indexWhere((r) => r.id == reelId);
-    if (idx != -1) {
-      list[idx].commentsCount = (list[idx].commentsCount - 1).clamp(0, 999999);
-    }
-    state = AsyncValue.data(List.from(list));
   }
 
   Future<void> refresh() async {
@@ -386,46 +349,41 @@ class ReelsFeedNotifier extends StateNotifier<AsyncValue<List<ReelModel>>> {
     state = AsyncValue.data(List.from(list));
   }
 
-  // ── Edit ─────────────────────────────────────────────────────────────────
+  void decrementComments(String reelId) {
+    final list = state.value;
+    if (list == null) return;
+    final idx = list.indexWhere((r) => r.id == reelId);
+    if (idx != -1) {
+      list[idx].commentsCount = (list[idx].commentsCount - 1).clamp(0, 999999);
+    }
+    state = AsyncValue.data(List.from(list));
+  }
 
-  /// Optimistically updates caption, calls API, reverts on failure.
-  /// Returns error message or null on success.
   Future<String?> editReel(String reelId, String newCaption) async {
     final list = state.value;
     if (list == null) return 'No data';
     final idx = list.indexWhere((r) => r.id == reelId);
     if (idx == -1) return 'Reel not found';
-
     final oldCaption = list[idx].caption;
-
-    // Optimistic update
     list[idx].caption = newCaption;
     state = AsyncValue.data(List.from(list));
-
     final result = await ReelsApiService.editReel(
       reelId: reelId,
       caption: newCaption,
     );
-
     if (result.success) {
-      // Sync with server response
       if (result.data != null) {
         list[idx].caption = result.data!.caption;
         state = AsyncValue.data(List.from(list));
       }
       return null;
     } else {
-      // Revert
       list[idx].caption = oldCaption;
       state = AsyncValue.data(List.from(list));
       return result.errorMessage;
     }
   }
 
-  // ── Delete ────────────────────────────────────────────────────────────────
-
-  /// Removes the reel from feed on success.
-  /// Returns error message or null on success.
   Future<String?> deleteReel(String reelId) async {
     final result = await ReelsApiService.deleteReel(reelId);
     if (result.success) {
@@ -436,15 +394,10 @@ class ReelsFeedNotifier extends StateNotifier<AsyncValue<List<ReelModel>>> {
     return result.errorMessage;
   }
 
-  // ── Repost ────────────────────────────────────────────────────────────────
-
-  /// Calls the repost API and prepends the new repost reel to the feed.
-  /// Returns error message or null on success.
   Future<String?> repostReel(String reelId) async {
     final result = await ReelsApiService.repostReel(reelId);
     if (result.success && result.data != null) {
       final list = state.value ?? [];
-      // Prepend repost to feed so user sees it immediately
       state = AsyncValue.data([result.data!, ...list]);
       return null;
     }
@@ -456,6 +409,92 @@ final reelsFeedProvider =
     StateNotifierProvider<ReelsFeedNotifier, AsyncValue<List<ReelModel>>>(
       (ref) => ReelsFeedNotifier(),
     );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NATIVE CONTROLLER POOL
+// Pre-warms NativeVideoPlayerController instances using ExoPlayer (Android)
+// so every reel plays instantly with zero startup lag.
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _NativeControllerPool {
+  final Map<String, NativeVideoPlayerController> _pool = {};
+  final Set<String> _loading = {};
+
+  // Start IDs high to avoid conflict with other players in the app
+  int _idCounter = 100;
+
+  /// Returns the ready controller for [reelId], or null if still loading.
+  NativeVideoPlayerController? get(String reelId) => _pool[reelId];
+
+  /// Pre-initializes and buffers the video for [reel].
+  /// [onReady] is called on the calling isolate when the controller is ready.
+  /// Safe to call multiple times — no-op if already loading/loaded.
+  Future<void> preload(ReelModel reel, {VoidCallback? onReady}) async {
+    if (_pool.containsKey(reel.id) || _loading.contains(reel.id)) return;
+    if (!reel.hasVideo) return;
+
+    _loading.add(reel.id);
+    developer.log('[Pool] Preloading reel ${reel.id}');
+
+    final ctrl = NativeVideoPlayerController(
+      id: _idCounter++,
+      autoPlay: false,
+      // enableLooping: true,
+      enableLooping: false,
+      showNativeControls: false, // We render our own Flutter controls
+    );
+
+    try {
+      // initialize() creates the native ExoPlayer/AVPlayer instance
+      await ctrl.initialize();
+
+      final url = reel.bestVideoUrl!;
+      final token = AppData().accessToken ?? '';
+      final headers =
+          token.isNotEmpty
+              ? <String, String>{'Authorization': 'Bearer $token'}
+              : null;
+
+      // loadUrl() triggers ExoPlayer to start fetching + buffering immediately
+      await ctrl.loadUrl(url: url, headers: headers);
+
+      _pool[reel.id] = ctrl;
+      developer.log('[Pool] Ready: reel ${reel.id}');
+      onReady?.call();
+    } catch (e) {
+      developer.log('[Pool] Error preloading ${reel.id}: $e');
+      ctrl.dispose();
+    } finally {
+      _loading.remove(reel.id);
+    }
+  }
+
+  /// Disposes controllers that are more than [keepRadius] positions away
+  /// from [currentIndex] to free memory.
+  void evictDistant(
+    int currentIndex,
+    List<ReelModel> reels, {
+    int keepRadius = 3,
+  }) {
+    final toEvict = <String>[];
+    for (final entry in _pool.entries) {
+      final idx = reels.indexWhere((r) => r.id == entry.key);
+      if (idx < 0 || (idx - currentIndex).abs() > keepRadius) {
+        toEvict.add(entry.key);
+      }
+    }
+    for (final id in toEvict) {
+      developer.log('[Pool] Evicting reel $id');
+      _pool.remove(id)?.dispose();
+    }
+  }
+
+  void disposeAll() {
+    for (final ctrl in _pool.values) ctrl.dispose();
+    _pool.clear();
+    _loading.clear();
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // REELS SCREEN
@@ -471,6 +510,7 @@ class ReelsScreen extends ConsumerStatefulWidget {
 class _ReelsScreenState extends ConsumerState<ReelsScreen>
     with WidgetsBindingObserver {
   late PageController _pageController;
+  final _pool = _NativeControllerPool();
   int _currentPage = 0;
   bool _isAnimating = false;
 
@@ -487,8 +527,26 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _pageController.dispose();
+    _pool.disposeAll();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
+  }
+
+  /// Pre-warms controllers for current reel + 2 ahead + 1 behind.
+  /// Calls setState when any controller becomes ready, so the item
+  /// gets a non-null controller and starts playing immediately.
+  void _preloadAround(List<ReelModel> reels, int index) {
+    final from = max(0, index - 1);
+    final to = min(reels.length - 1, index + 2);
+    for (int i = from; i <= to; i++) {
+      _pool.preload(
+        reels[i],
+        onReady: () {
+          if (mounted) setState(() {}); // hand ready controller to _ReelItem
+        },
+      );
+    }
+    _pool.evictDistant(index, reels);
   }
 
   void _goToPage(int page, List<ReelModel> reels) {
@@ -507,8 +565,8 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
   void _onPageChanged(int index) {
     setState(() => _currentPage = index);
     ref.read(activeReelIndexProvider.notifier).state = index;
-    final feedState = ref.read(reelsFeedProvider);
-    final reels = feedState.value ?? [];
+    final reels = ref.read(reelsFeedProvider).value ?? [];
+    _preloadAround(reels, index);
     if (index >= reels.length - 3) {
       ref.read(reelsFeedProvider.notifier).loadMore();
     }
@@ -517,6 +575,15 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
   @override
   Widget build(BuildContext context) {
     final feedState = ref.watch(reelsFeedProvider);
+
+    // Kick off preloading whenever feed data arrives / changes
+    ref.listen<AsyncValue<List<ReelModel>>>(reelsFeedProvider, (_, next) {
+      next.whenData((reels) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _preloadAround(reels, _currentPage);
+        });
+      });
+    });
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -589,7 +656,8 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
                   key: ValueKey(reels[index].id),
                   reel: reels[index],
                   isActive: index == _currentPage,
-                  shouldPreload: (index - _currentPage).abs() <= 1,
+                  // Pass pre-warmed controller — null shows thumbnail until ready
+                  controller: _pool.get(reels[index].id),
                 );
               },
             ),
@@ -602,18 +670,20 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SINGLE REEL ITEM
+// Receives a pre-warmed NativeVideoPlayerController from the pool.
+// When controller is non-null and isActive=true, video plays instantly.
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ReelItem extends ConsumerStatefulWidget {
   final ReelModel reel;
   final bool isActive;
-  final bool shouldPreload;
+  final NativeVideoPlayerController? controller;
 
   const _ReelItem({
     Key? key,
     required this.reel,
     required this.isActive,
-    required this.shouldPreload,
+    required this.controller,
   }) : super(key: key);
 
   @override
@@ -622,38 +692,174 @@ class _ReelItem extends ConsumerStatefulWidget {
 
 class _ReelItemState extends ConsumerState<_ReelItem>
     with WidgetsBindingObserver, SingleTickerProviderStateMixin {
-  VideoPlayerController? _controller;
-  bool _initialized = false;
-  bool _disposed = false;
+  // ── Playback state (driven by controller streams) ─────────────────────────
   bool _isPlaying = false;
+  Duration _position = Duration.zero;
+  Duration _duration = Duration.zero;
+  bool _isMuted = false;
+  bool _isSeeking = false;
+
+  StreamSubscription<Duration>? _positionSub;
+  StreamSubscription<Duration>? _durationSub;
+  StreamSubscription<PlayerActivityState>? _stateSub;
+
+  // ── UI state ──────────────────────────────────────────────────────────────
   bool _showControls = false;
   bool _showComments = false;
+  bool _viewRecorded = false;
 
+  // ── Heart burst animation ─────────────────────────────────────────────────
   late AnimationController _heartCtrl;
   late Animation<double> _heartScale;
   late Animation<double> _heartOpacity;
   bool _showHeartBurst = false;
   Offset _heartPosition = Offset.zero;
 
-  Duration _position = Duration.zero;
-  Duration _duration = Duration.zero;
-  bool _isSeeking = false;
-  Timer? _progressTimer;
-
+  // ── Reaction overlay ──────────────────────────────────────────────────────
   OverlayEntry? _reactionOverlay;
   final LayerLink _reactionLayerLink = LayerLink();
 
   final ContentLikeService _likeService = ContentLikeService(
-    baseUrl: 'http://36.253.137.34:8005',
+    baseUrl: 'http://182.93.94.220:8005',
   );
 
-  bool _viewRecorded = false;
+  // ─────────────────────────────────────────────────────────────────────────
+  // LIFECYCLE
+  // ─────────────────────────────────────────────────────────────────────────
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _initHeartAnimation();
+    _attachController(widget.controller);
+  }
 
+  @override
+  void didUpdateWidget(_ReelItem old) {
+    super.didUpdateWidget(old);
+
+    // Controller changed (pool finished loading) → re-subscribe
+    if (old.controller != widget.controller) {
+      _detachController();
+      _attachController(widget.controller);
+    }
+
+    // Active state changed → play / pause
+    if (widget.isActive != old.isActive) {
+      if (widget.isActive) {
+        widget.controller?.play();
+        if (!_viewRecorded) {
+          _viewRecorded = true;
+          ReelsApiService.recordView(widget.reel.id);
+        }
+      } else {
+        widget.controller?.pause();
+        _removeReactionOverlay();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _detachController();
+    _heartCtrl.dispose();
+    _removeReactionOverlay();
+    // Note: we do NOT dispose the controller here — the pool owns it.
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      widget.controller?.pause();
+    } else if (state == AppLifecycleState.resumed && widget.isActive) {
+      widget.controller?.play();
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // CONTROLLER ATTACHMENT
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // void _attachController(NativeVideoPlayerController? ctrl) {
+  //   if (ctrl == null) return;
+
+  //   // Seed current values synchronously
+  //   // _position = ctrl.currentPosition;
+  //   // _duration = ctrl.duration;
+
+  //   // Stream subscriptions for live updates
+  //   _positionSub = ctrl.positionStream.listen((pos) {
+  //     if (mounted && !_isSeeking) setState(() => _position = pos);
+  //   });
+  //   _durationSub = ctrl.durationStream.listen((dur) {
+  //     if (mounted) setState(() => _duration = dur);
+  //   });
+  //   _stateSub = ctrl.playerStateStream.listen((s) {
+  //     if (mounted) {
+  //       setState(() => _isPlaying = s == PlayerActivityState.playing);
+  //     }
+  //   });
+
+  //   // Apply mute preference if user changed it before controller was ready
+  //   if (_isMuted) ctrl.setVolume(0.0);
+
+  //   // Auto-play if this is the active reel
+  //   if (widget.isActive) {
+  //     ctrl.play();
+  //     if (!_viewRecorded) {
+  //       _viewRecorded = true;
+  //       ReelsApiService.recordView(widget.reel.id);
+  //     }
+  //   }
+  // }
+
+
+  void _attachController(NativeVideoPlayerController? ctrl) {
+  if (ctrl == null) return;
+
+  // ❌ REMOVE THESE — currentPosition and duration don't exist as properties
+  // _position = ctrl.currentPosition;
+  // _duration = ctrl.duration;
+
+  _positionSub = ctrl.positionStream.listen((pos) {
+    if (mounted && !_isSeeking) setState(() => _position = pos);
+  });
+
+  _durationSub = ctrl.durationStream.listen((dur) {
+    if (mounted) setState(() => _duration = dur);
+  });
+
+   _stateSub = ctrl.playerStateStream.listen((state) {
+    if (mounted) {
+      setState(() => _isPlaying = state == PlayerActivityState.playing);
+    }
+  });
+
+  if (_isMuted) ctrl.setVolume(0.0);
+
+  if (widget.isActive) {
+    ctrl.play();
+    if (!_viewRecorded) {
+      _viewRecorded = true;
+      ReelsApiService.recordView(widget.reel.id);
+    }
+  }
+}
+
+  void _detachController() {
+    _positionSub?.cancel();
+    _durationSub?.cancel();
+    _stateSub?.cancel();
+    _positionSub = null;
+    _durationSub = null;
+    _stateSub = null;
+  }
+
+  void _initHeartAnimation() {
     _heartCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 700),
@@ -685,248 +891,22 @@ class _ReelItemState extends ConsumerState<_ReelItem>
       TweenSequenceItem(tween: ConstantTween<double>(1.0), weight: 80),
       TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 0.0), weight: 20),
     ]).animate(_heartCtrl);
-
-    if (widget.shouldPreload) _initVideo();
   }
 
-  @override
-  void didUpdateWidget(_ReelItem oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.shouldPreload && _controller == null && !_disposed) {
-      _initVideo();
-    }
-    if (widget.isActive != oldWidget.isActive) {
-      if (widget.isActive) {
-        _play();
-        if (!_viewRecorded) {
-          _viewRecorded = true;
-          ReelsApiService.recordView(widget.reel.id);
-        }
-      } else {
-        _pause();
-        _removeReactionOverlay();
-      }
-    }
-  }
-
-  Future<void> _initVideo() async {
-    if (_disposed || !widget.reel.hasVideo) return;
-
-    // Build URL priority list: HLS first, then MP4
-    final urls = <String>[
-      if (widget.reel.hlsUrl != null && widget.reel.hlsUrl!.isNotEmpty)
-        widget.reel.hlsUrl!,
-      if (widget.reel.videoUrl != null && widget.reel.videoUrl!.isNotEmpty)
-        widget.reel.videoUrl!,
-    ];
-
-    for (final url in urls) {
-      final success = await _tryInitVideo(url);
-      if (success) return; // ✅ worked — stop
-    }
-
-    // All URLs failed
-    developer.log(
-      '[Reel] All video sources failed for reel: ${widget.reel.id}',
-    );
-    if (mounted) setState(() => _initialized = false);
-  }
-
-  /// Returns true if initialization succeeded, false otherwise.
-  Future<bool> _tryInitVideo(String url) async {
-    if (_disposed) return false;
-    developer.log('[Reel] Trying: $url');
-
-    // ── Fully clean up previous controller ───────────────────────────────────
-    final oldCtrl = _controller;
-    _controller = null;
-    if (oldCtrl != null) {
-      await oldCtrl.pause();
-      await oldCtrl.dispose();
-      // Small gap so ExoPlayer fully releases before new one inits
-      await Future.delayed(const Duration(milliseconds: 300));
-    }
-
-    if (_disposed) return false;
-
-    // ── Check URL reachability ────────────────────────────────────────────────
-    try {
-      final response = await http
-          .head(
-            Uri.parse(url),
-            headers:
-                url.endsWith('.m3u8')
-                    ? {'Authorization': 'Bearer ${AppData().accessToken ?? ''}'}
-                    : {},
-          )
-          .timeout(const Duration(seconds: 5));
-
-      developer.log(
-        '[Reel] HEAD $url → ${response.statusCode} | '
-        'Content-Type: ${response.headers['content-type']} | '
-        'Content-Length: ${response.headers['content-length']}',
-      );
-
-      if (response.statusCode != 200) {
-        developer.log('[Reel] ❌ Bad status ${response.statusCode}: $url');
-        return false;
-      }
-    } catch (e) {
-      developer.log('[Reel] ❌ URL unreachable: $url → $e');
-      return false;
-    }
-
-    if (_disposed) return false;
-
-    // ── Init new controller ───────────────────────────────────────────────────
-    // In _tryInitVideo(), replace the ctrl creation with:
-    final isHls = url.endsWith('.m3u8');
-    final ctrl = VideoPlayerController.networkUrl(
-      Uri.parse(url),
-      videoPlayerOptions: VideoPlayerOptions(
-        mixWithOthers: true,
-        allowBackgroundPlayback: false,
-      ),
-      httpHeaders:
-          isHls
-              ? {
-                'Authorization': 'Bearer ${AppData().accessToken ?? ''}',
-                // FIX: Some HLS servers need these headers too
-                'Accept': '*/*',
-                'Connection': 'keep-alive',
-              }
-              : {},
-    );
-
-    // Assign immediately so dispose() can clean it up if widget dies mid-init
-    _controller = ctrl;
-
-    try {
-      await ctrl.initialize().timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => throw TimeoutException('Timed out: $url'),
-      );
-
-      // Verify THIS controller is still the active one (not replaced by dispose)
-      if (_disposed || _controller != ctrl) {
-        developer.log('[Reel] Widget disposed during init, releasing: $url');
-        ctrl.dispose();
-        return false;
-      }
-
-      developer.log(
-        '[Reel] ✅ Success: $url | '
-        'Size: ${ctrl.value.size} | '
-        'Duration: ${ctrl.value.duration}',
-      );
-
-      await ctrl.setLooping(true);
-      await ctrl.setVolume(1.0);
-
-      if (mounted) {
-        setState(() {
-          _initialized = true;
-          _duration = ctrl.value.duration;
-        });
-        ctrl.addListener(() {
-          if (_disposed || !mounted) return;
-          final newSize = ctrl.value.size;
-          if (newSize.width > 0 && newSize.height > 0) {
-            // Trigger rebuild to recalculate cover scale with real dimensions
-            if (mounted) setState(() {});
-          }
-        });
-        if (widget.isActive) _play();
-        _startProgressTimer();
-      }
-
-      return true;
-    } catch (e) {
-      developer.log(
-        '[Reel] ❌ Failed ($url):\n'
-        '  Type: ${e.runtimeType}\n'
-        '  Error: $e',
-      );
-
-      // Only dispose if this is still the active controller
-      if (_controller == ctrl) {
-        ctrl.dispose();
-        _controller = null;
-      }
-      return false;
-    }
-  }
-
-  void _play() {
-    if (_controller == null || !_initialized || _disposed) return;
-    _controller!.play();
-    if (mounted) setState(() => _isPlaying = true);
-  }
-
-  void _pause() {
-    if (_controller == null || !_initialized || _disposed) return;
-    _controller!.pause();
-    if (mounted) setState(() => _isPlaying = false);
-  }
-
-  void _startProgressTimer() {
-    _progressTimer?.cancel();
-    _progressTimer = Timer.periodic(const Duration(milliseconds: 200), (_) {
-      if (_controller == null || !_initialized || _disposed || !mounted) return;
-      if (!_isSeeking) {
-        setState(() => _position = _controller!.value.position);
-      }
-    });
-  }
-
-  void _seekTo(double fraction) {
-    if (_controller == null || !_initialized) return;
-    final target = Duration(
-      milliseconds: (_duration.inMilliseconds * fraction).round(),
-    );
-    _controller!.seekTo(target);
-    setState(() => _position = target);
-  }
-
-  @override
-  void dispose() {
-    _disposed = true;
-    WidgetsBinding.instance.removeObserver(this);
-    _progressTimer?.cancel();
-    _heartCtrl.dispose();
-    _removeReactionOverlay();
-
-    // Capture reference before nulling
-    final ctrl = _controller;
-    _controller = null;
-    ctrl?.pause();
-    ctrl?.dispose();
-
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (_controller == null || _disposed) return;
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
-      _pause();
-    } else if (state == AppLifecycleState.resumed && widget.isActive) {
-      _play();
-    }
-  }
-
-  // ── Gestures ──────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
+  // GESTURE HANDLERS
+  // ─────────────────────────────────────────────────────────────────────────
 
   void _onTap() {
     _removeReactionOverlay();
+    final ctrl = widget.controller;
+    if (ctrl == null) return;
     if (_isPlaying) {
-      _pause();
-      _flashControls();
+      ctrl.pause();
     } else {
-      _play();
-      _flashControls();
+      ctrl.play();
     }
+    _flashControls();
   }
 
   void _flashControls() {
@@ -951,32 +931,31 @@ class _ReelItemState extends ConsumerState<_ReelItem>
     }
   }
 
-  void _onLongPressStart(LongPressStartDetails _) => _pause();
+  void _onLongPressStart(LongPressStartDetails _) => widget.controller?.pause();
+
   void _onLongPressEnd(LongPressEndDetails _) {
-    if (widget.isActive) _play();
+    if (widget.isActive) widget.controller?.play();
   }
 
-  // ── Reaction logic ────────────────────────────────────────────────────────
+  void _seekTo(double fraction) {
+    final ctrl = widget.controller;
+    if (ctrl == null) return;
+    final target = Duration(
+      milliseconds: (_duration.inMilliseconds * fraction).round(),
+    );
+    ctrl.seekTo(target);
+    if (mounted) setState(() => _position = target);
+  }
 
-  // Future<void> _applyReaction(ReactionType type) async {
-  //   final reel = widget.reel;
-  //   final wasLiked = reel.isLiked;
-  //   final isSameType = reel.currentUserReaction == type.value;
-  //   if (wasLiked && isSameType) {
-  //     ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, null);
-  //   } else {
-  //     ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, type.value);
-  //   }
-  //   final result = await _likeService.reactReel(reel.id, type);
-  //   if (result.success) {
-  //     final serverType = result.reactionType?.value;
-  //     ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, serverType);
-  //   } else {
-  //     ref
-  //         .read(reelsFeedProvider.notifier)
-  //         .applyReaction(reel.id, reel.currentUserReaction);
-  //   }
-  // }
+  void _toggleMute() {
+    _isMuted = !_isMuted;
+    widget.controller?.setVolume(_isMuted ? 0.0 : 1.0);
+    setState(() {});
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // REACTION LOGIC
+  // ─────────────────────────────────────────────────────────────────────────
 
   Future<void> _applyReaction(ReactionType type) async {
     final reel = widget.reel;
@@ -1010,8 +989,6 @@ class _ReelItemState extends ConsumerState<_ReelItem>
     }
   }
 
-  // ── Reaction Overlay ──────────────────────────────────────────────────────
-
   void _showReactionPicker() {
     if (_reactionOverlay != null) {
       _removeReactionOverlay();
@@ -1038,10 +1015,12 @@ class _ReelItemState extends ConsumerState<_ReelItem>
     _reactionOverlay = null;
   }
 
-  // ── More options sheet (edit / delete / repost) ───────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
+  // MORE OPTIONS
+  // ─────────────────────────────────────────────────────────────────────────
 
   void _showMoreOptions() {
-    _pause();
+    widget.controller?.pause();
     _removeReactionOverlay();
     final isOwner = _isCurrentUser();
 
@@ -1057,7 +1036,7 @@ class _ReelItemState extends ConsumerState<_ReelItem>
             onRepost: !isOwner ? () => _doRepost() : null,
           ),
     ).then((_) {
-      if (widget.isActive && mounted) _play();
+      if (widget.isActive && mounted) widget.controller?.play();
     });
   }
 
@@ -1174,10 +1153,7 @@ class _ReelItemState extends ConsumerState<_ReelItem>
                   final err = await ref
                       .read(reelsFeedProvider.notifier)
                       .deleteReel(widget.reel.id);
-                  if (err != null && mounted) {
-                    _showSnack(err, isError: true);
-                  }
-                  // Reel removed from state — PageView auto adjusts
+                  if (err != null && mounted) _showSnack(err, isError: true);
                 },
                 child: const Text(
                   'Delete',
@@ -1204,6 +1180,13 @@ class _ReelItemState extends ConsumerState<_ReelItem>
     }
   }
 
+  void _shareReel() {
+    Share.share(
+      'Check out this reel by @${widget.reel.username}!\n'
+      '${widget.reel.bestVideoUrl ?? ''}',
+    );
+  }
+
   void _showSnack(String msg, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1217,18 +1200,48 @@ class _ReelItemState extends ConsumerState<_ReelItem>
     );
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
+  bool _isCurrentUser() =>
+      AppData().isMe(widget.reel.userId) ||
+      AppData().isMe(widget.reel.username);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // BUILD
+  // ─────────────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final ctrl = widget.controller;
 
+    // When the pool has a ready controller, use NativeVideoPlayer.
+    // The overlayBuilder hosts ALL our Flutter UI on top of the native surface.
+    if (ctrl != null) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          NativeVideoPlayer(controller: ctrl),
+          _buildOverlay(size),
+        ],
+      );
+    }
+
+    // Controller not ready yet — show thumbnail + overlay
     return Stack(
       fit: StackFit.expand,
       children: [
-        // FIX: Must be Positioned.fill so video truly fills the stack
-        Positioned.fill(child: _buildVideoLayer(size)),
+      _buildThumbnailFallback(size), _buildOverlay(size)],
+    );
+  }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // OVERLAY  (all Flutter UI rendered on top of the native video)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  Widget _buildOverlay(Size size) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Transparent gesture detector fills the full screen
         Positioned.fill(
           child: GestureDetector(
             onTap: _onTap,
@@ -1254,110 +1267,34 @@ class _ReelItemState extends ConsumerState<_ReelItem>
     );
   }
 
-  // ── Video layer ───────────────────────────────────────────────────────────
+  // ── Thumbnail fallback (shown while controller is loading) ────────────────
 
-  Widget _buildVideoLayer(Size size) {
-    if (_initialized && _controller != null) {
-      final videoSize = _controller!.value.size;
-
-      // HLS streams sometimes report 0x0 before first frame
-      // Fall back to standard 9:16 portrait ratio in that case
-      final bool validSize = videoSize.width > 0 && videoSize.height > 0;
-
-      double videoW, videoH;
-      if (validSize) {
-        // Always use portrait orientation (larger = height)
-        videoW =
-            videoSize.width < videoSize.height
-                ? videoSize.width
-                : videoSize.height;
-        videoH =
-            videoSize.width > videoSize.height
-                ? videoSize.width
-                : videoSize.height;
-      } else {
-        // HLS default: assume 9:16 portrait
-        videoW = 9.0;
-        videoH = 16.0;
-      }
-
-      final videoAR = videoW / videoH;
-
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          final screenW = constraints.maxWidth;
-          final screenH = constraints.maxHeight;
-          final screenAR = screenW / screenH;
-
-          double scale;
-          if (screenAR > videoAR) {
-            scale = screenW / (screenH * videoAR);
-          } else {
-            scale = (screenH * videoAR) / screenW;
-          }
-          // Never scale down
-          scale = scale < 1.0 ? 1.0 : scale;
-
-          // For HLS: also listen for size changes after first frame loads
-          if (!validSize) {
-            // Re-check size after short delay when HLS metadata arrives
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted && _controller != null) {
-                final newSize = _controller!.value.size;
-                if (newSize.width > 0 && newSize.height > 0) {
-                  setState(() {}); // Rebuild with correct size
-                }
-              }
-            });
-          }
-
-          return ClipRect(
-            child: OverflowBox(
-              maxWidth: double.infinity,
-              maxHeight: double.infinity,
-              child: SizedBox(
-                width: screenW * scale,
-                height: screenH * scale,
-                child: VideoPlayer(_controller!),
-              ),
-            ),
-          );
-        },
-      );
-    }
-
-    // Thumbnail fallback
-    if (widget.reel.thumbnail != null && widget.reel.thumbnail!.isNotEmpty) {
+  Widget _buildThumbnailFallback(Size size) {
+    final thumb = widget.reel.thumbnail;
+    if (thumb != null && thumb.isNotEmpty) {
       return CachedNetworkImage(
-        imageUrl: widget.reel.thumbnail!,
+        imageUrl: thumb,
         fit: BoxFit.cover,
         width: size.width,
         height: size.height,
-        placeholder: (_, __) => _blackPlaceholder(),
-        errorWidget: (_, __, ___) => _blackPlaceholder(),
+        placeholder: (_, __) => const ColoredBox(color: Colors.black),
+        errorWidget: (_, __, ___) => const ColoredBox(color: Colors.black),
       );
     }
-    return _blackPlaceholder();
+    return Container(
+      color: Colors.black,
+      child: const Center(
+        child: SizedBox(
+          width: 36,
+          height: 36,
+          child: CircularProgressIndicator(
+            color: Colors.white54,
+            strokeWidth: 2,
+          ),
+        ),
+      ),
+    );
   }
-
-  Widget _blackPlaceholder() => Container(
-    color: Colors.black,
-    child:
-        widget.reel.hasVideo
-            ? const Center(
-              child: SizedBox(
-                width: 36,
-                height: 36,
-                child: CircularProgressIndicator(
-                  color: Colors.white54,
-                  strokeWidth: 2,
-                ),
-              ),
-            )
-            : const Center(
-              child: Icon(Icons.videocam_off, color: Colors.white38, size: 48),
-            ),
-  );
 
   // ── Gradients ─────────────────────────────────────────────────────────────
 
@@ -1423,20 +1360,11 @@ class _ReelItemState extends ConsumerState<_ReelItem>
           ),
         ),
         const Spacer(),
-        // ── More options (⋮) ──────────────────────────────────────────
-        IconButton(
-          icon: const Icon(
-            Icons.more_vert_rounded,
-            color: Colors.white,
-            size: 24,
-          ),
-          onPressed: _showMoreOptions,
-        ),
       ],
     ),
   );
 
-  // ── Bottom-left ───────────────────────────────────────────────────────────
+  // ── Bottom-left (user info + caption) ─────────────────────────────────────
 
   Widget _buildBottomLeft(Size size) => Positioned(
     bottom: 70,
@@ -1446,10 +1374,8 @@ class _ReelItemState extends ConsumerState<_ReelItem>
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Repost badge
         if (widget.reel.isRepost && widget.reel.sharedReelDetails != null)
           _buildRepostBadge(),
-
         GestureDetector(
           onTap:
               () => Navigator.push(
@@ -1496,7 +1422,6 @@ class _ReelItemState extends ConsumerState<_ReelItem>
     ),
   );
 
-  /// Small banner shown when this reel is a repost
   Widget _buildRepostBadge() {
     final original = widget.reel.sharedReelDetails!;
     return Padding(
@@ -1555,10 +1480,6 @@ class _ReelItemState extends ConsumerState<_ReelItem>
     ),
   );
 
-  bool _isCurrentUser() =>
-      AppData().isMe(widget.reel.userId) ||
-      AppData().isMe(widget.reel.username);
-
   // ── Right action bar ──────────────────────────────────────────────────────
 
   Widget _buildActionBar(Size size) {
@@ -1572,37 +1493,36 @@ class _ReelItemState extends ConsumerState<_ReelItem>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ── Like / Reaction button ──────────────────────────────────────
+          // Like / Reaction
           CompositedTransformTarget(
             link: _reactionLayerLink,
             child: GestureDetector(
-              onTap: () {
-                if (hasReaction) {
-                  _applyReaction(currentReaction);
-                } else {
-                  _applyReaction(ReactionType.like);
-                }
-              },
+              onTap:
+                  () =>
+                      hasReaction
+                          ? _applyReaction(currentReaction)
+                          : _applyReaction(ReactionType.like),
               onLongPress: _showReactionPicker,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
+                  SizedBox(
                     width: 44,
                     height: 44,
-                    alignment: Alignment.center,
-                    child:
-                        hasReaction
-                            ? Text(
-                              currentReaction.emoji,
-                              style: const TextStyle(fontSize: 28),
-                            )
-                            : const Icon(
-                              Icons.favorite_border_rounded,
-                              color: Colors.white,
-                              size: 30,
-                              shadows: [Shadow(blurRadius: 6)],
-                            ),
+                    child: Center(
+                      child:
+                          hasReaction
+                              ? Text(
+                                currentReaction.emoji,
+                                style: const TextStyle(fontSize: 28),
+                              )
+                              : const Icon(
+                                Icons.favorite_border_rounded,
+                                color: Colors.white,
+                                size: 30,
+                                shadows: [Shadow(blurRadius: 6)],
+                              ),
+                    ),
                   ),
                   Text(
                     _formatCount(reel.reactionsCount),
@@ -1620,7 +1540,7 @@ class _ReelItemState extends ConsumerState<_ReelItem>
 
           const SizedBox(height: 20),
 
-          // ── Comment button ─────────────────────────────────────────────
+          // Comment
           _ActionButton(
             icon: Icons.chat_bubble_outline_rounded,
             label: _formatCount(reel.commentsCount),
@@ -1629,57 +1549,44 @@ class _ReelItemState extends ConsumerState<_ReelItem>
 
           const SizedBox(height: 20),
 
-          // ── Repost button (non-owners only) ────────────────────────────
-          if (!_isCurrentUser())
+          // Repost (non-owners)
+          if (!_isCurrentUser()) ...[
             _ActionButton(
               icon: Icons.repeat_rounded,
               label: 'Repost',
               onTap: _doRepost,
             ),
+            const SizedBox(height: 20),
+          ],
 
-          if (!_isCurrentUser()) const SizedBox(height: 20),
-
-          // ── Share ──────────────────────────────────────────────────────
+          // Share
           _ActionButton(
             icon: Icons.send_rounded,
             label: 'Share',
             onTap: _shareReel,
           ),
 
+          // More options
+          IconButton(
+            icon: const Icon(
+              Icons.more_vert_rounded,
+              color: Colors.white,
+              size: 24,
+            ),
+            onPressed: _showMoreOptions,
+          ),
+
           const SizedBox(height: 20),
 
-          // ── Mute ───────────────────────────────────────────────────────
+          // Mute
           _ActionButton(
-            icon:
-                (_controller?.value.volume ?? 1.0) > 0
-                    ? Icons.volume_up_rounded
-                    : Icons.volume_off_rounded,
+            icon: _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
             label: '',
             onTap: _toggleMute,
           ),
         ],
       ),
     );
-  }
-
-  void _toggleMute() {
-    if (_controller == null) return;
-    final current = _controller!.value.volume;
-    _controller!.setVolume(current > 0 ? 0.0 : 1.0);
-    setState(() {});
-  }
-
-  void _shareReel() {
-    Share.share(
-      'Check out this reel by @${widget.reel.username}!\n'
-      '${widget.reel.bestVideoUrl ?? ''}',
-    );
-  }
-
-  String _formatCount(int count) {
-    if (count >= 1000000) return '${(count / 1000000).toStringAsFixed(1)}M';
-    if (count >= 1000) return '${(count / 1000).toStringAsFixed(1)}K';
-    return count > 0 ? '$count' : '';
   }
 
   // ── Progress bar ──────────────────────────────────────────────────────────
@@ -1820,14 +1727,12 @@ class _ReelItemState extends ConsumerState<_ReelItem>
                 ],
               ),
             ),
+
             Expanded(
               child: CommentSection(
                 contentId: widget.reel.id,
+                isReel: true,
 
-                // onCommentAdded:
-                //     () => ref
-                //         .read(reelsFeedProvider.notifier)
-                //         .incrementComments(widget.reel.id),
                 onCommentCountChanged: (delta) {
                   if (delta > 0) {
                     ref
@@ -1846,11 +1751,18 @@ class _ReelItemState extends ConsumerState<_ReelItem>
       ),
     ),
   );
+
+  String _formatCount(int count) {
+    if (count >= 1000000) {
+      return '${(count / 1000000).toStringAsFixed(1)}M';
+    }
+    if (count >= 1000) return '${(count / 1000).toStringAsFixed(1)}K';
+    return count > 0 ? '$count' : '';
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // REEL OPTIONS BOTTOM SHEET
-// Shown when user taps the ⋮ button — owner sees Edit/Delete, others see Repost
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ReelOptionsSheet extends StatelessWidget {
@@ -1879,7 +1791,6 @@ class _ReelOptionsSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Handle
           Container(
             width: 36,
             height: 4,
@@ -1889,7 +1800,6 @@ class _ReelOptionsSheet extends StatelessWidget {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-
           if (isOwner) ...[
             _OptionTile(
               icon: Icons.edit_rounded,
@@ -1918,7 +1828,6 @@ class _ReelOptionsSheet extends StatelessWidget {
               },
             ),
           ],
-
           _OptionTile(
             icon: Icons.close_rounded,
             label: 'Cancel',
@@ -2158,7 +2067,6 @@ class _ActionButton extends StatefulWidget {
 class _ActionButtonState extends State<_ActionButton>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
-  late Animation<double> _scale;
 
   @override
   void initState() {
@@ -2170,7 +2078,6 @@ class _ActionButtonState extends State<_ActionButton>
       upperBound: 1.0,
       value: 1.0,
     );
-    _scale = _ctrl;
   }
 
   @override
@@ -2191,7 +2098,7 @@ class _ActionButtonState extends State<_ActionButton>
     onTap: _handleTap,
     behavior: HitTestBehavior.opaque,
     child: ScaleTransition(
-      scale: _scale,
+      scale: _ctrl,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
