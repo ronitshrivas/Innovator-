@@ -1,16 +1,16 @@
-
 import 'dart:developer';
+import 'dart:developer' as console;
 import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:innovator/ecommerce/core/constants/api_constants.dart';
 import 'package:innovator/ecommerce/core/constants/network/base_api_service.dart';
 import 'package:innovator/ecommerce/core/constants/network/dio_client.dart';
-import 'package:innovator/ecommerce/model/notification_model.dart'; 
+import 'package:innovator/ecommerce/model/notification_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class EcommerceNotificationService extends EcommerBaseApiService {
   // EcommerceNotificationService() : super(dio: DioClient.instance);
-    EcommerceNotificationService() : super(silent: true);
+  EcommerceNotificationService() : super(silent: true);
 
   static const String _prefKey = 'ecommerce_fcm_token_id';
 
@@ -31,7 +31,7 @@ class EcommerceNotificationService extends EcommerBaseApiService {
         );
       }
     } catch (e) {
-      log('Ecommerce: registerFcmToken error: $e');
+      console.log('Ecommerce: registerFcmToken error: $e');
     }
   }
 
@@ -102,7 +102,9 @@ class EcommerceNotificationService extends EcommerBaseApiService {
   Future<List<EcommerceNotificationModel>> getNotifications() async {
     final data = await get<List<dynamic>>(EcommerceApi.notificationsList);
     return data
-        .map((e) => EcommerceNotificationModel.fromJson(e as Map<String, dynamic>))
+        .map(
+          (e) => EcommerceNotificationModel.fromJson(e as Map<String, dynamic>),
+        )
         .toList();
   }
 

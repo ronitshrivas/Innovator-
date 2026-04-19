@@ -69,9 +69,14 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
     final ctrl = VideoPlayerController.file(File(widget.videoPath));
     _videoCtrl = ctrl;
     await ctrl.initialize();
+
+    // Guard: ensure video has valid dimensions before rendering
+    if (ctrl.value.size.isEmpty) {
+      debugPrint('Video size is empty after initialize!');
+      return;
+    }
+
     ctrl.setLooping(true);
-    // FIX: Mute the video's own audio track since we play music separately
-    // If no music selected, keep video audio
     final hasMusic = ref.read(reelsProvider).selectedMusic != null;
     ctrl.setVolume(hasMusic ? 0.0 : 1.0);
     ctrl.play();
@@ -261,56 +266,94 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildFixedVideoPreview(ReelsState reels) {
     final filter = reelsFilters[reels.selectedFilterIndex];
+    final videoSize = _videoCtrl!.value.size;
 
-    // The video's actual pixel size
-    final Size videoSize = _videoCtrl!.value.size;
+    // Ensure we have valid video dimensions
+    if (videoSize.isEmpty) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color.fromRGBO(244, 135, 6, 1)),
+      );
+    }
 
-    Widget videoWidget = ColorFiltered(
-      colorFilter: ColorFilter.matrix(filter.matrix),
-      child: SizedBox.expand(
-        child: FittedBox(
-          fit: BoxFit.cover,
-          clipBehavior: Clip.hardEdge,
-          child: SizedBox(
-            // FIX: Use the video's actual pixel dimensions so FittedBox
-            // scales with the correct aspect ratio, preventing squish
-            width: videoSize.width,
-            height: videoSize.height,
-            child: VideoPlayer(_videoCtrl!),
+    // Always use portrait orientation
+    final double videoW =
+        videoSize.width < videoSize.height ? videoSize.width : videoSize.height;
+    final double videoH =
+        videoSize.width > videoSize.height ? videoSize.width : videoSize.height;
+
+    Widget videoWidget = LayoutBuilder(
+      builder: (context, constraints) {
+        final screenW = constraints.maxWidth;
+        final screenH = constraints.maxHeight;
+        final videoAR = videoW / videoH;
+        final screenAR = screenW / screenH;
+
+        // Cover: scale up so video fills entire screen, crop excess
+        double scale;
+        if (screenAR > videoAR) {
+          // Screen wider than video → fit by width
+          scale = screenW / (screenH * videoAR);
+        } else {
+          // Screen taller than video → fit by height
+          scale = (screenH * videoAR) / screenW;
+        }
+        // Clamp scale so we never scale down below 1.0
+        scale = scale < 1.0 ? 1.0 : scale;
+
+        return ClipRect(
+          child: OverflowBox(
+            maxWidth: double.infinity,
+            maxHeight: double.infinity,
+            child: SizedBox(
+              width: screenW * scale,
+              height: screenH * scale,
+              child: ColorFiltered(
+                colorFilter: ColorFilter.matrix(filter.matrix),
+                child: VideoPlayer(_videoCtrl!),
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
 
-    // Overlay brightness / warmth layers
-    final layers = <Widget>[videoWidget];
+    // Brightness / warmth overlay layers
+    final List<Widget> layers = [Positioned.fill(child: videoWidget)];
 
     if (reels.brightness > 0)
       layers.add(
-        Opacity(
-          opacity: (reels.brightness / 100).clamp(0.0, 0.4),
-          child: Container(color: Colors.white),
+        Positioned.fill(
+          child: Opacity(
+            opacity: (reels.brightness / 100).clamp(0.0, 0.4),
+            child: Container(color: Colors.white),
+          ),
         ),
       );
     if (reels.brightness < 0)
       layers.add(
-        Opacity(
-          opacity: (-reels.brightness / 100).clamp(0.0, 0.5),
-          child: Container(color: Colors.black),
+        Positioned.fill(
+          child: Opacity(
+            opacity: (-reels.brightness / 100).clamp(0.0, 0.5),
+            child: Container(color: Colors.black),
+          ),
         ),
       );
     if (reels.warmth > 0)
       layers.add(
-        Opacity(
-          opacity: (reels.warmth / 100).clamp(0.0, 0.25),
-          child: Container(color: Colors.orange.shade300),
+        Positioned.fill(
+          child: Opacity(
+            opacity: (reels.warmth / 100).clamp(0.0, 0.25),
+            child: Container(color: Colors.orange.shade300),
+          ),
         ),
       );
     if (reels.warmth < 0)
       layers.add(
-        Opacity(
-          opacity: (-reels.warmth / 100).clamp(0.0, 0.25),
-          child: Container(color: Colors.blue.shade200),
+        Positioned.fill(
+          child: Opacity(
+            opacity: (-reels.warmth / 100).clamp(0.0, 0.25),
+            child: Container(color: Colors.blue.shade200),
+          ),
         ),
       );
 

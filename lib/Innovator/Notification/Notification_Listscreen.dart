@@ -99,6 +99,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
   // ─────────────────────────────────────────────
   Future<void> fetchNotifications() async {
     if (isLoading) return;
+    if (!mounted) return; // ← ADD
     setState(() => isLoading = true);
 
     try {
@@ -112,12 +113,11 @@ class _NotificationListScreenState extends State<NotificationListScreen>
 
       if (response.statusCode == 200) {
         final List<dynamic> jsonList = jsonDecode(response.body);
+        if (!mounted) return; // ← ADD (after await)
         setState(() {
           notifications =
               jsonList.map((j) => NotificationModel.fromJson(j)).toList();
-          // New API returns a flat list; pagination handled via offset if needed.
-          hasMore =
-              false; // Update when the API adds cursor/pagination support.
+          hasMore = false;
           nextCursor = null;
         });
       } else {
@@ -126,8 +126,10 @@ class _NotificationListScreenState extends State<NotificationListScreen>
         );
       }
     } catch (e) {
+      if (!mounted) return; // ← ADD
       _showErrorSnackbar('Error fetching notifications');
     } finally {
+      if (!mounted) return; // ← ADD
       setState(() => isLoading = false);
     }
   }
@@ -138,6 +140,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
   // ─────────────────────────────────────────────
   Future<void> fetchMoreNotifications() async {
     if (isLoadingMore || !hasMore || nextCursor == null) return;
+    if (!mounted) return;
     setState(() => isLoadingMore = true);
 
     try {
@@ -151,6 +154,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
 
       if (response.statusCode == 200) {
         final List<dynamic> jsonList = jsonDecode(response.body);
+        if (!mounted) return;
         setState(() {
           notifications.addAll(
             jsonList.map((j) => NotificationModel.fromJson(j)),
@@ -165,8 +169,10 @@ class _NotificationListScreenState extends State<NotificationListScreen>
         );
       }
     } catch (e) {
+      if (!mounted) return;
       _showErrorSnackbar('Error fetching more notifications');
     } finally {
+      if (!mounted) return;
       setState(() => isLoadingMore = false);
     }
   }

@@ -70,7 +70,7 @@ class MutualFriendsNotifier extends StateNotifier<MutualFriendsState> {
       _setState(
         state.copyWith(
           isLoading: false,
-          error: 'Session expired. Please log in again.',
+          error: 'Session expired. Please log in again. 5',
         ),
       );
     }
