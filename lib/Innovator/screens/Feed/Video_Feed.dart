@@ -124,7 +124,7 @@ class ReelOperationResult {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class ReelsApiService {
-  static const String _baseUrl = 'http://182.93.94.220:8005';
+  static const String _baseUrl = 'http://36.253.137.34:8005';
   static const String _reelsUrl = '$_baseUrl/api/reels/';
 
   static Map<String, String> _headers() {
@@ -634,7 +634,7 @@ class _ReelItemState extends ConsumerState<_ReelItem>
   final LayerLink _reactionLayerLink = LayerLink();
 
   final ContentLikeService _likeService = ContentLikeService(
-    baseUrl: 'http://182.93.94.220:8005',
+    baseUrl: 'http://36.253.137.34:8005',
   );
 
   bool _viewRecorded = false;
@@ -988,14 +988,15 @@ class _ReelItemState extends ConsumerState<_ReelItem>
     } else {
       ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, type.value);
 
-    final result = await _likeService.reelreaction(reel.id, type);
-    if (result.success) {
-      final serverType = result.reactionType?.value;
-      ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, serverType);
-    } else {
-      ref
-          .read(reelsFeedProvider.notifier)
-          .applyReaction(reel.id, reel.currentUserReaction);
+      final result = await _likeService.reactReel(reel.id, type);
+      if (result.success) {
+        final serverType = result.reactionType?.value;
+        ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, serverType);
+      } else {
+        ref
+            .read(reelsFeedProvider.notifier)
+            .applyReaction(reel.id, reel.currentUserReaction);
+      }
     }
   }
 

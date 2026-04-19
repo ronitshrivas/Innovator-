@@ -56,7 +56,7 @@ class _NewFeedPostDetailScreenState extends State<NewFeedPostDetailScreen> {
       // New API: GET /api/posts/<id>/
       final response = await http
           .get(
-            Uri.parse('http://182.93.94.220:8005/api/posts/${widget.postId}/'),
+            Uri.parse('http://36.253.137.34:8005/api/posts/${widget.postId}/'),
             headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json',
@@ -175,34 +175,33 @@ class _NewFeedPostDetailScreenState extends State<NewFeedPostDetailScreen> {
         children: [
           // Optional: highlight banner when coming from a notification
           if (widget.highlightAction != null)
-           // _buildHighlightBanner(widget.highlightAction!),
-
-          FeedItem(
-            content: _post!,
-            onLikeToggled: (isLiked) {
-              if (!mounted) return;
-              setState(() {
-                _post!.isLiked = isLiked;
-                _post!.likes =
-                    isLiked
-                        ? (_post!.likes + 1).clamp(0, 999999)
-                        : (_post!.likes - 1).clamp(0, 999999);
-              });
-            },
-            onFollowToggled: (isFollowed) {
-              if (!mounted) return;
-              setState(() => _post!.isFollowed = isFollowed);
-            },
-            onDeleted: () {
-              if (mounted) Navigator.pop(context);
-            },
-            onStatusUpdated: (newStatus) {
-              if (mounted) setState(() => _post!.status = newStatus);
-            },
-            onCommentAdded: () {
-              if (mounted) setState(() => _post!.comments++);
-            },
-          ),
+            // _buildHighlightBanner(widget.highlightAction!),
+            FeedItem(
+              content: _post!,
+              onLikeToggled: (isLiked) {
+                if (!mounted) return;
+                setState(() {
+                  _post!.isLiked = isLiked;
+                  _post!.likes =
+                      isLiked
+                          ? (_post!.likes + 1).clamp(0, 999999)
+                          : (_post!.likes - 1).clamp(0, 999999);
+                });
+              },
+              onFollowToggled: (isFollowed) {
+                if (!mounted) return;
+                setState(() => _post!.isFollowed = isFollowed);
+              },
+              onDeleted: () {
+                if (mounted) Navigator.pop(context);
+              },
+              onStatusUpdated: (newStatus) {
+                if (mounted) setState(() => _post!.status = newStatus);
+              },
+              onCommentAdded: () {
+                if (mounted) setState(() => _post!.comments++);
+              },
+            ),
 
           const SizedBox(height: 80),
         ],

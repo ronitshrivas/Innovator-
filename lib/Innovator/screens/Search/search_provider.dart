@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
 
-const String _baseUrl = 'http://182.93.94.220:8005';
+const String _baseUrl = 'http://36.253.137.34:8005';
 
 class SearchUser {
   final String id;

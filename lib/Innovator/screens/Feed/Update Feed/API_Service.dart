@@ -1,6 +1,6 @@
 // API_Service.dart
-// Update:  PATCH  http://182.93.94.220:8005/api/posts/<id>/  (multipart)
-// Delete:  DELETE http://182.93.94.220:8005/api/posts/<id>/
+// Update:  PATCH  http://36.253.137.34:8005/api/posts/<id>/  (multipart)
+// Delete:  DELETE http://36.253.137.34:8005/api/posts/<id>/
 
 import 'dart:convert';
 import 'dart:io';
@@ -12,7 +12,7 @@ import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Login.dart';
 
 class ApiService {
-  static const String _base = 'http://182.93.94.220:8005';
+  static const String _base = 'http://36.253.137.34:8005';
 
   // ── Auth header (no Content-Type — multipart sets its own boundary) ────────
   static Map<String, String> _authHeader() {

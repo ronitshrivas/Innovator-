@@ -1,5 +1,5 @@
 // comment_Model.dart
-// Maps the new API response from http://182.93.94.220:8005/api/comments/
+// Maps the new API response from http://36.253.137.34:8005/api/comments/
 
 class Comment {
   final String id;

@@ -1,5 +1,5 @@
 // CommentScreen.dart  (standalone full-page comments screen)
-// Updated for http://182.93.94.220:8005
+// Updated for http://36.253.137.34:8005
 
 import 'package:flutter/material.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';

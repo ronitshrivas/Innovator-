@@ -47,7 +47,7 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
   AudioPlayer? _musicPlayer;
   bool _musicPlaying = false;
 
-  static const String _reelsApi = 'http://182.93.94.220:8005/api/reels/';
+  static const String _reelsApi = 'http://36.253.137.34:8005/api/reels/';
   final Color _orange = const Color.fromRGBO(244, 135, 6, 1);
 
   @override

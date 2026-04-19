@@ -1,7 +1,7 @@
 // comment_section.dart
 // Inline comment section used inside feed cards.
 // Features: list comments, add comment, reply to comment, edit, delete.
-// All API calls updated to http://182.93.94.220:8005
+// All API calls updated to http://36.253.137.34:8005
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';

@@ -272,7 +272,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   /// POSTs the Google ID token to the backend SSO endpoint.
   /// On success, saves auth tokens via AppData and navigates — same as email login.
   Future<void> _sendGoogleTokenToBackend(String googleIdToken) async {
-    const String ssoUrl = 'http://182.93.94.220:8010/api/auth/sso/google/';
+    const String ssoUrl = 'http://36.253.137.34:8010/api/auth/sso/google/';
 
     developer.log('Posting to SSO: $ssoUrl');
 
