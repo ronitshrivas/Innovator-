@@ -27,7 +27,7 @@ class ReelModel {
   final String userId;
   final String username;
   final String avatar;
-  String caption; // mutable for edit
+  String caption;
   final String? videoUrl;
   final String? hlsUrl;
   final String? thumbnail;
@@ -948,16 +948,45 @@ class _ReelItemState extends ConsumerState<_ReelItem>
 
   // ── Reaction logic ────────────────────────────────────────────────────────
 
+  // Future<void> _applyReaction(ReactionType type) async {
+  //   final reel = widget.reel;
+  //   final wasLiked = reel.isLiked;
+  //   final isSameType = reel.currentUserReaction == type.value;
+  //   if (wasLiked && isSameType) {
+  //     ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, null);
+  //   } else {
+  //     ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, type.value);
+  //   }
+  //   final result = await _likeService.reactReel(reel.id, type);
+  //   if (result.success) {
+  //     final serverType = result.reactionType?.value;
+  //     ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, serverType);
+  //   } else {
+  //     ref
+  //         .read(reelsFeedProvider.notifier)
+  //         .applyReaction(reel.id, reel.currentUserReaction);
+  //   }
+  // }
+
   Future<void> _applyReaction(ReactionType type) async {
     final reel = widget.reel;
-    final wasLiked = reel.isLiked;
     final isSameType = reel.currentUserReaction == type.value;
+    final previousReaction = reel.currentUserReaction;
 
-    if (wasLiked && isSameType) {
+    if (isSameType) {
       ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, null);
+
+      final result = await _likeService.reactReel(reel.id, type);
+
+      if (result.success) {
+        ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, null);
+      } else {
+        ref
+            .read(reelsFeedProvider.notifier)
+            .applyReaction(reel.id, previousReaction);
+      }
     } else {
       ref.read(reelsFeedProvider.notifier).applyReaction(reel.id, type.value);
-    }
 
     final result = await _likeService.reelreaction(reel.id, type);
     if (result.success) {
