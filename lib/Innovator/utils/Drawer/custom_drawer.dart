@@ -531,8 +531,11 @@ class _TrueInstantDrawerState extends ConsumerState<TrueInstantDrawer> {
               ElevatedButton(
                 onPressed: () async {
                   await FCMService().clearToken();
-                  await ref.read(elearningNotificationServiceProvider).clearToken();
+                  await ref
+                      .read(elearningNotificationServiceProvider)
+                      .clearToken();
                   AppData().clearAuthToken();
+
                   ref.read(drawerProfileProvider.notifier).clear();
                   AppData().logout();
                   Navigator.of(dialogContext).pop();

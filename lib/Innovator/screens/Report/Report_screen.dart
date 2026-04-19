@@ -62,7 +62,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         });
       } else if (response.statusCode == 401) {
         setState(() {
-          error = 'Session expired. Please login again.';
+          error = 'Session expired. Please login again. 6';
           isLoading = false;
         });
       } else {
