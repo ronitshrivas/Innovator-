@@ -69,7 +69,7 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
 
       if (mounted) _showSnack('Checked in successfully!', isError: false);
     } catch (e) {
-      if (mounted) _showSnack('Check-in failed: $e', isError: true);
+      if (mounted);
     } finally {
       setState(() => _loadingMap[schoolId] = false);
     }
@@ -94,7 +94,7 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
       });
       if (mounted) _showSnack('Checked out successfully!', isError: false);
     } catch (e) {
-      if (mounted) _showSnack('Check-out failed: $e', isError: true);
+      if (mounted) _showSnack('Check-out failed', isError: true);
     } finally {
       setState(() => _loadingMap[schoolId] = false);
     }

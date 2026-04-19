@@ -9,6 +9,7 @@ import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/models/comment_Model.dart';
 import 'package:innovator/Innovator/screens/comment/comment_services.dart';
+import 'package:innovator/Innovator/utils/triangle_tool_tip.dart';
 
 class CommentSection extends StatefulWidget {
   final String contentId; // = postId in new API
@@ -209,6 +210,7 @@ class _CommentSectionState extends State<CommentSection> {
       context: context,
       builder:
           (_) => AlertDialog(
+            backgroundColor: Colors.white,
             title: const Text('Delete Comment'),
             content: const Text(
               'Are you sure you want to delete this comment?',
@@ -592,32 +594,53 @@ class _CommentSectionState extends State<CommentSection> {
                       ],
                       if (isOwn) ...[
                         const SizedBox(width: 12),
-                        GestureDetector(
-                          onTap:
-                              () => _startEdit(
-                                comment,
-                                isReply: isReply,
-                              ), // ← pass isReply
-                          child: const Text(
-                            'Edit',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.blueGrey,
-                            ),
+
+                        // PopupMenuButton(
+                        //   color: Colors.white,
+                        //   itemBuilder:
+                        //       (context) => [
+                        //         PopupMenuItem(
+                        //           value: "edit",
+                        //           child: Text("Edit"),
+                        //         ),
+                        //         PopupMenuItem(
+                        //           value: "delete",
+                        //           child: Text("Delete"),
+                        //         ),
+                        //       ],
+                        //   onSelected: (value) {
+                        //     if (value == 'edit') {
+                        //       _startEdit(comment, isReply: isReply);
+                        //     }
+                        //     if (value == "delete") {
+                        //       _delete(comment);
+                        //     }
+                        //   },
+                        // ),
+                        ArrowPopupMenu(
+                          child: const Icon(
+                            Icons.more_horiz,
+                            color: Colors.grey,
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        GestureDetector(
-                          onTap: () => _delete(comment), // ← pass full comment
-                          child: const Text(
-                            'Delete',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.red,
+                          arrowPosition: ArrowPosition.topRight,
+                          arrowColor: Colors.white,
+                          backgroundColor: Colors.white,
+                          menuWidth: 140,
+                          items: [
+                            ArrowMenuItem(
+                              label: 'Edit',
+                              icon: Icons.edit_outlined,
+                              onTap:
+                                  () => _startEdit(comment, isReply: isReply),
                             ),
-                          ),
+                            ArrowMenuItem(
+                              label: 'Delete',
+                              icon: Icons.delete_outlined,
+                              textColor: Colors.red,
+                              iconColor: Colors.red,
+                              onTap: () => _delete(comment),
+                            ),
+                          ],
                         ),
                       ],
                     ],

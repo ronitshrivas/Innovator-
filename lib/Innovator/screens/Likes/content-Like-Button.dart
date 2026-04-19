@@ -142,7 +142,7 @@ class _LikeButtonState extends State<LikeButton>
     ReactionResult result;
     if (type == null) {
       // Remove: re-post same reaction to toggle off, or use removeReaction
-      result = await widget.likeService.react(
+      result = await widget.likeService.reactPost(
         widget.contentId,
         previous ?? ReactionType.like,
       );
@@ -151,7 +151,7 @@ class _LikeButtonState extends State<LikeButton>
         _setReaction(null, previous);
       }
     } else {
-      result = await widget.likeService.react(widget.contentId, type);
+      result = await widget.likeService.reactPost(widget.contentId, type);
       if (result.success) {
         _setReaction(result.reactionType ?? type, previous);
       }
@@ -242,7 +242,10 @@ class _LikeButtonState extends State<LikeButton>
                       ),
                     )
                     : emoji != null
-                    ? Text(emoji, style: const TextStyle(fontSize: 22))
+                    ? Text(
+                      emoji,
+                      style: const TextStyle(fontSize: 22, color: Colors.red),
+                    )
                     : Icon(
                       Icons.thumb_up_alt_outlined,
                       color: iconColor,
@@ -442,7 +445,13 @@ class _ReactionPickerOverlayState extends State<_ReactionPickerOverlay>
             alignment: Alignment.center,
             clipBehavior: Clip.none,
             children: [
-              Text(r.emoji, style: TextStyle(fontSize: isActive ? 20 : 18)),
+              Text(
+                r.emoji,
+                style: TextStyle(
+                  fontSize: isActive ? 20 : 18,
+                  color: Colors.red,
+                ),
+              ),
               if (isHovered)
                 Positioned(
                   bottom: 30,

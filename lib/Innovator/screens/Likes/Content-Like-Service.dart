@@ -107,7 +107,7 @@ class ContentLikeService {
   /// POST /api/reactions/  { "post": postId, "type": reactionType }
   /// If the user already has the same reaction the backend may toggle it off —
   /// handle both 200/201 (created) and 204 (removed) gracefully.
-  Future<ReactionResult> react(String postId, ReactionType type) async {
+  Future<ReactionResult> reactPost(String postId, ReactionType type) async {
     final token = _appData.accessToken;
     if (token == null || token.isEmpty) {
       log('[Reaction] No auth token');
@@ -150,8 +150,7 @@ class ContentLikeService {
       return const ReactionResult(success: false);
     }
   }
-
-  Future<ReactionResult> reelreaction(String postId, ReactionType type) async {
+  Future<ReactionResult> reactReel(String postId, ReactionType type) async {
     final token = _appData.accessToken;
     if (token == null || token.isEmpty) {
       log('[Reaction] No auth token');
@@ -194,39 +193,38 @@ class ContentLikeService {
       return const ReactionResult(success: false);
     }
   }
-
   // ── Remove reaction ──────────────────────────────────────────────────────────
   /// DELETE /api/reactions/{reactionId}/
-  Future<bool> removeReaction(String reactionId) async {
-    final token = _appData.accessToken;
-    if (token == null || token.isEmpty) return false;
+  // Future<bool> removeReaction(String reactionId) async {
+  //   final token = _appData.accessToken;
+  //   if (token == null || token.isEmpty) return false;
 
-    try {
-      final response = await http.delete(
-        Uri.parse('${ApiConstants.sendreaction}$reactionId/'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-        },
-      );
-      log(
-        '[Reaction] DELETE /api/reactions/$reactionId/ → ${response.statusCode}',
-      );
-      return response.statusCode == 204 || response.statusCode == 200;
-    } catch (e) {
-      log('[Reaction] removeReaction error: $e');
-      return false;
-    }
-  }
+  //   try {
+  //     final response = await http.delete(
+  //       Uri.parse('${ApiConstants.sendreaction}$reactionId/'),
+  //       headers: {
+  //         'Authorization': 'Bearer $token',
+  //         'Accept': 'application/json',
+  //       },
+  //     );
+  //     log(
+  //       '[Reaction] DELETE /api/reactions/$reactionId/ → ${response.statusCode}',
+  //     );
+  //     return response.statusCode == 204 || response.statusCode == 200;
+  //   } catch (e) {
+  //     log('[Reaction] removeReaction error: $e');
+  //     return false;
+  //   }
+  // }
 
   // ── Legacy compat wrappers ────────────────────────────────────────────────────
   Future<bool> toggleLike(String postId, bool isLiking) async {
     if (!isLiking) {
       // Best-effort: no reactionId at this point, just re-post same type to toggle off
-      final r = await react(postId, ReactionType.like);
+      final r = await reactPost(postId, ReactionType.like);
       return r.success;
     }
-    final r = await react(postId, ReactionType.like);
+    final r = await reactPost(postId, ReactionType.like);
     return r.success;
   }
 
