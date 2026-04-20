@@ -4325,8 +4325,6 @@ import 'package:innovator/Innovator/screens/comment/comment_section.dart';
 import 'package:innovator/Innovator/screens/Follow/follow_Button.dart';
 import 'package:innovator/Innovator/screens/Likes/Content-Like-Service.dart';
 import 'package:innovator/Innovator/screens/SHow_Specific_Profile/Show_Specific_Profile.dart';
-
-// Import the native player wrapper we created
 import 'reels_player.dart';
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -4374,7 +4372,6 @@ class ReelModel {
       (hlsUrl != null && hlsUrl!.isNotEmpty) ||
       (videoUrl != null && videoUrl!.isNotEmpty);
 
-  /// Prefer HLS for adaptive streaming
   String? get bestVideoUrl =>
       (hlsUrl != null && hlsUrl!.isNotEmpty) ? hlsUrl : videoUrl;
 
@@ -4423,17 +4420,6 @@ class ReelOperationResult {
   });
 }
 
-class ReelsFeed {
-  final List<ReelModel> reels;
-  final String? nextCursor;
-  final bool hasMore;
-  const ReelsFeed({
-    required this.reels,
-    this.nextCursor,
-    required this.hasMore,
-  });
-}
-
 // ════════════════════════════════════════════════════════════════════════════
 // API SERVICE
 // ════════════════════════════════════════════════════════════════════════════
@@ -4451,7 +4437,7 @@ class ReelsApiService {
     };
   }
 
-  static Future<ReelsFeed> fetchReels({String? cursor}) async {
+  static Future<List<ReelModel>> fetchReels({String? cursor}) async {
     final uri =
         (cursor != null && cursor.isNotEmpty)
             ? Uri.parse(cursor)
@@ -4461,20 +4447,13 @@ class ReelsApiService {
         .timeout(const Duration(seconds: 20));
     if (res.statusCode == 200) {
       final data = json.decode(res.body) as Map<String, dynamic>;
-      final results =
-          (data['results'] as List<dynamic>? ?? [])
-              .whereType<Map<String, dynamic>>()
-              .map(ReelModel.fromJson)
-              .where((r) => r.hasVideo)
-              .toList();
-      developer.log('[Feed] Loaded ${results.length} reels');
-      return ReelsFeed(
-        reels: results,
-        nextCursor: data['next']?.toString(),
-        hasMore: data['next'] != null,
-      );
+      return (data['results'] as List<dynamic>? ?? [])
+          .whereType<Map<String, dynamic>>()
+          .map(ReelModel.fromJson)
+          .where((r) => r.hasVideo)
+          .toList();
     }
-    throw Exception('Reels fetch failed: ${res.statusCode}');
+    throw Exception('Fetch failed: ${res.statusCode}');
   }
 
   static Future<void> recordView(String reelId) async {
@@ -4507,7 +4486,7 @@ class ReelsApiService {
       }
       return ReelOperationResult(
         success: false,
-        errorMessage: _parseError(res.body, res.statusCode),
+        errorMessage: _err(res.body, res.statusCode),
       );
     } catch (_) {
       return const ReelOperationResult(
@@ -4527,7 +4506,7 @@ class ReelsApiService {
       }
       return ReelOperationResult(
         success: false,
-        errorMessage: _parseError(res.body, res.statusCode),
+        errorMessage: _err(res.body, res.statusCode),
       );
     } catch (_) {
       return const ReelOperationResult(
@@ -4552,7 +4531,7 @@ class ReelsApiService {
       }
       return ReelOperationResult(
         success: false,
-        errorMessage: _parseError(res.body, res.statusCode),
+        errorMessage: _err(res.body, res.statusCode),
       );
     } catch (_) {
       return const ReelOperationResult(
@@ -4562,7 +4541,7 @@ class ReelsApiService {
     }
   }
 
-  static String _parseError(String body, int code) {
+  static String _err(String body, int code) {
     try {
       final d = json.decode(body);
       if (d is Map) {
@@ -4570,7 +4549,7 @@ class ReelsApiService {
         if (v != null) return v.toString();
       }
     } catch (_) {}
-    return 'Something went wrong ($code)';
+    return 'Error ($code)';
   }
 }
 
@@ -4585,115 +4564,102 @@ class ReelsFeedNotifier extends StateNotifier<AsyncValue<List<ReelModel>>> {
     _load();
   }
 
-  String? _nextCursor;
+  String? _next;
   bool _hasMore = true;
-  bool _isLoadingMore = false;
+  bool _busy = false;
 
   Future<void> _load() async {
     try {
-      final feed = await ReelsApiService.fetchReels();
-      _nextCursor = feed.nextCursor;
-      _hasMore = feed.hasMore;
-      state = AsyncValue.data(feed.reels);
+      state = AsyncValue.data(await ReelsApiService.fetchReels());
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
   }
 
   Future<void> refresh() async {
-    _nextCursor = null;
+    _next = null;
     _hasMore = true;
     state = const AsyncValue.loading();
     await _load();
   }
 
   Future<void> loadMore() async {
-    if (_isLoadingMore || !_hasMore || _nextCursor == null) return;
-    _isLoadingMore = true;
+    if (_busy || !_hasMore || _next == null) return;
+    _busy = true;
     try {
-      final current = state.value ?? [];
-      final feed = await ReelsApiService.fetchReels(cursor: _nextCursor);
-      _nextCursor = feed.nextCursor;
-      _hasMore = feed.hasMore;
-      state = AsyncValue.data([...current, ...feed.reels]);
+      final more = await ReelsApiService.fetchReels(cursor: _next);
+      state = AsyncValue.data([...(state.value ?? []), ...more]);
     } catch (_) {
     } finally {
-      _isLoadingMore = false;
+      _busy = false;
     }
   }
 
-  void applyReaction(String reelId, String? newReaction) {
+  void applyReaction(String id, String? r) {
     final list = state.value;
     if (list == null) return;
-    final idx = list.indexWhere((r) => r.id == reelId);
-    if (idx == -1) return;
-    final reel = list[idx];
-    final had = reel.currentUserReaction != null;
-    final will = newReaction != null;
-    reel.currentUserReaction = newReaction;
-    if (!had && will) reel.reactionsCount++;
-    if (had && !will)
-      reel.reactionsCount = (reel.reactionsCount - 1).clamp(0, 999999);
+    final i = list.indexWhere((x) => x.id == id);
+    if (i < 0) return;
+    final had = list[i].currentUserReaction != null;
+    list[i].currentUserReaction = r;
+    if (!had && r != null) list[i].reactionsCount++;
+    if (had && r == null)
+      list[i].reactionsCount = (list[i].reactionsCount - 1).clamp(0, 999999);
     state = AsyncValue.data(List.from(list));
   }
 
-  void updateFollow(String userId, bool isFollowed) {
+  void updateFollow(String userId, bool v) {
     final list = state.value;
     if (list == null) return;
-    for (final r in list) {
-      if (r.userId == userId) r.isFollowed = isFollowed;
-    }
+    for (final r in list) if (r.userId == userId) r.isFollowed = v;
     state = AsyncValue.data(List.from(list));
   }
 
-  void incrementComments(String reelId) {
+  void incrementComments(String id) {
     final list = state.value;
     if (list == null) return;
-    final idx = list.indexWhere((r) => r.id == reelId);
-    if (idx != -1) list[idx].commentsCount++;
+    final i = list.indexWhere((x) => x.id == id);
+    if (i >= 0) list[i].commentsCount++;
     state = AsyncValue.data(List.from(list));
   }
 
-  Future<String?> editReel(String reelId, String newCaption) async {
+  Future<String?> editReel(String id, String caption) async {
     final list = state.value;
     if (list == null) return 'No data';
-    final idx = list.indexWhere((r) => r.id == reelId);
-    if (idx == -1) return 'Not found';
-    final old = list[idx].caption;
-    list[idx].caption = newCaption;
+    final i = list.indexWhere((x) => x.id == id);
+    if (i < 0) return 'Not found';
+    final old = list[i].caption;
+    list[i].caption = caption;
     state = AsyncValue.data(List.from(list));
-    final result = await ReelsApiService.editReel(
-      reelId: reelId,
-      caption: newCaption,
-    );
-    if (result.success) {
-      if (result.data != null) list[idx].caption = result.data!.caption;
+    final res = await ReelsApiService.editReel(reelId: id, caption: caption);
+    if (res.success) {
+      if (res.data != null) list[i].caption = res.data!.caption;
       state = AsyncValue.data(List.from(list));
       return null;
     }
-    list[idx].caption = old;
+    list[i].caption = old;
     state = AsyncValue.data(List.from(list));
-    return result.errorMessage;
+    return res.errorMessage;
   }
 
-  Future<String?> deleteReel(String reelId) async {
-    final result = await ReelsApiService.deleteReel(reelId);
-    if (result.success) {
+  Future<String?> deleteReel(String id) async {
+    final res = await ReelsApiService.deleteReel(id);
+    if (res.success) {
       state = AsyncValue.data(
-        (state.value ?? []).where((r) => r.id != reelId).toList(),
+        (state.value ?? []).where((r) => r.id != id).toList(),
       );
       return null;
     }
-    return result.errorMessage;
+    return res.errorMessage;
   }
 
-  Future<String?> repostReel(String reelId) async {
-    final result = await ReelsApiService.repostReel(reelId);
-    if (result.success && result.data != null) {
-      state = AsyncValue.data([result.data!, ...(state.value ?? [])]);
+  Future<String?> repostReel(String id) async {
+    final res = await ReelsApiService.repostReel(id);
+    if (res.success && res.data != null) {
+      state = AsyncValue.data([res.data!, ...(state.value ?? [])]);
       return null;
     }
-    return result.errorMessage;
+    return res.errorMessage;
   }
 }
 
@@ -4705,76 +4671,56 @@ final reelsFeedProvider =
 // ════════════════════════════════════════════════════════════════════════════
 // SLOT MANAGER
 //
-// Maps reel list indices → player slots (0, 1, 2).
+// THE BUG THIS FIXES:
+// ─────────────────────────────────────────────────────────────────────────
+// The old code used `pageIndex % 3` for slot assignment.
 //
-// As the user scrolls:
-//   currentIndex=5  → slot 1 (playing)
-//   currentIndex=6  → slot 2 (pre-buffered, ready)
-//   currentIndex=4  → slot 0 (kept alive for back-swipe)
+//   Page 0 → slot 0 (User A)
+//   Page 1 → slot 1 (User B)
+//   Page 2 → slot 2 (User C)
+//   Page 3 → slot 0 ← REUSED! Still has User A's video initially!
 //
-// On every page change we shift the window and pre-buffer the new next reel.
+// When you swiped to page 3, switchSurface(0) would briefly play USER A's
+// video behind USER D's overlay (correct name/avatar shown, wrong video).
+//
+// THE FIX — Ring-buffer rotation:
+// ─────────────────────────────────────────────────────────────────────────
+// We maintain 3 logical roles that rotate between the 3 physical slots:
+//   • curSlot  = slot currently playing (has the display surface)
+//   • nextSlot = slot pre-buffering the NEXT reel
+//   • prevSlot = slot pre-buffering the PREVIOUS reel (for back-swipe)
+//
+// On forward swipe: prevSlot ← curSlot ← nextSlot ← (recycled prevSlot)
+// On backward swipe: nextSlot ← curSlot ← prevSlot ← (recycled nextSlot)
+//
+// The recycled slot gets prepared with the new reel's URL.
+// This guarantees: curSlot ALWAYS has the correct reel's video. No mismatch.
 // ════════════════════════════════════════════════════════════════════════════
 
 class _SlotManager {
-  // reelIndex → slot number
-  final Map<int, int> _indexToSlot = {};
+  // Physical slot numbers (0, 1, 2). These roles rotate.
+  int curSlot = 0; // Currently playing
+  int nextSlot = 1; // Pre-buffering next reel
+  int prevSlot = 2; // Pre-buffering previous reel
 
-  // Which reel index is in each slot
-  final Map<int, int> _slotToIndex = {};
-
-  /// Called when currentIndex changes.
-  /// Returns the slot for currentIndex (always 1).
-  /// Schedules pre-buffer for currentIndex+1 in slot 2.
-  /// Keeps currentIndex-1 alive in slot 0.
-  void onPageChanged({
-    required int currentIndex,
-    required List<ReelModel> reels,
-    required String token,
-  }) {
-    // Previous window — release what's no longer needed
-    final keep = {currentIndex - 1, currentIndex, currentIndex + 1};
-    final toRelease =
-        _slotToIndex.values.where((i) => !keep.contains(i)).toList();
-    for (final i in toRelease) {
-      final slot = _indexToSlot[i];
-      if (slot != null) {
-        ReelsPlayer.release(slot);
-        _slotToIndex.remove(slot);
-        _indexToSlot.remove(i);
-      }
-    }
-
-    // Map the 3 relevant indices to fixed slots
-    final window = [
-      currentIndex - 1, // slot 0: previous
-      currentIndex, // slot 1: current
-      currentIndex + 1, // slot 2: next
-    ];
-
-    for (int s = 0; s < 3; s++) {
-      final reelIdx = window[s];
-      if (reelIdx < 0 || reelIdx >= reels.length) continue;
-      final reel = reels[reelIdx];
-      final url = reel.bestVideoUrl;
-      if (url == null) continue;
-
-      // Only prepare if this slot doesn't already have this reel buffered
-      if (_slotToIndex[s] != reelIdx) {
-        _slotToIndex[s] = reelIdx;
-        _indexToSlot[reelIdx] = s;
-        ReelsPlayer.prepare(s, url, token);
-        developer.log('[SlotMgr] slot=$s ← reelIdx=$reelIdx url=$url');
-      }
-    }
+  // Rotate forward (user swiped to next reel)
+  // Returns the recycled slot that needs to be prepared with the new next URL.
+  int rotateForward() {
+    final recycled = prevSlot;
+    prevSlot = curSlot;
+    curSlot = nextSlot;
+    nextSlot = recycled;
+    return nextSlot; // caller should prepare this slot with reels[newIndex+1]
   }
 
-  /// Slot number for the current playing reel. Always 1.
-  int get currentSlot => 1;
-
-  void releaseAll() {
-    ReelsPlayer.releaseAll();
-    _indexToSlot.clear();
-    _slotToIndex.clear();
+  // Rotate backward (user swiped to previous reel)
+  // Returns the recycled slot that needs to be prepared with the new prev URL.
+  int rotateBackward() {
+    final recycled = nextSlot;
+    nextSlot = curSlot;
+    curSlot = prevSlot;
+    prevSlot = recycled;
+    return prevSlot; // caller should prepare this slot with reels[newIndex-1]
   }
 }
 
@@ -4792,9 +4738,13 @@ class ReelsScreen extends ConsumerStatefulWidget {
 class _ReelsScreenState extends ConsumerState<ReelsScreen>
     with WidgetsBindingObserver {
   late final PageController _pageCtrl;
-  final _slotMgr = _SlotManager();
+
   int _currentPage = 0;
   bool _isMuted = false;
+  bool _feedReady = false;
+
+  // Slot manager: guarantees curSlot always has the correct reel's video
+  final _slots = _SlotManager();
 
   String get _token => AppData().accessToken ?? '';
 
@@ -4810,7 +4760,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _slotMgr.releaseAll();
+    ReelsPlayer.releaseAll();
     _pageCtrl.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setPreferredOrientations(DeviceOrientation.values);
@@ -4818,59 +4768,110 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
-      ReelsPlayer.pause(_slotMgr.currentSlot);
-    } else if (state == AppLifecycleState.resumed) {
-      ReelsPlayer.play(_slotMgr.currentSlot);
+  void didChangeAppLifecycleState(AppLifecycleState s) {
+    if (s == AppLifecycleState.paused || s == AppLifecycleState.inactive) {
+      ReelsPlayer.pause(_slots.curSlot);
+    } else if (s == AppLifecycleState.resumed) {
+      ReelsPlayer.play(_slots.curSlot);
     }
   }
 
-  void _onFeedLoaded(List<ReelModel> reels) {
-    // Called once the feed data arrives — kick off initial pre-buffering
-    _slotMgr.onPageChanged(currentIndex: 0, reels: reels, token: _token);
-    // Small delay so the first SurfaceView is mounted before we play
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) ReelsPlayer.play(_slotMgr.currentSlot);
+  // ── Feed init ─────────────────────────────────────────────────────────────
+
+  void _onFeedReady(List<ReelModel> reels) {
+    if (_feedReady || reels.isEmpty) return;
+    _feedReady = true;
+
+    // Initial slot assignment:
+    //   curSlot  (0) = page 0 (first reel)
+    //   nextSlot (1) = page 1 (second reel, pre-buffering)
+    //   prevSlot (2) = empty  (no previous reel yet)
+    _prepareIndex(0, reels, _slots.curSlot);
+    if (reels.length > 1) _prepareIndex(1, reels, _slots.nextSlot);
+
+    // Wait for SurfaceView to be created, then connect + play
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (!mounted) return;
+      ReelsPlayer.switchSurface(_slots.curSlot);
+      Future.delayed(const Duration(milliseconds: 60), () {
+        if (!mounted) return;
+        ReelsPlayer.play(_slots.curSlot);
+        ReelsApiService.recordView(reels[0].id);
+      });
     });
   }
 
-  void _onPageChanged(int index, List<ReelModel> reels) {
-    // Pause current before shifting
-    ReelsPlayer.pause(_slotMgr.currentSlot);
+  /// Prepare a specific physical slot with the reel at [reelIndex].
+  void _prepareIndex(int reelIndex, List<ReelModel> reels, int physicalSlot) {
+    if (reelIndex < 0 || reelIndex >= reels.length) return;
+    final url = reels[reelIndex].bestVideoUrl;
+    if (url == null || url.isEmpty) return;
+    developer.log(
+      '[Reels] prepare slot=$physicalSlot for reelIndex=$reelIndex (${reels[reelIndex].username})',
+    );
+    ReelsPlayer.prepare(physicalSlot, url, _token);
+  }
 
-    setState(() => _currentPage = index);
-    ref.read(activeReelIndexProvider.notifier).state = index;
+  // ── Page change ───────────────────────────────────────────────────────────
 
-    // Shift the 3-slot window and pre-buffer the new next reel
-    _slotMgr.onPageChanged(currentIndex: index, reels: reels, token: _token);
+  void _onPageChanged(int newIndex, List<ReelModel> reels) {
+    final goingForward = newIndex > _currentPage;
 
-    // Play immediately — slot 1 was pre-buffered while user was on previous reel
-    ReelsPlayer.play(_slotMgr.currentSlot);
+    // 1. Pause current
+    ReelsPlayer.pause(_slots.curSlot);
 
-    // Apply mute state
-    if (_isMuted) ReelsPlayer.setVolume(_slotMgr.currentSlot, 0.0);
+    // 2. Rotate slots — curSlot now points to the pre-buffered reel
+    final int recycledSlot;
+    if (goingForward) {
+      recycledSlot = _slots.rotateForward();
+      // Prepare the recycled slot with the reel after the new current
+      _prepareIndex(newIndex + 1, reels, recycledSlot);
+    } else {
+      recycledSlot = _slots.rotateBackward();
+      // Prepare the recycled slot with the reel before the new current
+      _prepareIndex(newIndex - 1, reels, recycledSlot);
+    }
 
-    // Record view
-    ReelsApiService.recordView(reels[index].id);
+    // 3. Update page state
+    setState(() => _currentPage = newIndex);
+    ref.read(activeReelIndexProvider.notifier).state = newIndex;
 
-    // Load more if near end
-    if (index >= reels.length - 3) {
+    // 4. Switch surface to the new curSlot (which already has the correct video)
+    //    and play immediately — no mismatch because curSlot was pre-buffered
+    //    with exactly this reel's URL.
+    ReelsPlayer.switchSurface(_slots.curSlot).then((_) {
+      Future.delayed(const Duration(milliseconds: 50), () {
+        if (!mounted) return;
+        ReelsPlayer.play(_slots.curSlot);
+        if (_isMuted) ReelsPlayer.setVolume(_slots.curSlot, 0.0);
+      });
+    });
+
+    // 5. Record view
+    ReelsApiService.recordView(reels[newIndex].id);
+
+    // 6. Load more if approaching end
+    if (newIndex >= reels.length - 3) {
       ref.read(reelsFeedProvider.notifier).loadMore();
     }
+
+    developer.log(
+      '[Reels] page=$newIndex | cur=${_slots.curSlot} next=${_slots.nextSlot} prev=${_slots.prevSlot}',
+    );
   }
 
   void _toggleMute() {
     setState(() => _isMuted = !_isMuted);
-    ReelsPlayer.setVolume(_slotMgr.currentSlot, _isMuted ? 0.0 : 1.0);
+    ReelsPlayer.setVolume(_slots.curSlot, _isMuted ? 0.0 : 1.0);
   }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final feedState = ref.watch(reelsFeedProvider);
     return PopScope(
-      onPopInvoked: (_) => _slotMgr.releaseAll(),
+      onPopInvoked: (_) => ReelsPlayer.releaseAll(),
       child: Scaffold(
         backgroundColor: Colors.black,
         body: feedState.when(
@@ -4880,33 +4881,42 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
                 onRetry: () => ref.read(reelsFeedProvider.notifier).refresh(),
               ),
           data: (reels) {
-            if (reels.isEmpty) return _emptyState();
+            if (reels.isEmpty) return _buildEmpty();
 
-            // Kick off pre-buffering once on first data arrival
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (_currentPage == 0 &&
-                  _slotMgr._indexToSlot.isEmpty &&
-                  reels.isNotEmpty) {
-                _onFeedLoaded(reels);
-              }
-            });
+            WidgetsBinding.instance.addPostFrameCallback(
+              (_) => _onFeedReady(reels),
+            );
 
-            return PageView.builder(
-              controller: _pageCtrl,
-              scrollDirection: Axis.vertical,
-              onPageChanged: (i) => _onPageChanged(i, reels),
-              itemCount: reels.length,
-              itemBuilder:
-                  (ctx, i) => _ReelItem(
-                    key: ValueKey(reels[i].id),
-                    reel: reels[i],
-                    // Each item knows which slot it lives in (0=prev,1=curr,2=next)
-                    // Items far from the window get slot -1 (no video, just thumbnail)
-                    slot: _slotFor(i),
-                    isActive: i == _currentPage,
-                    isMuted: _isMuted,
-                    onMuteToggle: _toggleMute,
-                  ),
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                // ── Single shared SurfaceView (never leaves the tree) ──────
+                const ReelsSurfaceWidget(),
+
+                // ── PageView: transparent, handles swipe + overlays ────────
+                // Each page renders its OWN reel's avatar/name/caption/buttons.
+                // The active overlay also knows the current physical slot for
+                // play/pause control.
+                PageView.builder(
+                  controller: _pageCtrl,
+                  scrollDirection: Axis.vertical,
+                  onPageChanged: (i) => _onPageChanged(i, reels),
+                  itemCount: reels.length,
+                  itemBuilder: (ctx, i) {
+                    final isActive = i == _currentPage;
+                    return _ReelOverlay(
+                      key: ValueKey(reels[i].id),
+                      // ↓ Each overlay gets its OWN reel data — always correct
+                      reel: reels[i],
+                      isActive: isActive,
+                      isMuted: _isMuted,
+                      onMuteToggle: _toggleMute,
+                      // ↓ Only the ACTIVE overlay needs the slot for controls
+                      activeSlot: _slots.curSlot,
+                    );
+                  },
+                ),
+              ],
             );
           },
         ),
@@ -4914,15 +4924,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
     );
   }
 
-  /// Returns 0, 1, or 2 for the 3 active slots, or -1 for off-window items.
-  int _slotFor(int reelIndex) {
-    if (reelIndex == _currentPage - 1) return 0;
-    if (reelIndex == _currentPage) return 1;
-    if (reelIndex == _currentPage + 1) return 2;
-    return -1; // outside window → show thumbnail only
-  }
-
-  Widget _emptyState() => Center(
+  Widget _buildEmpty() => Center(
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -4947,39 +4949,47 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// SINGLE REEL ITEM
+// REEL OVERLAY
+//
+// Each page in the PageView has its own _ReelOverlay with its own reel data.
+// This means avatar, username, caption, like count, comment count etc. always
+// show the correct user's info — independent of which video slot is active.
+//
+// `activeSlot` is passed from the parent and only used for play/pause controls
+// when this overlay is the active one (isActive == true).
 // ════════════════════════════════════════════════════════════════════════════
 
-class _ReelItem extends ConsumerStatefulWidget {
+class _ReelOverlay extends ConsumerStatefulWidget {
   final ReelModel reel;
-  final int slot; // -1 = off-window (thumbnail only), 0/1/2 = native view
   final bool isActive;
   final bool isMuted;
   final VoidCallback onMuteToggle;
+  final int activeSlot;
 
-  const _ReelItem({
+  const _ReelOverlay({
     Key? key,
     required this.reel,
-    required this.slot,
     required this.isActive,
     required this.isMuted,
     required this.onMuteToggle,
+    required this.activeSlot,
   }) : super(key: key);
 
   @override
-  ConsumerState<_ReelItem> createState() => _ReelItemState();
+  ConsumerState<_ReelOverlay> createState() => _ReelOverlayState();
 }
 
-class _ReelItemState extends ConsumerState<_ReelItem>
+class _ReelOverlayState extends ConsumerState<_ReelOverlay>
     with SingleTickerProviderStateMixin {
+  bool _isPlaying = false;
+  bool _isLoading = true;
   bool _showControls = false;
-  bool _isPlaying = true;
   bool _showComments = false;
 
-  // Heart double-tap animation
+  Timer? _loadingTimer;
+
   late AnimationController _heartCtrl;
-  late Animation<double> _heartScale;
-  late Animation<double> _heartOpacity;
+  late Animation<double> _heartScale, _heartOpacity;
   bool _showHeart = false;
   Offset _heartPos = Offset.zero;
 
@@ -4993,13 +5003,44 @@ class _ReelItemState extends ConsumerState<_ReelItem>
   void initState() {
     super.initState();
     _initHeart();
+    if (widget.isActive) _scheduleVideoReveal();
+  }
+
+  @override
+  void didUpdateWidget(_ReelOverlay old) {
+    super.didUpdateWidget(old);
+    if (widget.isActive && !old.isActive) {
+      // This reel just became active (user swiped to it)
+      setState(() {
+        _isLoading = true;
+        _isPlaying = true;
+      });
+      _scheduleVideoReveal();
+    } else if (!widget.isActive && old.isActive) {
+      _loadingTimer?.cancel();
+      setState(() {
+        _isPlaying = false;
+        _isLoading = true;
+      });
+    }
   }
 
   @override
   void dispose() {
+    _loadingTimer?.cancel();
     _heartCtrl.dispose();
     _removeOverlay();
     super.dispose();
+  }
+
+  void _scheduleVideoReveal() {
+    _loadingTimer?.cancel();
+    _isPlaying = true;
+    _loadingTimer = Timer(const Duration(milliseconds: 600), () {
+      if (mounted && widget.isActive) {
+        setState(() => _isLoading = false);
+      }
+    });
   }
 
   void _initHeart() {
@@ -5036,20 +5077,18 @@ class _ReelItemState extends ConsumerState<_ReelItem>
     ]).animate(_heartCtrl);
   }
 
-  // ── gestures ──────────────────────────────────────────────────────────────
+  // ── Gestures ──────────────────────────────────────────────────────────────
 
   void _onTap() {
     _removeOverlay();
-    if (!widget.isActive || widget.slot < 0) return;
+    if (!widget.isActive) return;
     setState(() {
       _isPlaying = !_isPlaying;
       _showControls = true;
     });
-    if (_isPlaying) {
-      ReelsPlayer.play(widget.slot);
-    } else {
-      ReelsPlayer.pause(widget.slot);
-    }
+    _isPlaying
+        ? ReelsPlayer.play(widget.activeSlot)
+        : ReelsPlayer.pause(widget.activeSlot);
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) setState(() => _showControls = false);
     });
@@ -5068,16 +5107,15 @@ class _ReelItemState extends ConsumerState<_ReelItem>
     if (!widget.reel.isLiked) _react(ReactionType.like);
   }
 
-  void _onLongPressStart(LongPressStartDetails _) {
-    if (widget.isActive && widget.slot >= 0) ReelsPlayer.pause(widget.slot);
+  void _onLPS(LongPressStartDetails _) {
+    if (widget.isActive) ReelsPlayer.pause(widget.activeSlot);
   }
 
-  void _onLongPressEnd(LongPressEndDetails _) {
-    if (widget.isActive && widget.slot >= 0 && _isPlaying)
-      ReelsPlayer.play(widget.slot);
+  void _onLPE(LongPressEndDetails _) {
+    if (widget.isActive && _isPlaying) ReelsPlayer.play(widget.activeSlot);
   }
 
-  // ── reactions ─────────────────────────────────────────────────────────────
+  // ── Reactions ─────────────────────────────────────────────────────────────
 
   Future<void> _react(ReactionType type) async {
     final r = widget.reel;
@@ -5122,7 +5160,7 @@ class _ReelItemState extends ConsumerState<_ReelItem>
       AppData().isMe(widget.reel.username);
 
   void _options() {
-    if (widget.isActive && widget.slot >= 0) ReelsPlayer.pause(widget.slot);
+    if (widget.isActive) ReelsPlayer.pause(widget.activeSlot);
     _removeOverlay();
     showModalBottomSheet(
       context: context,
@@ -5136,8 +5174,8 @@ class _ReelItemState extends ConsumerState<_ReelItem>
             onRepost: !_isMe() ? _doRepost : null,
           ),
     ).then((_) {
-      if (widget.isActive && mounted && _isPlaying && widget.slot >= 0)
-        ReelsPlayer.play(widget.slot);
+      if (widget.isActive && mounted && _isPlaying)
+        ReelsPlayer.play(widget.activeSlot);
     });
   }
 
@@ -5292,14 +5330,12 @@ class _ReelItemState extends ConsumerState<_ReelItem>
   }
 
   String _fmt(int n) {
-    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
-    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
+    if (n >= 1_000_000) return '${(n / 1_000_000).toStringAsFixed(1)}M';
+    if (n >= 1_000) return '${(n / 1_000).toStringAsFixed(1)}K';
     return n > 0 ? '$n' : '';
   }
 
-  // ════════════════════════════════════════════════════════════════════════
-  // BUILD
-  // ════════════════════════════════════════════════════════════════════════
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -5308,85 +5344,84 @@ class _ReelItemState extends ConsumerState<_ReelItem>
     return Stack(
       fit: StackFit.expand,
       children: [
-        // ── Video layer ────────────────────────────────────────────────────
-        // slot >= 0 → embed the native SurfaceView for this slot
-        // slot == -1 → show thumbnail only (off-window items)
-        if (widget.slot >= 0)
-          ReelsSurfaceWidget(slot: widget.slot)
-        else
-          _thumb(size),
-
-        // ── Thumbnail shown behind native view until video starts ──────────
-        // Fades out once isActive and isPlaying
-        if (widget.slot >= 0 && widget.reel.thumbnail != null)
+        // Loading overlay — covers the surface while video is buffering.
+        // Prevents seeing a previous reel's final frame during transition.
+        if (widget.isActive)
           AnimatedOpacity(
-            opacity: (widget.isActive && _isPlaying) ? 0.0 : 1.0,
+            opacity: _isLoading ? 1.0 : 0.0,
             duration: const Duration(milliseconds: 300),
-            child: _thumb(size),
+            child: _buildLoadingOverlay(),
           ),
 
-        // ── Overlays ───────────────────────────────────────────────────────
-        _gradients(),
-        _gestureLayer(),
-        _topBar(),
-        _bottomLeft(size),
-        _actions(),
-        if (_showControls) _pauseHint(),
-        if (_showHeart) _heartBurst(),
-        if (!widget.isActive || widget.slot < 0) _offScreenOverlay(),
-        if (_showComments) _commentsSheet(),
+        // Gesture layer (transparent)
+        Positioned.fill(
+          child: GestureDetector(
+            onTap: _onTap,
+            onDoubleTapDown: _onDoubleTap,
+            onDoubleTap: () {},
+            onLongPressStart: _onLPS,
+            onLongPressEnd: _onLPE,
+            behavior: HitTestBehavior.translucent,
+            child: Container(color: Colors.transparent),
+          ),
+        ),
+
+        _buildGradients(),
+        _buildTopBar(),
+        // ↓ This always shows THIS reel's info — never the wrong user
+        _buildBottomLeft(size),
+        _buildActions(),
+        if (_showControls) _buildPauseHint(),
+        if (_showHeart) _buildHeartBurst(),
+        if (_showComments) _buildCommentsSheet(),
       ],
     );
   }
 
-  // A transparent gesture detector covering the whole screen
-  Widget _gestureLayer() => Positioned.fill(
-    child: GestureDetector(
-      onTap: _onTap,
-      onDoubleTapDown: _onDoubleTap,
-      onDoubleTap: () {},
-      onLongPressStart: _onLongPressStart,
-      onLongPressEnd: _onLongPressEnd,
-      behavior: HitTestBehavior.translucent,
-      child: Container(color: Colors.transparent),
-    ),
+  Widget _buildLoadingOverlay() => Stack(
+    fit: StackFit.expand,
+    children: [
+      Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF0D0D0D), Color(0xFF1A1A1A), Color(0xFF0D0D0D)],
+          ),
+        ),
+      ),
+      Shimmer.fromColors(
+        baseColor: Colors.white.withOpacity(0.03),
+        highlightColor: Colors.white.withOpacity(0.08),
+        period: const Duration(milliseconds: 1200),
+        child: Container(color: Colors.white.withOpacity(0.03)),
+      ),
+      const Center(
+        child: SizedBox(
+          width: 36,
+          height: 36,
+          child: CircularProgressIndicator(
+            color: Colors.white54,
+            strokeWidth: 2.5,
+          ),
+        ),
+      ),
+    ],
   );
 
-  Widget _thumb(Size size) {
-    final t = widget.reel.thumbnail;
-    if (t != null && t.isNotEmpty) {
-      return CachedNetworkImage(
-        imageUrl: t,
-        fit: BoxFit.cover,
-        width: size.width,
-        height: size.height,
-        placeholder: (_, __) => const ColoredBox(color: Colors.black),
-        errorWidget: (_, __, ___) => const ColoredBox(color: Colors.black),
-      );
-    }
-    return const ColoredBox(color: Colors.black);
-  }
-
-  // Dim overlay for off-screen items so they don't look active
-  Widget _offScreenOverlay() => Positioned.fill(
-    child: IgnorePointer(
-      child: Container(color: Colors.black.withOpacity(0.3)),
-    ),
-  );
-
-  Widget _gradients() => Stack(
+  Widget _buildGradients() => Stack(
     children: [
       Positioned(
         top: 0,
         left: 0,
         right: 0,
-        height: 120,
+        height: 140,
         child: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Colors.black.withOpacity(0.5), Colors.transparent],
+              colors: [Colors.black.withOpacity(0.6), Colors.transparent],
             ),
           ),
         ),
@@ -5395,13 +5430,13 @@ class _ReelItemState extends ConsumerState<_ReelItem>
         bottom: 0,
         left: 0,
         right: 0,
-        height: 320,
+        height: 340,
         child: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.bottomCenter,
               end: Alignment.topCenter,
-              colors: [Colors.black.withOpacity(0.8), Colors.transparent],
+              colors: [Colors.black.withOpacity(0.85), Colors.transparent],
             ),
           ),
         ),
@@ -5409,7 +5444,7 @@ class _ReelItemState extends ConsumerState<_ReelItem>
     ],
   );
 
-  Widget _topBar() => Positioned(
+  Widget _buildTopBar() => Positioned(
     top: MediaQuery.of(context).padding.top + 8,
     left: 8,
     right: 16,
@@ -5441,14 +5476,17 @@ class _ReelItemState extends ConsumerState<_ReelItem>
     ),
   );
 
-  Widget _bottomLeft(Size size) => Positioned(
-    bottom: 70,
-    left: 12,
-    right: 80,
+  /// Bottom-left overlay: avatar, username, follow button, caption.
+  /// Uses widget.reel — always THIS page's reel data, never another user's.
+  Widget _buildBottomLeft(Size size) => Positioned(
+    bottom: 80,
+    left: 14,
+    right: 88,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Repost badge
         if (widget.reel.isRepost && widget.reel.sharedReelDetails != null)
           Padding(
             padding: const EdgeInsets.only(bottom: 6),
@@ -5465,13 +5503,14 @@ class _ReelItemState extends ConsumerState<_ReelItem>
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 12,
-                    fontWeight: FontWeight.w500,
                     shadows: [Shadow(blurRadius: 3)],
                   ),
                 ),
               ],
             ),
           ),
+
+        // Avatar + username + follow
         GestureDetector(
           onTap:
               () => Navigator.push(
@@ -5484,7 +5523,7 @@ class _ReelItemState extends ConsumerState<_ReelItem>
               ),
           child: Row(
             children: [
-              _avatar(),
+              _buildAvatar(),
               const SizedBox(width: 10),
               Flexible(
                 child: Text(
@@ -5519,6 +5558,8 @@ class _ReelItemState extends ConsumerState<_ReelItem>
             ],
           ),
         ),
+
+        // Caption
         if (widget.reel.caption.isNotEmpty) ...[
           const SizedBox(height: 8),
           _ExpandableCaption(caption: widget.reel.caption),
@@ -5527,7 +5568,7 @@ class _ReelItemState extends ConsumerState<_ReelItem>
     ),
   );
 
-  Widget _avatar() {
+  Widget _buildAvatar() {
     final url = widget.reel.avatar;
     final init =
         widget.reel.username.isNotEmpty
@@ -5553,7 +5594,7 @@ class _ReelItemState extends ConsumerState<_ReelItem>
       ),
       child: ClipOval(
         child:
-            url.isNotEmpty
+            (url != null && url.isNotEmpty)
                 ? CachedNetworkImage(
                   imageUrl: url,
                   fit: BoxFit.cover,
@@ -5565,15 +5606,18 @@ class _ReelItemState extends ConsumerState<_ReelItem>
     );
   }
 
-  Widget _actions() {
+  /// Right-side action buttons: like, comment, repost, share, mute.
+  /// Uses widget.reel for counts — always THIS reel's data.
+  Widget _buildActions() {
     final reel = widget.reel;
     final reaction = reel.currentReactionType;
     return Positioned(
       right: 8,
-      bottom: 80,
+      bottom: 88,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Like / reaction
           CompositedTransformTarget(
             link: _reactionLink,
             child: GestureDetector(
@@ -5614,12 +5658,16 @@ class _ReelItemState extends ConsumerState<_ReelItem>
             ),
           ),
           const SizedBox(height: 20),
+
+          // Comments
           _ActionButton(
             icon: Icons.chat_bubble_outline_rounded,
             label: _fmt(reel.commentsCount),
             onTap: () => setState(() => _showComments = !_showComments),
           ),
           const SizedBox(height: 20),
+
+          // Repost (not own reel)
           if (!_isMe()) ...[
             _ActionButton(
               icon: Icons.repeat_rounded,
@@ -5628,11 +5676,15 @@ class _ReelItemState extends ConsumerState<_ReelItem>
             ),
             const SizedBox(height: 20),
           ],
+
+          // Share
           _ActionButton(
             icon: Icons.send_rounded,
             label: 'Share',
             onTap: _share,
           ),
+
+          // More options
           IconButton(
             icon: const Icon(
               Icons.more_vert_rounded,
@@ -5641,7 +5693,9 @@ class _ReelItemState extends ConsumerState<_ReelItem>
             ),
             onPressed: _options,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
+
+          // Mute
           _ActionButton(
             icon:
                 widget.isMuted
@@ -5655,7 +5709,7 @@ class _ReelItemState extends ConsumerState<_ReelItem>
     );
   }
 
-  Widget _pauseHint() => Center(
+  Widget _buildPauseHint() => Center(
     child: AnimatedOpacity(
       opacity: _showControls ? 1.0 : 0.0,
       duration: const Duration(milliseconds: 200),
@@ -5675,7 +5729,7 @@ class _ReelItemState extends ConsumerState<_ReelItem>
     ),
   );
 
-  Widget _heartBurst() => Positioned(
+  Widget _buildHeartBurst() => Positioned(
     left: _heartPos.dx - 48,
     top: _heartPos.dy - 48,
     child: IgnorePointer(
@@ -5701,7 +5755,7 @@ class _ReelItemState extends ConsumerState<_ReelItem>
     ),
   );
 
-  Widget _commentsSheet() => Positioned(
+  Widget _buildCommentsSheet() => Positioned(
     bottom: 0,
     left: 0,
     right: 0,
@@ -5760,6 +5814,7 @@ class _ReelOptionsSheet extends StatelessWidget {
   final bool isOwner;
   final ReelModel reel;
   final VoidCallback? onEdit, onDelete, onRepost;
+
   const _ReelOptionsSheet({
     required this.isOwner,
     required this.reel,
@@ -5830,6 +5885,7 @@ class _Tile extends StatelessWidget {
   final String label;
   final Color color;
   final VoidCallback onTap;
+
   const _Tile({
     required this.icon,
     required this.label,
@@ -5869,6 +5925,7 @@ class _VerticalReactionPicker extends StatefulWidget {
   final ReactionType? currentReaction;
   final void Function(ReactionType) onSelect;
   final VoidCallback onDismiss;
+
   const _VerticalReactionPicker({
     required this.layerLink,
     required this.currentReaction,
@@ -6032,6 +6089,7 @@ class _ActionButton extends StatefulWidget {
   final Color iconColor;
   final String label;
   final VoidCallback onTap;
+
   const _ActionButton({
     required this.icon,
     this.iconColor = Colors.white,
@@ -6112,14 +6170,12 @@ class _ABState extends State<_ActionButton>
 class _ExpandableCaption extends StatefulWidget {
   final String caption;
   const _ExpandableCaption({required this.caption});
-
   @override
   State<_ExpandableCaption> createState() => _ECState();
 }
 
 class _ECState extends State<_ExpandableCaption> {
   bool _exp = false;
-
   @override
   Widget build(BuildContext context) => GestureDetector(
     onTap: () => setState(() => _exp = !_exp),
@@ -6165,7 +6221,7 @@ class _ReelsShimmer extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Shimmer.fromColors(
     baseColor: Colors.grey.shade900,
-    highlightColor: Colors.grey.shade700,
+    highlightColor: Colors.grey.shade800,
     period: const Duration(milliseconds: 1400),
     child: Container(color: Colors.black),
   );
