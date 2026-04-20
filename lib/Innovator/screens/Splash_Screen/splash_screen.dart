@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Login.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
+import 'package:innovator/Innovator/widget/FloatingMenuwidget.dart';
 import 'package:innovator/innovator_home.dart';
 import 'dart:developer' as developer;
 
@@ -55,6 +56,7 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void _navigateToLogin() {
+    FloatingMenuOverlay.remove();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Navigator.pushAndRemoveUntil(
         context,

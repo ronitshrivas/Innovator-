@@ -21,8 +21,6 @@ import 'dart:developer' as developer;
 import 'package:innovator/ecommerce/screens/Shop/Shop_Page.dart';
 import 'package:innovator/elearning/provider/notificationProvider.dart';
 
-
-
 late Size mq;
 GlobalKey<NavigatorState> get navigatorKey => Get.key;
 

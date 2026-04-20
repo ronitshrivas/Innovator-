@@ -4,25 +4,28 @@ import 'package:flutter/services.dart';
 // ════════════════════════════════════════════════════════════════════════════
 // ReelsPlayer — Dart wrapper around the native MethodChannel
 //
-// SLOT CONVENTION (always 3 slots):
-//   slot 0 → previous reel  (kept alive for instant back-swipe)
-//   slot 1 → current reel   (playing)
-//   slot 2 → next reel      (pre-buffering silently in background)
+// SLOT CONVENTION (3 ExoPlayer instances, 1 shared surface):
+//   slot 0 → previous reel  (pre-buffered, no surface)
+//   slot 1 → current reel   (playing, has the display surface)
+//   slot 2 → next reel      (pre-buffered, no surface)
 //
-// USAGE FLOW:
-//   1. Feed loads  → prepare(1, currentUrl)  + prepare(2, nextUrl)
-//   2. User swipes → play(1) [instant, already buffered]
-//                  → prepare(2, newNextUrl)  [background buffer starts]
-//   3. Leave screen → releaseAll()
+// SURFACE SWITCHING FLOW:
+//   1. Feed loads     → prepare(0, url0) + prepare(1, url1)
+//                     → switchSurface(0)   ← surface → slot 0
+//                     → play(0)
+//   2. User swipes    → pause(oldSlot)
+//                     → switchSurface(newSlot)   ← moves surface instantly
+//                     → play(newSlot)
+//                     → prepare(nextSlot, nextUrl)
+//   3. Leave screen   → releaseAll()
 // ════════════════════════════════════════════════════════════════════════════
 
 class ReelsPlayer {
   static const _channel = MethodChannel('reels_player');
 
-  /// Prepare a slot: load the URL and start buffering.
-  /// Safe to call in advance — this is the key to zero-delay playback.
+  /// Prepare a slot: load URL and start buffering (no surface needed).
   static Future<void> prepare(int slot, String url, String token) async {
-    assert(slot >= 0 && slot <= 2, 'slot must be 0, 1, or 2');
+    assert(slot >= 0 && slot <= 2);
     try {
       await _channel.invokeMethod('prepare', {
         'slot': slot,
@@ -34,7 +37,18 @@ class ReelsPlayer {
     }
   }
 
-  /// Play a slot. Near-instant if prepare() was called first.
+  /// Switch the shared display surface to a given slot.
+  /// Call this BEFORE play() when changing reels.
+  static Future<void> switchSurface(int slot) async {
+    assert(slot >= 0 && slot <= 2);
+    try {
+      await _channel.invokeMethod('switchSurface', {'slot': slot});
+    } catch (e) {
+      debugPrint('[ReelsPlayer] switchSurface error: $e');
+    }
+  }
+
+  /// Play a slot (must have called switchSurface first for the video to appear).
   static Future<void> play(int slot) async {
     try {
       await _channel.invokeMethod('play', {'slot': slot});
@@ -52,7 +66,7 @@ class ReelsPlayer {
     }
   }
 
-  /// Set volume for a slot. 0.0 = mute, 1.0 = full volume.
+  /// Set volume (0.0 = mute, 1.0 = full).
   static Future<void> setVolume(int slot, double volume) async {
     try {
       await _channel.invokeMethod('setVolume', {
@@ -64,7 +78,7 @@ class ReelsPlayer {
     }
   }
 
-  /// Seek to a position in milliseconds.
+  /// Seek to positionMs.
   static Future<void> seekTo(int slot, int positionMs) async {
     try {
       await _channel.invokeMethod('seekTo', {
@@ -76,7 +90,7 @@ class ReelsPlayer {
     }
   }
 
-  /// Release one slot (frees memory).
+  /// Release one slot.
   static Future<void> release(int slot) async {
     try {
       await _channel.invokeMethod('release', {'slot': slot});
@@ -85,7 +99,7 @@ class ReelsPlayer {
     }
   }
 
-  /// Release ALL slots. Call this when leaving the reels screen.
+  /// Release ALL slots. Call when leaving the reels screen.
   static Future<void> releaseAll() async {
     try {
       await _channel.invokeMethod('releaseAll');
@@ -96,21 +110,21 @@ class ReelsPlayer {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// ReelsSurfaceWidget — embeds the native SurfaceView for one slot
+// ReelsSurfaceWidget — THE single shared display surface.
+//
+// Only ONE of these should ever exist in the widget tree.
+// It is always mounted (never removed), so the SurfaceView surface is
+// never destroyed. ExoPlayers share this surface via switchSurface().
 // ════════════════════════════════════════════════════════════════════════════
 
 class ReelsSurfaceWidget extends StatelessWidget {
-  final int slot;
-
-  const ReelsSurfaceWidget({Key? key, required this.slot}) : super(key: key);
+  const ReelsSurfaceWidget({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    // AndroidView embeds the native SurfaceView registered as "reels_surface_view"
     return AndroidView(
       viewType: 'reels_surface_view',
       layoutDirection: TextDirection.ltr,
-      creationParams: {'slot': slot},
       creationParamsCodec: const StandardMessageCodec(),
     );
   }

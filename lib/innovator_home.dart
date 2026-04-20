@@ -1,15 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// lib/Innovator/screens/Feed/homepage.dart  (or wherever your Homepage lives)
-//
-// CHANGES FROM YOUR ORIGINAL:
-//   1. StatefulWidget → ConsumerStatefulWidget  (needed for ref)
-//   2. State → ConsumerState                    (needed for ref)
-//   3. didChangeAppLifecycleState wired to setAppActive()
-//      resumed → 8-second polling (fast, user is looking at the app)
-//      paused  → 30-second polling (slow, saves battery)
-//   4. Everything else is IDENTICAL to your original
-// ─────────────────────────────────────────────────────────────────────────────
-
 import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart'; // ← NEW
@@ -38,10 +26,7 @@ class _HomepageState extends ConsumerState<Homepage>
     WidgetsBinding.instance.addObserver(this);
 
     _checkForUpdate();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      FloatingMenuOverlay.show(context);
-    });
+    FloatingMenuOverlay.show(context);
   }
 
   @override
