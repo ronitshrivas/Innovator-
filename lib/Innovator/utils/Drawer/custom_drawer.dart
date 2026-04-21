@@ -23,6 +23,7 @@ import 'package:innovator/Innovator/screens/Profile/profile_page.dart';
 import 'package:innovator/Innovator/screens/Settings/settings.dart';
 import 'package:innovator/Innovator/services/fcm_services.dart';
 import 'package:innovator/Innovator/utils/Drawer/drawer_cache_manager.dart';
+import 'package:innovator/Innovator/widget/FloatingMenuwidget.dart';
 import 'package:innovator/KMS/core/constants/service/auth_wrapper.dart';
 import 'package:innovator/ecommerce/screens/Shop/Shop_Page.dart';
 import 'package:innovator/elearning/provider/notificationProvider.dart';
@@ -535,9 +536,9 @@ class _TrueInstantDrawerState extends ConsumerState<TrueInstantDrawer> {
                       .read(elearningNotificationServiceProvider)
                       .clearToken();
                   AppData().clearAuthToken();
-
                   ref.read(drawerProfileProvider.notifier).clear();
                   AppData().logout();
+                  FloatingMenuOverlay.remove();
                   Navigator.of(dialogContext).pop();
                   Navigator.pushAndRemoveUntil(
                     context,

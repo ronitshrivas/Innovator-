@@ -1089,12 +1089,7 @@ class _ErrorView extends ConsumerWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            error,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: _T.textSecondary, fontSize: 13),
-          ),
+
           const SizedBox(height: 24),
           GestureDetector(
             onTap: onRetry,

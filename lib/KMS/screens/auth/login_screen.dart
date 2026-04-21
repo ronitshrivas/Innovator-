@@ -7,7 +7,6 @@ import 'package:innovator/KMS/provider/constant_provider.dart';
 import 'package:innovator/KMS/provider/coordinator_provider.dart';
 import 'package:innovator/KMS/provider/teacher_provider.dart';
 import 'package:innovator/KMS/provider/user_provider.dart';
-import 'package:innovator/KMS/screens/auth/signup_screen.dart';
 import 'package:innovator/KMS/screens/auth/student_login_screen.dart';
 import 'package:innovator/KMS/screens/auth/student_register_screen.dart';
 import 'package:innovator/KMS/screens/dashboard/coordinator_dashboard_screen.dart';
