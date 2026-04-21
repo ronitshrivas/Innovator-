@@ -10,6 +10,7 @@ class Comment {
   final String? reel;
   final String content;
   final DateTime createdAt;
+  final bool isReel;
   // Replies are loaded separately via /api/replies/ but stored here after fetch
   List<Comment> replies;
 
@@ -22,6 +23,7 @@ class Comment {
     this.reel,
     required this.content,
     required this.createdAt,
+    this.isReel = false,
     this.replies = const [],
   });
 

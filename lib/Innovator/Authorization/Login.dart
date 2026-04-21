@@ -387,7 +387,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => Homepage()),
-        (_) => false,
+        (Route) => false,
       );
     } else {
       developer.log('Profile incomplete → Homepage + snackbar');
@@ -396,29 +396,29 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         MaterialPageRoute(builder: (_) => const Homepage()),
         (_) => false,
       );
-      Future.delayed(const Duration(milliseconds: 400), () {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(
-                children: [
-                  Icon(Icons.info_outline, color: AppColors.whitecolor),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text('Please complete your profile to continue'),
-                  ),
-                ],
-              ),
-              backgroundColor: Colors.orange,
-              behavior: SnackBarBehavior.floating,
-              duration: const Duration(seconds: 4),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          );
-        }
-      });
+      // Future.delayed(const Duration(milliseconds: 100), () {
+      //   if (mounted) {
+      //     ScaffoldMessenger.of(context).showSnackBar(
+      //       SnackBar(
+      //         content: const Row(
+      //           children: [
+      //             Icon(Icons.info_outline, color: AppColors.whitecolor),
+      //             SizedBox(width: 8),
+      //             Expanded(
+      //               child: Text('Please complete your profile to continue'),
+      //             ),
+      //           ],
+      //         ),
+      //         backgroundColor: Colors.orange,
+      //         behavior: SnackBarBehavior.floating,
+      //         duration: const Duration(seconds: 4),
+      //         shape: RoundedRectangleBorder(
+      //           borderRadius: BorderRadius.circular(10),
+      //         ),
+      //       ),
+      //     );
+      //   }
+      // });
     }
   }
 
