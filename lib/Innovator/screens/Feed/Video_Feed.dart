@@ -4307,6 +4307,7 @@
 //     ),
 //   );
 // }
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
@@ -4475,14 +4476,13 @@ class ReelsApiService {
             body: json.encode({'caption': caption}),
           )
           .timeout(const Duration(seconds: 15));
-      if (res.statusCode == 200) {
+      if (res.statusCode == 200)
         return ReelOperationResult(
           success: true,
           data: ReelModel.fromJson(
             json.decode(res.body) as Map<String, dynamic>,
           ),
         );
-      }
       return ReelOperationResult(
         success: false,
         errorMessage: _err(res.body, res.statusCode),
@@ -4612,21 +4612,11 @@ class ReelsFeedNotifier extends StateNotifier<AsyncValue<List<ReelModel>>> {
     state = AsyncValue.data(List.from(list));
   }
 
-  void incrementComments(String reelId) {
+  void incrementComments(String id) {
     final list = state.value;
     if (list == null) return;
-    final idx = list.indexWhere((r) => r.id == reelId);
-    if (idx != -1) list[idx].commentsCount++;
-    state = AsyncValue.data(List.from(list));
-  }
-
-  void decrementComments(String reelId) {
-    final list = state.value;
-    if (list == null) return;
-    final idx = list.indexWhere((r) => r.id == reelId);
-    if (idx != -1) {
-      list[idx].commentsCount = (list[idx].commentsCount - 1).clamp(0, 999999);
-    }
+    final i = list.indexWhere((x) => x.id == id);
+    if (i >= 0) list[i].commentsCount++;
     state = AsyncValue.data(List.from(list));
   }
 
@@ -4678,29 +4668,18 @@ final reelsFeedProvider =
 // ════════════════════════════════════════════════════════════════════════════
 // REELS SCREEN
 //
-// ROOT CAUSE OF ALL BLACK SCREEN ISSUES (confirmed from logs):
+// WHY BLACK SCREEN HAPPENED WITH Offstage:
+//   Offstage(offstage: true) calls RenderBox.markNeedsLayout but also
+//   sets the layer's opacity to 0 AND stops compositing the subtree.
+//   For SurfaceView specifically, this causes the underlying
+//   android.view.Surface to report as "not ready" to ExoPlayer, which
+//   then renders nothing (black) even though audio keeps playing.
 //
-//   I/PlatformViewsController: Hosting view in a VIRTUAL DISPLAY
-//
-// Flutter's PageView puts AndroidView in "virtual display" mode which:
-//   1. Destroys the SurfaceView when it scrolls just 1px off screen
-//   2. Recreates it when it comes back — but ExoPlayer is mid-decode
-//   3. The abandoned BufferQueue triggers codec crash: error 0xffffffff
-//   4. ExoPlayer enters Released state → setSurface() throws
-//   5. Skipped 184 frames on main thread
-//
-// THE FIX:
-//   Instead of putting ReelsSurfaceWidget inside PageView items,
-//   we use a SINGLE Stack with 3 surfaces that are ALWAYS in the tree.
-//   Only the overlay content (username, buttons, caption) scrolls with PageView.
-//   The surfaces never leave the tree → never destroyed → no crashes.
-//
-//   Layout:
-//     Stack (full screen)
-//       ├── Surface slot 0  (always present, visibility toggled)
-//       ├── Surface slot 1  (always present, visibility toggled)
-//       ├── Surface slot 2  (always present, visibility toggled)
-//       └── PageView        (transparent, handles swipe gestures + overlays)
+// FIX — Stack with explicit Positioned sizing:
+//   All 3 SurfaceViews are always fully composited.
+//   Inactive ones are moved off-screen via Positioned (left: screenWidth)
+//   so they are rendered but not visible. The active one is at left:0.
+//   This keeps every Surface valid and attached to ExoPlayer at all times.
 // ════════════════════════════════════════════════════════════════════════════
 
 class ReelsScreen extends ConsumerStatefulWidget {
@@ -4718,10 +4697,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
   bool _feedReady = false;
 
   String get _token => AppData().accessToken ?? '';
-
-  // Which slot is assigned to which page index
-  // slot = pageIndex % 3
-  int _slotFor(int pageIndex) => pageIndex % 3;
+  int _slotFor(int i) => i % 3;
   int get _currentSlot => _slotFor(_currentPage);
 
   @override
@@ -4757,8 +4733,9 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
     _feedReady = true;
     _prepareSlot(0, reels);
     if (reels.length > 1) _prepareSlot(1, reels);
-    // Delay play slightly so surfaces are mounted
-    Future.delayed(const Duration(milliseconds: 300), () {
+    // Wait for SurfaceView to be mounted and surface to be created
+    // before calling play(). 400ms is enough for the platform view to render.
+    Future.delayed(const Duration(milliseconds: 400), () {
       if (mounted) {
         ReelsPlayer.play(_slotFor(0));
         ReelsApiService.recordView(reels[0].id);
@@ -4776,24 +4753,21 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
   }
 
   void _onPageChanged(int newIndex, List<ReelModel> reels) {
-    final oldSlot = _currentSlot;
-    ReelsPlayer.pause(oldSlot);
-
+    ReelsPlayer.pause(_currentSlot);
     setState(() => _currentPage = newIndex);
     ref.read(activeReelIndexProvider.notifier).state = newIndex;
 
     final newSlot = _slotFor(newIndex);
 
-    // Small delay — gives the surface time to re-attach after slot switch
-    Future.delayed(const Duration(milliseconds: 80), () {
+    // Short delay so setState rebuilds and the active surface is
+    // fully composited before ExoPlayer renders the first frame.
+    Future.delayed(const Duration(milliseconds: 100), () {
       if (!mounted) return;
       ReelsPlayer.play(newSlot);
       if (_isMuted) ReelsPlayer.setVolume(newSlot, 0.0);
     });
 
-    // Pre-buffer next reel
     _prepareSlot(newIndex + 1, reels);
-
     ReelsApiService.recordView(reels[newIndex].id);
 
     if (newIndex >= reels.length - 3) {
@@ -4821,43 +4795,55 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
               ),
           data: (reels) {
             if (reels.isEmpty) return _empty();
-
             WidgetsBinding.instance.addPostFrameCallback(
               (_) => _onFeedReady(reels),
             );
 
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                // ── 3 native surfaces — ALWAYS in the widget tree ────────────
-                // This is the critical fix: surfaces never leave the tree,
-                // so SurfaceView is never destroyed between scrolls.
-                // We use Offstage(offstage: true) to hide inactive surfaces
-                // without removing them from the tree.
-                for (int slot = 0; slot < 3; slot++)
-                  Offstage(
-                    offstage: slot != _currentSlot,
-                    child: ReelsSurfaceWidget(slot: slot),
-                  ),
+            return LayoutBuilder(
+              builder: (ctx, constraints) {
+                final w = constraints.maxWidth;
+                final h = constraints.maxHeight;
 
-                // ── PageView for swipe gestures + overlays ───────────────────
-                // Background is transparent so the surface layer shows through
-                PageView.builder(
-                  controller: _pageCtrl,
-                  scrollDirection: Axis.vertical,
-                  onPageChanged: (i) => _onPageChanged(i, reels),
-                  itemCount: reels.length,
-                  itemBuilder:
-                      (ctx, i) => _ReelOverlay(
-                        key: ValueKey(reels[i].id),
-                        reel: reels[i],
-                        slot: _slotFor(i),
-                        isActive: i == _currentPage,
-                        isMuted: _isMuted,
-                        onMuteToggle: _toggleMute,
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // ── 3 native SurfaceViews — always composited ──────────
+                    //
+                    // KEY FIX: Instead of Offstage (which stops compositing),
+                    // we use Positioned to move inactive surfaces OFF-SCREEN
+                    // to the right (left = screenWidth). They remain fully
+                    // rendered and their Surfaces stay valid for ExoPlayer.
+                    // Only the active slot is at left=0 (visible).
+                    //
+                    for (int slot = 0; slot < 3; slot++)
+                      AnimatedPositioned(
+                        duration: Duration.zero, // instant, no animation
+                        left: slot == _currentSlot ? 0 : w,
+                        top: 0,
+                        width: w,
+                        height: h,
+                        child: ReelsSurfaceWidget(slot: slot),
                       ),
-                ),
-              ],
+
+                    // ── PageView — transparent overlay for swipes + UI ─────
+                    PageView.builder(
+                      controller: _pageCtrl,
+                      scrollDirection: Axis.vertical,
+                      onPageChanged: (i) => _onPageChanged(i, reels),
+                      itemCount: reels.length,
+                      itemBuilder:
+                          (ctx, i) => _ReelOverlay(
+                            key: ValueKey(reels[i].id),
+                            reel: reels[i],
+                            slot: _slotFor(i),
+                            isActive: i == _currentPage,
+                            isMuted: _isMuted,
+                            onMuteToggle: _toggleMute,
+                          ),
+                    ),
+                  ],
+                );
+              },
             );
           },
         ),
@@ -4890,7 +4876,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// REEL OVERLAY  (transparent — sits on top of the always-on surface layer)
+// REEL OVERLAY
 // ════════════════════════════════════════════════════════════════════════════
 
 class _ReelOverlay extends ConsumerStatefulWidget {
@@ -5209,6 +5195,7 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
   void _share() => Share.share(
     'Check out this reel by @${widget.reel.username}!\n${widget.reel.bestVideoUrl ?? ''}',
   );
+
   void _snack(String msg, {bool err = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -5231,15 +5218,16 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Thumbnail fades out once active and playing (covers surface until video renders)
+        // Thumbnail shown until video starts (fades out when active+playing)
         if (widget.reel.thumbnail != null && widget.reel.thumbnail!.isNotEmpty)
           IgnorePointer(
             child: AnimatedOpacity(
               opacity: (widget.isActive && _isPlaying) ? 0.0 : 1.0,
-              duration: const Duration(milliseconds: 500),
+              duration: const Duration(milliseconds: 600),
               child: CachedNetworkImage(
                 imageUrl: widget.reel.thumbnail!,
                 fit: BoxFit.cover,
@@ -5642,17 +5630,7 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
             Expanded(
               child: CommentSection(
                 contentId: widget.reel.id,
-                onCommentCountChanged: (delta) {
-                  if (delta > 0) {
-                    ref
-                        .read(reelsFeedProvider.notifier)
-                        .incrementComments(widget.reel.id);
-                  } else {
-                    ref
-                        .read(reelsFeedProvider.notifier)
-                        .decrementComments(widget.reel.id);
-                  }
-                },
+                // onCommentAdded: () => ref.read(reelsFeedProvider.notifier).incrementComments(widget.reel.id),
               ),
             ),
           ],
