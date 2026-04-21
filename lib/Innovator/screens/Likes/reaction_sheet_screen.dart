@@ -143,7 +143,10 @@ class _reeactionsheetState extends State<reeactionsheet> {
                             if (tab != 'all')
                               Text(
                                 _emojiMap[tab] ?? '👍',
-                                style: const TextStyle(fontSize: 14),
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.red,
+                                ),
                               ),
                             if (tab != 'all') const SizedBox(width: 4),
                             Text(

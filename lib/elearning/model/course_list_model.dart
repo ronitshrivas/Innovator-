@@ -11,6 +11,7 @@ class CourseListModel {
   final bool isPublished;
   final bool isEnrolled;
   final DateTime createdAt;
+  final String? thumbnail;
   final List<CourseContent> contents;
 
   CourseListModel({
@@ -22,6 +23,7 @@ class CourseListModel {
     required this.title,
     required this.description,
     required this.price,
+    this.thumbnail,
     required this.courseType,
     required this.isPublished,
     required this.isEnrolled,
@@ -41,11 +43,13 @@ class CourseListModel {
       title: json['title'] ?? '',
       description: json['description'] ?? '',
       price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
+      thumbnail: json['thumbnail'],
       courseType: json['course_type'] ?? '',
       isPublished: json['is_published'] ?? false,
       isEnrolled: json['is_enrolled'] ?? false,
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
-      contents: (json['contents'] as List?)
+      contents:
+          (json['contents'] as List?)
               ?.map((e) => CourseContent.fromJson(e))
               .toList() ??
           [],
@@ -62,6 +66,7 @@ class CourseListModel {
       'title': title,
       'description': description,
       'price': price.toStringAsFixed(2),
+      'thumbnail': thumbnail,
       'course_type': courseType,
       'is_published': isPublished,
       'is_enrolled': isEnrolled,

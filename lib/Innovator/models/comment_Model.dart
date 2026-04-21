@@ -6,7 +6,8 @@ class Comment {
   final String username;
   final String? avatar;
   final String postId;
-  final String? parentId; // non-null = this is a reply
+  final String? parentId;
+  final String? reel;
   final String content;
   final DateTime createdAt;
   final bool isReel;
@@ -19,6 +20,7 @@ class Comment {
     this.avatar,
     required this.postId,
     this.parentId,
+    this.reel,
     required this.content,
     required this.createdAt,
     this.isReel = false,
@@ -34,6 +36,7 @@ class Comment {
       avatar: json['avatar']?.toString(),
       postId: json['post']?.toString() ?? '',
       parentId: json['parent']?.toString(),
+      reel: json['reel'] ?? '',
       content: json['content']?.toString() ?? '',
       createdAt:
           DateTime.tryParse(json['created_at']?.toString() ?? '') ??
@@ -48,6 +51,7 @@ class Comment {
     'post': postId,
     'parent': parentId,
     'content': content,
+    'reel': reel,
     'created_at': createdAt.toIso8601String(),
   };
 }

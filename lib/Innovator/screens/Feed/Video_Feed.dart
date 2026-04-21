@@ -4748,6 +4748,8 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
 
   String get _token => AppData().accessToken ?? '';
 
+  // ── lifecycle ─────────────────────────────────────────────────────────────
+
   @override
   void initState() {
     super.initState();
@@ -4985,6 +4987,7 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
   bool _isLoading = true;
   bool _showControls = false;
   bool _showComments = false;
+  bool _viewRecorded = false;
 
   Timer? _loadingTimer;
 
@@ -4993,6 +4996,7 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
   bool _showHeart = false;
   Offset _heartPos = Offset.zero;
 
+  // ── reaction overlay ──────────────────────────────────────────────────────
   OverlayEntry? _reactionOverlay;
   final LayerLink _reactionLink = LayerLink();
   final ContentLikeService _likeService = ContentLikeService(
@@ -5077,7 +5081,7 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
     ]).animate(_heartCtrl);
   }
 
-  // ── Gestures ──────────────────────────────────────────────────────────────
+  // ── gestures ──────────────────────────────────────────────────────────────
 
   void _onTap() {
     _removeOverlay();
@@ -5340,7 +5344,14 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final ctrl = _ctrl;
 
+    if (ctrl != null) {
+      return NativeVideoPlayer(
+        controller: ctrl,
+        overlayBuilder: (_, __) => _buildOverlay(size),
+      );
+    }
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -5486,7 +5497,6 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Repost badge
         if (widget.reel.isRepost && widget.reel.sharedReelDetails != null)
           Padding(
             padding: const EdgeInsets.only(bottom: 6),
@@ -5793,10 +5803,19 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
             Expanded(
               child: CommentSection(
                 contentId: widget.reel.id,
-                onCommentAdded:
-                    () => ref
+                isReel: true,
+
+                onCommentCountChanged: (delta) {
+                  if (delta > 0) {
+                    ref
                         .read(reelsFeedProvider.notifier)
-                        .incrementComments(widget.reel.id),
+                        .incrementComments(widget.reel.id);
+                  } else {
+                    ref
+                        .read(reelsFeedProvider.notifier)
+                        .decrementComments(widget.reel.id);
+                  }
+                },
               ),
             ),
           ],
@@ -5804,6 +5823,12 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
       ),
     ),
   );
+
+  String _fmt(int n) {
+    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
+    return n > 0 ? '$n' : '';
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
