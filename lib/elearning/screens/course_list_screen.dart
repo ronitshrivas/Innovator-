@@ -42,7 +42,6 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
         () => _searchQuery = _searchController.text.trim().toLowerCase(),
       );
     });
-   
   }
 
   @override
@@ -365,7 +364,9 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
                     builder: (_) => CourseDetailScreen(course: course),
                   ),
                 ).then((_) {
-                  ref.read(elearningNotificationListProvider.notifier).refresh();
+                  ref
+                      .read(elearningNotificationListProvider.notifier)
+                      .refresh();
                   ref.refresh(enrollmentProvider);
                 }),
           );
@@ -410,9 +411,6 @@ class _CourseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final thumbnail =
-        course.contents.isNotEmpty ? course.contents.first.thumbnail : null;
-
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -440,9 +438,9 @@ class _CourseCard extends StatelessWidget {
                   child: AspectRatio(
                     aspectRatio: 16 / 9,
                     child:
-                        thumbnail != null
+                        course.thumbnail != null
                             ? Image.network(
-                              thumbnail,
+                              course.thumbnail!,
                               fit: BoxFit.cover,
                               errorBuilder:
                                   (_, __, ___) => _ThumbnailPlaceholder(),
