@@ -1249,68 +1249,72 @@ class _FeedItemState extends State<FeedItem>
                         padding: const EdgeInsets.all(8.0),
                         child: Row(
                           children: [
-                            FittedBox(
-                              child: Text(
-                                widget.content.author.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16.0,
-                                  fontFamily: 'InterThin',
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
+                            // ── Expanded owns ALL space except the more button ──
+                            Expanded(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // ✅ Flexible: shows FULL name by default.
+                                  //    Adds ... ONLY when name is too long to fit beside the Follow button.
+                                  Flexible(
+                                    child: Text(
+                                      widget.content.author.name,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 16.0,
+                                        fontFamily: 'InterThin',
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Container(
+                                    width: 4.0,
+                                    height: 4.0,
+                                    decoration: BoxDecoration(
+                                      color: _getTypeColor(widget.content.type),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8.0),
+                                  if (!isOwnContent)
+                                    GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: () {},
+                                      child: FollowButton(
+                                        targetUserId: widget.content.author.id,
+                                        initialFollowStatus:
+                                            widget.content.isFollowed,
+                                        onFollowSuccess: () {
+                                          SoundPlayer().FollowSound();
+                                          if (mounted) {
+                                            setState(
+                                              () =>
+                                                  widget.content.isFollowed =
+                                                      true,
+                                            );
+                                            widget.onFollowToggled(true);
+                                          }
+                                        },
+                                        onUnfollowSuccess: () {
+                                          SoundPlayer().FollowSound();
+                                          if (mounted) {
+                                            setState(
+                                              () =>
+                                                  widget.content.isFollowed =
+                                                      false,
+                                            );
+                                            widget.onFollowToggled(false);
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                ],
                               ),
                             ),
-                            const SizedBox(width: 5),
-                            Container(
-                              width: 4.0,
-                              height: 4.0,
-                              decoration: BoxDecoration(
-                                color: _getTypeColor(widget.content.type),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            SizedBox(width: 8.0),
-                            if (!isOwnContent) ...[
-                              // GestureDetector here absorbs taps so the
-                              // parent's onTap (navigate to profile) is NOT
-                              // triggered when the Follow button is pressed.
-                              GestureDetector(
-                                behavior: HitTestBehavior.opaque,
-                                onTap:
-                                    () {}, // absorb — FollowButton handles its own tap
-                                child: FollowButton(
-                                  targetUserId: widget.content.author.id,
-                                  initialFollowStatus:
-                                      widget.content.isFollowed,
-                                  onFollowSuccess: () {
-                                    SoundPlayer().FollowSound();
-                                    developer.log(
-                                      'Follow success: \${widget.content.author.name}',
-                                    );
-                                    if (mounted) {
-                                      setState(
-                                        () => widget.content.isFollowed = true,
-                                      );
-                                      widget.onFollowToggled(true);
-                                    }
-                                  },
-                                  onUnfollowSuccess: () {
-                                    SoundPlayer().FollowSound();
-                                    developer.log(
-                                      'Unfollow success: \${widget.content.author.name}',
-                                    );
-                                    if (mounted) {
-                                      setState(
-                                        () => widget.content.isFollowed = false,
-                                      );
-                                      widget.onFollowToggled(false);
-                                    }
-                                  },
-                                ),
-                              ),
-                            ],
-                            const Spacer(),
+
+                            // ── More button always pinned to far right ──
                             InkWell(
                               borderRadius: BorderRadius.circular(12.0),
                               onTap: () {
@@ -4218,5 +4222,3 @@ extension DateTimeExtension on DateTime {
     return 'Just now';
   }
 }
-
- 
