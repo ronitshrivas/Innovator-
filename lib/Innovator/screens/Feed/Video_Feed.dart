@@ -4615,11 +4615,21 @@ class ReelsFeedNotifier extends StateNotifier<AsyncValue<List<ReelModel>>> {
     state = AsyncValue.data(List.from(list));
   }
 
-  void incrementComments(String id) {
+  void incrementComments(String reelId) {
     final list = state.value;
     if (list == null) return;
-    final i = list.indexWhere((x) => x.id == id);
-    if (i >= 0) list[i].commentsCount++;
+    final idx = list.indexWhere((r) => r.id == reelId);
+    if (idx != -1) list[idx].commentsCount++;
+    state = AsyncValue.data(List.from(list));
+  }
+
+  void decrementComments(String reelId) {
+    final list = state.value;
+    if (list == null) return;
+    final idx = list.indexWhere((r) => r.id == reelId);
+    if (idx != -1) {
+      list[idx].commentsCount = (list[idx].commentsCount - 1).clamp(0, 999999);
+    }
     state = AsyncValue.data(List.from(list));
   }
 
@@ -5344,14 +5354,14 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final ctrl = _ctrl;
+    // final ctrl = _ctrl;
 
-    if (ctrl != null) {
-      return NativeVideoPlayer(
-        controller: ctrl,
-        overlayBuilder: (_, __) => _buildOverlay(size),
-      );
-    }
+    // if (ctrl != null) {
+    //   return NativeVideoPlayer(
+    //     controller: ctrl,
+    //     overlayBuilder: (_, __) => _buildOverlay(size),
+    //   );
+    // }
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -5824,11 +5834,11 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
     ),
   );
 
-  String _fmt(int n) {
-    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
-    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
-    return n > 0 ? '$n' : '';
-  }
+  // String _fmt(int n) {
+  //   if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
+  //   if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
+  //   return n > 0 ? '$n' : '';
+  // }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
