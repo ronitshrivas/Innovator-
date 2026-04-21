@@ -40,10 +40,10 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
     ref.refresh(elearningUnreadCountProvider);
     ref.refresh(elearningNotificationListProvider);
     _tabController = TabController(length: _tabs.length, vsync: this);
-  WidgetsBinding.instance.addPostFrameCallback((_) async {
-    await ref.refresh(enrollmentProvider.future); 
-    _maybeStartVideo();  
-  });
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await ref.refresh(enrollmentProvider.future);
+      _maybeStartVideo();
+    });
   }
 
   /// Silently refreshes enrollment; if now enrolled → auto-play video.
@@ -61,7 +61,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
 
       if (isNowEnrolled) {
         setState(() => _isVerifyingPayment = false);
-         ref.read(elearningNotificationListProvider.notifier).refresh();
+        ref.read(elearningNotificationListProvider.notifier).refresh();
         _videoStarted = true;
         if (widget.course.contents.isNotEmpty) {
           _initVideo(widget.course.contents.first);
@@ -174,8 +174,6 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
         });
   }
 
- 
-
   Future<void> _enroll() async {
     final courseId = widget.course.id;
     ref.read(enrollLoadingProvider(courseId).notifier).setLoading(true);
@@ -185,7 +183,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
         await ref.read(courseServiceProvider).enrollCourse(courseId);
         await ref.refresh(enrollmentProvider.future);
         ref.read(enrollLoadingProvider(courseId).notifier).setLoading(false);
- ref.read(elearningNotificationListProvider.notifier).refresh();
+        ref.read(elearningNotificationListProvider.notifier).refresh();
 
         _videoStarted = true;
         if (widget.course.contents.isNotEmpty) {
@@ -246,42 +244,30 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
     );
   }
 
-  // Build
-
   @override
   Widget build(BuildContext context) {
     final enrolledIds = ref.watch(enrolledCoursesProvider);
     final isEnrolled = enrolledIds.contains(widget.course.id);
-
-    // if (isEnrolled && !_videoStarted) {
-    //   _videoStarted = true;
-    //   WidgetsBinding.instance.addPostFrameCallback((_) {
-    //     if (mounted && widget.course.contents.isNotEmpty) {
-    //       _initVideo(widget.course.contents.first);
-    //     }
-    //   });
-    // }
     final unreadCount = ref.watch(chatUnreadCountProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       body: Stack(
         children: [
-          Column(
-            children: [
-              _buildVideoSection(isEnrolled),
-              _buildTitleBar(),
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildLessonsTab(isEnrolled),
-                    _buildDocsTab(isEnrolled),
-                    _buildAboutTab(isEnrolled),
-                  ],
-                ),
-              ),
-            ],
+          NestedScrollView(
+            headerSliverBuilder:
+                (context, innerBoxIsScrolled) => [
+                  SliverToBoxAdapter(child: _buildVideoSection(isEnrolled)),
+                  SliverToBoxAdapter(child: _buildTitleBar()),
+                ],
+            body: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildLessonsTab(isEnrolled),
+                _buildDocsTab(isEnrolled),
+                _buildAboutTab(isEnrolled),
+              ],
+            ),
           ),
 
           // Payment verification overlay
@@ -418,13 +404,22 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
 
   Widget _buildVideoSection(bool isEnrolled) {
     final isLoading = ref.watch(enrollLoadingProvider(widget.course.id));
+
+    double aspectRatio = 16 / 9;
+    if (_videoInitialized && _videoController != null) {
+      final size = _videoController!.value.size;
+      if (size.width > 0 && size.height > 0) {
+        aspectRatio = size.width / size.height;
+      }
+    }
     return Container(
       color: Colors.black,
       width: double.infinity,
       child: SafeArea(
         bottom: false,
         child: AspectRatio(
-          aspectRatio: 16 / 9,
+          // aspectRatio: 16 / 9,
+          aspectRatio: aspectRatio,
           child: Stack(
             alignment: Alignment.center,
             children: [
@@ -775,8 +770,6 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
     ),
   );
 }
-
- 
 
 class KhaltiWebViewScreen extends StatefulWidget {
   final String paymentUrl;
