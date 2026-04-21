@@ -239,8 +239,6 @@ class _CommentSectionState extends State<CommentSection> {
   //   }
   // }
 
-  
-
   // Future<void> _submitReel() async {
   //   final text = _inputCtrl.text.trim();
   //   if (text.isEmpty || _isSending) return;
@@ -320,86 +318,136 @@ class _CommentSectionState extends State<CommentSection> {
   //   }
   // }
 
-
   Future<void> _submit() async {
-  final text = _inputCtrl.text.trim();
-  if (text.isEmpty || _isSending) return;
+    final text = _inputCtrl.text.trim();
+    if (text.isEmpty || _isSending) return;
 
-  setState(() => _isSending = true);
-  try {
-    if (_editingCommentId != null) {
-      final Comment updated;
-      if (_editingIsReply) {
-        updated = await _service.updateReply(
-          replyId: _editingCommentId!,
-          content: text,
-        );
-        setState(() {
-          for (final key in _replies.keys) {
-            final idx = _replies[key]?.indexWhere(
-              (r) => r.id == _editingCommentId,
-            );
-            if (idx != null && idx != -1) {
-              _replies[key]![idx] = updated;
-              break;
+    setState(() => _isSending = true);
+    try {
+      if (_editingCommentId != null) {
+        final Comment updated;
+        if (_editingIsReply) {
+          updated = await _service.updateReply(
+            replyId: _editingCommentId!,
+            content: text,
+          );
+          setState(() {
+            for (final key in _replies.keys) {
+              final idx = _replies[key]?.indexWhere(
+                (r) => r.id == _editingCommentId,
+              );
+              if (idx != null && idx != -1) {
+                _replies[key]![idx] = updated;
+                break;
+              }
             }
-          }
-        });
-      } else {
-        updated = await _service.updateComment(
-          commentId: _editingCommentId!,
+          });
+        } else {
+          updated = await _service.updateComment(
+            commentId: _editingCommentId!,
+            content: text,
+          );
+          setState(() {
+            final idx = _comments.indexWhere((c) => c.id == _editingCommentId);
+            if (idx != -1) _comments[idx] = updated;
+          });
+        }
+        _ok('${_editingIsReply ? 'Reply' : 'Comment'} updated');
+      } else if (_replyToCommentId != null) {
+        final reply = await _service.addReply(
+          parentCommentId: _replyToCommentId!,
           content: text,
           isReel: widget.isReel,
         );
         setState(() {
-          final idx = _comments.indexWhere((c) => c.id == _editingCommentId);
-          if (idx != -1) _comments[idx] = updated;
+          _replies[_replyToCommentId!] = [
+            ...(_replies[_replyToCommentId!] ?? []),
+            reply,
+          ];
+          _expandedReplies.add(_replyToCommentId!);
         });
+        widget.onCommentCountChanged?.call(1);
+        _ok('Reply posted');
+      } else {
+        // ← single routing decision based on isReel
+        final comment =
+            widget.isReel
+                ? await _service.addCommentReel(
+                  postId: widget.contentId,
+                  content: text,
+                )
+                : await _service.addComment(
+                  postId: widget.contentId,
+                  content: text,
+                );
+        setState(() => _comments.insert(0, comment));
+        widget.onCommentCountChanged?.call(1);
+        _ok('Comment posted');
       }
-      _ok('${_editingIsReply ? 'Reply' : 'Comment'} updated');
-
-    } else if (_replyToCommentId != null) {
-      final reply = await _service.addReply(
-        parentCommentId: _replyToCommentId!,
-        content: text,
-      );
-      setState(() {
-        _replies[_replyToCommentId!] = [
-          ...(_replies[_replyToCommentId!] ?? []),
-          reply,
-        ];
-        _expandedReplies.add(_replyToCommentId!);
-      });
-      widget.onCommentCountChanged?.call(1);
-      _ok('Reply posted');
-
-    } else {
-      // ← single routing decision based on isReel
-      final comment = widget.isReel
-          ? await _service.addCommentReel(postId: widget.contentId, content: text)
-          : await _service.addComment(postId: widget.contentId, content: text);
-      setState(() => _comments.insert(0, comment));
-      widget.onCommentCountChanged?.call(1);
-      _ok('Comment posted');
-    }
-  } catch (e) {
-    _err('Failed: $e');
-  } finally {
-    if (mounted) {
-      setState(() {
-        _isSending = false;
-        _editingCommentId = null;
-        _editingIsReply = false;
-        _replyToCommentId = null;
-        _replyToUsername = null;
-      });
-      _inputCtrl.clear();
-      _focusNode.unfocus();
+    } catch (e) {
+      _err('Failed: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSending = false;
+          _editingCommentId = null;
+          _editingIsReply = false;
+          _replyToCommentId = null;
+          _replyToUsername = null;
+        });
+        _inputCtrl.clear();
+        _focusNode.unfocus();
+      }
     }
   }
-}
- 
 
+  // Future<void> _delete(Comment comment) async {
+  //   final ok = await showDialog<bool>(
+  //     context: context,
+  //     builder:
+  //         (_) => AlertDialog(
+  //           backgroundColor: Colors.white,
+  //           title: const Text('Delete Comment'),
+  //           content: const Text(
+  //             'Are you sure you want to delete this comment?',
+  //           ),
+  //           actions: [
+  //             TextButton(
+  //               onPressed: () => Navigator.pop(context, false),
+  //               child: const Text('Cancel'),
+  //             ),
+  //             TextButton(
+  //               onPressed: () => Navigator.pop(context, true),
+  //               child: const Text(
+  //                 'Delete',
+  //                 style: TextStyle(color: Colors.red),
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //   );
+  //   if (ok != true) return;
+
+  //   try {
+  //     // ── Route to the correct delete endpoint ──────────────────────────────
+  //     if (comment.isReply) {
+  //       await _service.deleteReply(comment.id);
+  //     } else {
+  //       await _service.deleteComment(comment.id);
+  //     }
+
+  //     setState(() {
+  //       _comments.removeWhere((c) => c.id == comment.id);
+  //       for (final key in _replies.keys) {
+  //         _replies[key]?.removeWhere((r) => r.id == comment.id);
+  //       }
+  //     });
+  //     widget.onCommentCountChanged?.call(-1);
+  //     _ok('Comment deleted');
+  //   } catch (e) {
+  //     _err('Failed to delete');
+  //   }
+  // }
   Future<void> _delete(Comment comment) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -428,7 +476,6 @@ class _CommentSectionState extends State<CommentSection> {
     if (ok != true) return;
 
     try {
-      // ── Route to the correct delete endpoint ──────────────────────────────
       if (comment.isReply) {
         await _service.deleteReply(comment.id);
       } else {
@@ -437,10 +484,16 @@ class _CommentSectionState extends State<CommentSection> {
 
       setState(() {
         _comments.removeWhere((c) => c.id == comment.id);
+
         for (final key in _replies.keys) {
           _replies[key]?.removeWhere((r) => r.id == comment.id);
+
+          if (_replies[key]?.isEmpty == true) {
+            _expandedReplies.remove(key);
+          }
         }
       });
+
       widget.onCommentCountChanged?.call(-1);
       _ok('Comment deleted');
     } catch (e) {
@@ -820,8 +873,8 @@ class _CommentSectionState extends State<CommentSection> {
                   ),
                 ),
 
-                // View/hide replies toggle (top-level only)
-                if (!isReply)
+                if (!isReply &&
+                    (loadingReplies || replies.isNotEmpty || isExpanded))
                   GestureDetector(
                     onTap: () => _toggleReplies(comment.id),
                     child: Padding(
@@ -843,25 +896,23 @@ class _CommentSectionState extends State<CommentSection> {
                                         ? Icons.keyboard_arrow_up
                                         : Icons.keyboard_arrow_down,
                                     size: 14,
-                                    color: Colors.grey.shade600,
+                                    color: const Color.fromRGBO(244, 135, 6, 1),
                                   ),
                                   const SizedBox(width: 2),
                                   Text(
                                     isExpanded
-                                        ? 'Hide replies'
-                                        : replies.isNotEmpty
-                                        ? 'View ${replies.length} repl${replies.length == 1 ? 'y' : 'ies'}'
-                                        : 'View replies',
-                                    style: TextStyle(
+                                        ? 'Hide replies (${replies.length})'
+                                        : 'View ${replies.length} repl${replies.length == 1 ? 'y' : 'ies'}',
+                                    style: const TextStyle(
                                       fontSize: 11,
-                                      color: Colors.grey.shade600,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color.fromRGBO(244, 135, 6, 1),
                                     ),
                                   ),
                                 ],
                               ),
                     ),
                   ),
-
                 // Replies
                 if (!isReply && isExpanded)
                   Column(
