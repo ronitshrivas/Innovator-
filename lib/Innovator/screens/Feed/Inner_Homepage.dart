@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +14,7 @@ import 'package:innovator/Innovator/Authorization/Login.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/controllers/user_controller.dart';
+import 'package:innovator/Innovator/provider/unread_count_provider.dart';
 import 'package:innovator/Innovator/screens/Feed/Optimize%20Media/OptimizeMediaScreen.dart';
 import 'package:innovator/Innovator/screens/Feed/Optimize%20Media/full_screen_image_viewer.dart';
 import 'package:innovator/Innovator/screens/Feed/facebook_video_widget.dart';
@@ -32,6 +34,7 @@ import 'package:innovator/Innovator/screens/chatrrom/sound/soundplayer.dart';
 import 'package:innovator/Innovator/screens/comment/comment_section.dart';
 import 'package:innovator/Innovator/widget/Custom_refresh_Indicator.dart';
 import 'dart:io';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:video_player/video_player.dart';
 import 'dart:developer' as developer;
@@ -896,9 +899,9 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
         onStatusUpdated: (newStatus) {
           if (mounted) setState(() => content.status = newStatus);
         },
-        // onCommentAdded: () {
-        //   if (mounted) setState(() => content.comments++);
-        // },
+        onCommentAdded: () {
+          if (mounted) setState(() => content.comments++);
+        },
       ),
     );
   }
@@ -1183,439 +1186,460 @@ class _FeedItemState extends State<FeedItem>
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
-            children: [
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (_) => FullScreenImageViewer(
-                            imageUrl: widget.content.author.picture,
-                            tag:
-                                'avatar_${widget.content.author.id}_${widget.content.id}',
-                          ),
-                    ),
-                  );
-                },
-                child: Hero(
-                  tag:
-                      'avatar_${widget.content.author.id}_${widget.content.id}',
-                  child: Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        colors: [
-                          Color.fromRGBO(244, 135, 6, 1),
-                          Color.fromRGBO(255, 204, 0, 1),
-                        ],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.orangeAccent.shade100,
-                          blurRadius: 12.0,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(2.0),
-                    child: _buildAuthorAvatar(),
-                  ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.whitecolor, Colors.grey.shade50],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
               ),
-              const SizedBox(width: 10.0),
-              Expanded(
-                child: GestureDetector(
-                  onTap:
-                      () => Navigator.push(
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
                         context,
-                        PageRouteBuilder(
-                          pageBuilder:
-                              (ctx, a, _) => SpecificUserProfilePage(
-                                userId: widget.content.author.id,
-                              ),
-                          transitionsBuilder:
-                              (ctx, a, _, child) => SlideTransition(
-                                position: a.drive(
-                                  Tween(
-                                    begin: const Offset(1.0, 0.0),
-                                    end: Offset.zero,
-                                  ),
-                                ),
-                                child: child,
+                        MaterialPageRoute(
+                          builder:
+                              (_) => FullScreenImageViewer(
+                                imageUrl: widget.content.author.picture,
+                                tag:
+                                    'avatar_${widget.content.author.id}_${widget.content.id}',
                               ),
                         ),
-                      ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Row(
-                          children: [
-                            FittedBox(
-                              child: Text(
-                                widget.content.author.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16.0,
-                                  fontFamily: 'InterThin',
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                            ),
-                            const SizedBox(width: 5),
-                            Container(
-                              width: 4.0,
-                              height: 4.0,
-                              decoration: BoxDecoration(
-                                color: _getTypeColor(widget.content.type),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            SizedBox(width: 8.0),
-                            if (!isOwnContent) ...[
-                              // GestureDetector here absorbs taps so the
-                              // parent's onTap (navigate to profile) is NOT
-                              // triggered when the Follow button is pressed.
-                              GestureDetector(
-                                behavior: HitTestBehavior.opaque,
-                                onTap:
-                                    () {}, // absorb — FollowButton handles its own tap
-                                child: FollowButton(
-                                  targetUserId: widget.content.author.id,
-                                  initialFollowStatus:
-                                      widget.content.isFollowed,
-                                  onFollowSuccess: () {
-                                    SoundPlayer().FollowSound();
-                                    developer.log(
-                                      'Follow success: \${widget.content.author.name}',
-                                    );
-                                    if (mounted) {
-                                      setState(
-                                        () => widget.content.isFollowed = true,
-                                      );
-                                      widget.onFollowToggled(true);
-                                    }
-                                  },
-                                  onUnfollowSuccess: () {
-                                    SoundPlayer().FollowSound();
-                                    developer.log(
-                                      'Unfollow success: \${widget.content.author.name}',
-                                    );
-                                    if (mounted) {
-                                      setState(
-                                        () => widget.content.isFollowed = false,
-                                      );
-                                      widget.onFollowToggled(false);
-                                    }
-                                  },
-                                ),
-                              ),
+                      );
+                    },
+                    child: Hero(
+                      tag:
+                          'avatar_${widget.content.author.id}_${widget.content.id}',
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color.fromRGBO(244, 135, 6, 1),
+                              Color.fromRGBO(255, 204, 0, 1),
                             ],
-                            const Spacer(),
-                            InkWell(
-                              borderRadius: BorderRadius.circular(12.0),
-                              onTap: () {
-                                if (_isAuthorCurrentUser()) {
-                                  _showQuickSuggestions(context);
-                                } else {
-                                  _showQuickspecificSuggestions(context);
-                                }
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Icon(
-                                  Icons.more_vert_rounded,
-                                  color: Colors.grey.shade600,
-                                  size: 20.0,
-                                ),
-                              ),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.orangeAccent.shade100,
+                              blurRadius: 12.0,
+                              offset: const Offset(0, 4),
                             ),
                           ],
                         ),
+                        padding: const EdgeInsets.all(2.0),
+                        child: _buildAuthorAvatar(),
                       ),
-                      Row(
-                        children: [
-                          const SizedBox(width: 4.0),
-                          Text(
-                            formattedTimeAgo,
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 12.0,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(width: 8.0),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8.0,
-                              vertical: 2.0,
-                            ),
-                            child: Text(
-                              widget.content.type.toUpperCase(),
-                              style: TextStyle(
-                                color: _getTypeColor(widget.content.type),
-                                fontSize: 12.0,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.7,
-                                fontFamily: 'InterThin',
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            ],
-          ),
-
-          // Content
-          if (widget.content.status.isNotEmpty)
-            Container(
-              padding: EdgeInsets.only(
-                left: 16.0,
-                right: 16.0,
-                bottom: widget.content.files.isNotEmpty ? 8.0 : 16.0,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final span = TextSpan(
-                        text: widget.content.status,
-                        style: const TextStyle(
-                          fontSize: 15.0,
-                          fontFamily: 'InterThin',
-                        ),
-                      );
-                      final tp = TextPainter(
-                        text: span,
-                        maxLines: _maxLinesCollapsed,
-                        textDirection: TextDirection.ltr,
-                      )..layout(maxWidth: constraints.maxWidth);
-                      final needsToggle = tp.didExceedMaxLines;
-                      return Column(
+                  const SizedBox(width: 10.0),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap:
+                          () => Navigator.push(
+                            context,
+                            PageRouteBuilder(
+                              pageBuilder:
+                                  (ctx, a, _) => SpecificUserProfilePage(
+                                    userId: widget.content.author.id,
+                                  ),
+                              transitionsBuilder:
+                                  (ctx, a, _, child) => SlideTransition(
+                                    position: a.drive(
+                                      Tween(
+                                        begin: const Offset(1.0, 0.0),
+                                        end: Offset.zero,
+                                      ),
+                                    ),
+                                    child: child,
+                                  ),
+                            ),
+                          ),
+                      child: Column(
+                        mainAxisSize:
+                            MainAxisSize.min, // ← key: don't expand vertically
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          AnimatedSize(
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeInOut,
-                            child: _LinkifyText(
-                              text: widget.content.status,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                height: 1.5,
-                                color: Colors.black,
-                                fontWeight: FontWeight.w500,
-                                letterSpacing: 0.6,
-                                fontStyle: FontStyle.normal,
-                                fontFamily: 'InterThin',
-                              ),
-                              maxLines: _isExpanded ? null : _maxLinesCollapsed,
-                              overflow:
-                                  _isExpanded ? null : TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (needsToggle)
-                            InkWell(
-                              onTap:
-                                  () => setState(
-                                    () => _isExpanded = !_isExpanded,
-                                  ),
-                              child: Text(
-                                _isExpanded ? 'See Less' : 'See More',
-                                style: TextStyle(
-                                  color: Colors.blue.shade700,
-                                  fontSize: 11.0,
-                                  fontWeight: FontWeight.w600,
+                          Row(
+                            children: [
+                              // ── Expanded owns ALL space except the more button ──
+                              Expanded(
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // ✅ Flexible: shows FULL name by default.
+                                    //    Adds ... ONLY when name is too long to fit beside the Follow button.
+                                    Flexible(
+                                      child: Text(
+                                        widget.content.author.name,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 16.0,
+                                          fontFamily: 'InterThin',
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Container(
+                                      width: 4.0,
+                                      height: 4.0,
+                                      decoration: BoxDecoration(
+                                        color: _getTypeColor(
+                                          widget.content.type,
+                                        ),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8.0),
+                                    if (!isOwnContent)
+                                      GestureDetector(
+                                        behavior: HitTestBehavior.opaque,
+                                        onTap: () {},
+                                        child: FollowButton(
+                                          targetUserId:
+                                              widget.content.author.id,
+                                          initialFollowStatus:
+                                              widget.content.isFollowed,
+                                          onFollowSuccess: () {
+                                            SoundPlayer().FollowSound();
+                                            if (mounted) {
+                                              setState(
+                                                () =>
+                                                    widget.content.isFollowed =
+                                                        true,
+                                              );
+                                              widget.onFollowToggled(true);
+                                            }
+                                          },
+                                          onUnfollowSuccess: () {
+                                            SoundPlayer().FollowSound();
+                                            if (mounted) {
+                                              setState(
+                                                () =>
+                                                    widget.content.isFollowed =
+                                                        false,
+                                              );
+                                              widget.onFollowToggled(false);
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ),
-                            ),
+
+                              // ── More button always pinned to far right ──
+                              InkWell(
+                                borderRadius: BorderRadius.circular(12.0),
+                                onTap: () {
+                                  if (_isAuthorCurrentUser()) {
+                                    _showQuickSuggestions(context);
+                                  } else {
+                                    _showQuickspecificSuggestions(context);
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Icon(
+                                    Icons.more_vert_rounded,
+                                    color: Colors.grey.shade600,
+                                    size: 20.0,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          // ── Row 2: timestamp · type tag ────────────────────────────────
+                          Row(
+                            children: [
+                              const SizedBox(width: 4.0),
+                              Text(
+                                formattedTimeAgo,
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: 12.0,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(width: 8.0),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8.0,
+                                  vertical: 2.0,
+                                ),
+                                child: Text(
+                                  widget.content.type.toUpperCase(),
+                                  style: TextStyle(
+                                    color: _getTypeColor(widget.content.type),
+                                    fontSize: 12.0,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.7,
+                                    fontFamily: 'InterThin',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ],
-                      );
-                    },
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
 
-          // Media
-          if (widget.content.isRepost &&
-              widget.content.sharedPostDetails != null)
-            SharedPostCard(details: widget.content.sharedPostDetails!),
-
-          // Own media (only shown when NOT a repost)
-          if (!widget.content.isRepost && widget.content.files.isNotEmpty)
-            Container(
-              margin: EdgeInsets.symmetric(horizontal: 1.0),
-              child: _buildMediaPreview(),
-            ),
-          const SizedBox(height: 10.0),
-          Divider(
-            color: Colors.grey.shade300,
-            endIndent: 10,
-            indent: 10,
-            height: 1.0,
-            thickness: 1.0,
-          ),
-          const SizedBox(height: 10),
-
-          // Action bar
-          Padding(
-            padding: EdgeInsets.only(
-              right: 10,
-              left: 10,
-              bottom: 13,
-              // top: 10,
-            ),
-            child: Row(
-              //mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Row(
+            // Content
+            if (widget.content.status.isNotEmpty)
+              Container(
+                padding: EdgeInsets.only(
+                  left: 16.0,
+                  right: 16.0,
+                  bottom: widget.content.files.isNotEmpty ? 8.0 : 16.0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    LikeButton(
-                      contentId: widget.content.id,
-                      initialLikeStatus: widget.content.isLiked,
-                      likeService: likeService,
-                      initialReactionType: widget.content.currentUserReaction,
-                      onLikeToggled: (isLiked) {
-                        widget.onLikeToggled(isLiked);
-                        SoundPlayer().playlikeSound();
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final span = TextSpan(
+                          text: widget.content.status,
+                          style: const TextStyle(
+                            fontSize: 15.0,
+                            fontFamily: 'InterThin',
+                          ),
+                        );
+                        final tp = TextPainter(
+                          text: span,
+                          maxLines: _maxLinesCollapsed,
+                          textDirection: TextDirection.ltr,
+                        )..layout(maxWidth: constraints.maxWidth);
+                        final needsToggle = tp.didExceedMaxLines;
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AnimatedSize(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                              child: _LinkifyText(
+                                text: widget.content.status,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  height: 1.5,
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.w500,
+                                  letterSpacing: 0.6,
+                                  fontStyle: FontStyle.normal,
+                                  fontFamily: 'InterThin',
+                                ),
+                                maxLines:
+                                    _isExpanded ? null : _maxLinesCollapsed,
+                                overflow:
+                                    _isExpanded ? null : TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (needsToggle)
+                              InkWell(
+                                onTap:
+                                    () => setState(
+                                      () => _isExpanded = !_isExpanded,
+                                    ),
+                                child: Text(
+                                  _isExpanded ? 'See Less' : 'See More',
+                                  style: TextStyle(
+                                    color: Colors.blue.shade700,
+                                    fontSize: 11.0,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        );
                       },
                     ),
-                    //const SizedBox(width: 10),
-                    GestureDetector(
-                      onTap: () => _showReactionsList(context),
-                      child: Text(
-                        '${widget.content.likes} Likes',
+                  ],
+                ),
+              ),
+
+            // Media
+            if (widget.content.isRepost &&
+                widget.content.sharedPostDetails != null)
+              SharedPostCard(details: widget.content.sharedPostDetails!),
+
+            // Own media (only shown when NOT a repost)
+            if (!widget.content.isRepost && widget.content.files.isNotEmpty)
+              Container(
+                margin: EdgeInsets.symmetric(horizontal: 1.0),
+                child: _buildMediaPreview(),
+              ),
+            const SizedBox(height: 10.0),
+            Divider(
+              color: Colors.grey.shade300,
+              endIndent: 10,
+              indent: 10,
+              height: 1.0,
+              thickness: 1.0,
+            ),
+            const SizedBox(height: 10),
+
+            // Action bar
+            Padding(
+              padding: EdgeInsets.only(
+                right: 10,
+                left: 10,
+                bottom: 13,
+                // top: 10,
+              ),
+              child: Row(
+                //mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Row(
+                    children: [
+                      LikeButton(
+                        contentId: widget.content.id,
+                        initialLikeStatus: widget.content.isLiked,
+                        likeService: likeService,
+                        isReel: widget.content.isReel,
+                        initialReactionType: widget.content.currentUserReaction,
+                        onLikeToggled: (isLiked) {
+                          widget.onLikeToggled(isLiked);
+                          SoundPlayer().playlikeSound();
+                        },
+                      ),
+                      //const SizedBox(width: 10),
+                      GestureDetector(
+                        onTap: () => _showReactionsList(context),
+                        child: Text(
+                          '${widget.content.likes} Likes',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade700,
+                            fontSize: 11.0,
+                          ),
+                        ),
+                      ),
+                      //_buildReactionBubbles(),
+                    ],
+                  ),
+                  const SizedBox(width: 30),
+                  Row(
+                    children: [
+                      InkWell(
+                        onTap:
+                            () =>
+                                setState(() => _showComments = !_showComments),
+                        child: Image.asset(
+                          'assets/icon/comment.png',
+                          color:
+                              _showComments
+                                  ? Colors.blue.shade700
+                                  : Colors.grey.shade800,
+                          width: 25,
+                          height: 25,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        '${widget.content.comments} Comments',
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
                           color: Colors.grey.shade700,
                           fontSize: 11.0,
                         ),
                       ),
-                    ),
-                    //_buildReactionBubbles(),
-                  ],
-                ),
-                const SizedBox(width: 30),
-                Row(
-                  children: [
-                    InkWell(
-                      onTap:
-                          () => setState(() => _showComments = !_showComments),
-                      child: Image.asset(
-                        'assets/icon/comment.png',
-                        color:
-                            _showComments
-                                ? Colors.blue.shade700
-                                : Colors.grey.shade800,
-                        width: 25,
-                        height: 25,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      '${widget.content.comments} Comments',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade700,
-                        fontSize: 11.0,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(width: 20),
-                Row(
-                  children: [
-                    RepostButton(
-                      postId: widget.content.id,
-                      authorName: widget.content.author.name,
-                      content: widget.content.status,
-                      authorAvatar:
-                          widget.content.author.picture.isNotEmpty
-                              ? widget.content.author.picture
-                              : null,
-                      onViewReposts: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (_) => RepostsListScreen(
-                                  postId: widget.content.id,
-                                  originalAuthorName:
-                                      widget.content.author.name,
-                                ),
-                          ),
-                        );
-                      },
-                    ),
-                    // CountPill(count: _entries.length),
-                    //CountPill(count: widget.content., label: 'Reposts'),
-                  ],
-                ),
-                const Spacer(),
-                InkWell(
-                  onTap: () => _showShareOptions(context),
-                  child: Image.asset(
-                    'assets/icon/send.png',
-                    width: 20,
-                    height: 20,
+                    ],
                   ),
-                ),
-              ],
-            ),
-          ),
-
-          // Comments
-          AnimatedSize(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            child:
-                _showComments
-                    ? Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        borderRadius: const BorderRadius.only(
-                          bottomLeft: Radius.circular(20.0),
-                          bottomRight: Radius.circular(20.0),
-                        ),
-                      ),
-                      padding: const EdgeInsets.all(16.0),
-                      child: CommentSection(
-                        contentId: widget.content.id,
-
-                        // onCommentAdded: () {
-                        //   setState(() => widget.content.comments++);
-                        //   widget.onCommentAdded?.call();
-                        // },
-                        onCommentCountChanged: (delta) {
-                          setState(
-                            () =>
-                                widget.content.comments =
-                                    (widget.content.comments + delta).clamp(
-                                      0,
-                                      999999,
-                                    ),
+                  SizedBox(width: 20),
+                  Row(
+                    children: [
+                      RepostButton(
+                        postId: widget.content.id,
+                        authorName: widget.content.author.name,
+                        content: widget.content.status,
+                        authorAvatar:
+                            widget.content.author.picture.isNotEmpty
+                                ? widget.content.author.picture
+                                : null,
+                        onViewReposts: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => RepostsListScreen(
+                                    postId: widget.content.id,
+                                    originalAuthorName:
+                                        widget.content.author.name,
+                                  ),
+                            ),
                           );
                         },
                       ),
-                    )
-                    : const SizedBox.shrink(),
-          ),
-        ],
+                      // CountPill(count: _entries.length),
+                      //CountPill(count: widget.content., label: 'Reposts'),
+                    ],
+                  ),
+                  const Spacer(),
+                  InkWell(
+                    onTap: () => _showShareOptions(context),
+                    child: Image.asset(
+                      'assets/icon/send.png',
+                      width: 20,
+                      height: 20,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Comments
+            AnimatedSize(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              child:
+                  _showComments
+                      ? Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: const BorderRadius.only(
+                            bottomLeft: Radius.circular(20.0),
+                            bottomRight: Radius.circular(20.0),
+                          ),
+                        ),
+                        padding: const EdgeInsets.all(16.0),
+                        child: CommentSection(
+                          contentId: widget.content.id,
+                          isReel: widget.content.isReel,
+                          onCommentCountChanged: (delta) {
+                            setState(
+                              () =>
+                                  widget.content.comments =
+                                      (widget.content.comments + delta).clamp(
+                                        0,
+                                        999999,
+                                      ),
+                            );
+                            widget.onCommentAdded?.call();
+                          },
+                        ),
+                      )
+                      : const SizedBox.shrink(),
+            ),
+          ],
+        ),
       ),
     );
   }

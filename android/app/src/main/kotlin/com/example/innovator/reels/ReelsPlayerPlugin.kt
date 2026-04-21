@@ -7,7 +7,6 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.StandardMessageCodec
-import io.flutter.plugin.platform.PlatformViewFactory
 
 class ReelsPlayerPlugin : FlutterPlugin, MethodCallHandler {
 
@@ -22,7 +21,6 @@ class ReelsPlayerPlugin : FlutterPlugin, MethodCallHandler {
         channel = MethodChannel(binding.binaryMessenger, "reels_player")
         channel.setMethodCallHandler(this)
 
-        // Single shared surface — no slot param needed
         binding.platformViewRegistry.registerViewFactory(
             "reels_surface_view",
             ReelsSurfaceViewFactory(pool, StandardMessageCodec.INSTANCE)
@@ -38,17 +36,10 @@ class ReelsPlayerPlugin : FlutterPlugin, MethodCallHandler {
         when (call.method) {
 
             "prepare" -> {
-                val slot  = call.argument<Int>("slot") ?: return result.error("ARG", "slot missing", null)
-                val url   = call.argument<String>("url") ?: return result.error("ARG", "url missing", null)
+                val slot  = call.argument<Int>("slot")    ?: return result.error("ARG", "slot missing", null)
+                val url   = call.argument<String>("url")  ?: return result.error("ARG", "url missing", null)
                 val token = call.argument<String>("token") ?: ""
                 pool.prepare(slot, url, token)
-                result.success(null)
-            }
-
-            // NEW: Switch the shared display surface to a different ExoPlayer slot
-            "switchSurface" -> {
-                val slot = call.argument<Int>("slot") ?: return result.error("ARG", "slot missing", null)
-                pool.switchSurface(slot)
                 result.success(null)
             }
 
@@ -65,16 +56,9 @@ class ReelsPlayerPlugin : FlutterPlugin, MethodCallHandler {
             }
 
             "setVolume" -> {
-                val slot   = call.argument<Int>("slot") ?: return result.error("ARG", "slot missing", null)
+                val slot   = call.argument<Int>("slot")       ?: return result.error("ARG", "slot missing", null)
                 val volume = call.argument<Double>("volume")?.toFloat() ?: 1f
                 pool.setVolume(slot, volume)
-                result.success(null)
-            }
-
-            "seekTo" -> {
-                val slot  = call.argument<Int>("slot") ?: return result.error("ARG", "slot missing", null)
-                val posMs = call.argument<Int>("positionMs")?.toLong() ?: 0L
-                pool.seekTo(slot, posMs)
                 result.success(null)
             }
 
