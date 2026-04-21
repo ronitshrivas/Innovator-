@@ -25,6 +25,7 @@ class LikeButton extends StatefulWidget {
   /// Optional: display the reaction label + count inline
   final bool showLabel;
   final int initialCount;
+  final bool isReel;
 
   const LikeButton({
     Key? key,
@@ -35,6 +36,7 @@ class LikeButton extends StatefulWidget {
     this.initialReactionType,
     this.showLabel = false,
     this.initialCount = 0,
+    this.isReel = false,
   }) : super(key: key);
 
   @override
@@ -141,17 +143,24 @@ class _LikeButtonState extends State<LikeButton>
 
     ReactionResult result;
     if (type == null) {
-      // Remove: re-post same reaction to toggle off, or use removeReaction
-      result = await widget.likeService.reactPost(
-        widget.contentId,
-        previous ?? ReactionType.like,
-      );
-      // A 204 / toggled-off means success with null type
+      result =
+          widget.isReel
+              ? await widget.likeService.reactReel(
+                widget.contentId,
+                previous ?? ReactionType.like,
+              )
+              : await widget.likeService.reactPost(
+                widget.contentId,
+                previous ?? ReactionType.like,
+              );
       if (result.success) {
         _setReaction(null, previous);
       }
     } else {
-      result = await widget.likeService.reactPost(widget.contentId, type);
+      result =
+          widget.isReel
+              ? await widget.likeService.reactReel(widget.contentId, type)
+              : await widget.likeService.reactPost(widget.contentId, type);
       if (result.success) {
         _setReaction(result.reactionType ?? type, previous);
       }
@@ -159,7 +168,6 @@ class _LikeButtonState extends State<LikeButton>
 
     if (mounted) setState(() => _isLoading = false);
 
-    // Notify parent (true = has any reaction, false = no reaction)
     widget.onLikeToggled?.call(_currentReaction != null);
   }
 

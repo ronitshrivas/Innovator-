@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -8,18 +7,11 @@ import 'package:innovator/Innovator/constant/api_constants.dart';
 
 class UserController extends GetxController {
   static UserController get to => Get.find();
-
-  // ── Current user ────────────────────────────────────────────────────────────
   final Rx<String?> profilePicture = Rx<String?>(null);
   final Rx<String?> userName = Rx<String?>(null);
   RxInt profilePictureVersion = 0.obs;
-
-  // ── Other-user cache ────────────────────────────────────────────────────────
-  // Key: user UUID (from user_id field in API response)
-  // Value: _UserEntry — avatar URL (already absolute) + display name + timestamp
   final Map<String, _UserEntry> _cache = {};
   final Set<String> _prefetched = {};
-
   static const Duration _ttl = Duration(hours: 2);
   static const int _maxEntries = 500;
   static const int _evictCount = 50;
@@ -28,19 +20,12 @@ class UserController extends GetxController {
   void onInit() {
     super.onInit();
     _syncFromAppData();
-    // Periodic cleanup every 30 min
     Timer.periodic(const Duration(minutes: 30), (_) => _evictExpired());
   }
 
-  /// Reads the current user's avatar from AppData.
-  /// Checks every key the new API and legacy API may use.
   void _syncFromAppData() {
     final user = AppData().currentUser;
     if (user == null) return;
-
-    // New API login response: user.avatar (absolute URL)
-    // New API /me response:   user.avatar or user.profile.avatar
-    // Legacy API:             user.photo_url, user.picture
     final avatar =
         user['avatar']?.toString() ?? // new API flat
         user['photo_url']?.toString() ?? // after upload
