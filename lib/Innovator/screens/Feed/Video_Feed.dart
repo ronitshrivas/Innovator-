@@ -4307,7 +4307,6 @@
 //     ),
 //   );
 // }
-
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
@@ -4501,9 +4500,8 @@ class ReelsApiService {
       final res = await http
           .delete(Uri.parse('$_reelsUrl$reelId/'), headers: _headers())
           .timeout(const Duration(seconds: 15));
-      if (res.statusCode == 204 || res.statusCode == 200) {
+      if (res.statusCode == 204 || res.statusCode == 200)
         return const ReelOperationResult(success: true);
-      }
       return ReelOperationResult(
         success: false,
         errorMessage: _err(res.body, res.statusCode),
@@ -4521,14 +4519,13 @@ class ReelsApiService {
       final res = await http
           .post(Uri.parse('$_reelsUrl$reelId/repost/'), headers: _headers())
           .timeout(const Duration(seconds: 15));
-      if (res.statusCode == 200 || res.statusCode == 201) {
+      if (res.statusCode == 200 || res.statusCode == 201)
         return ReelOperationResult(
           success: true,
           data: ReelModel.fromJson(
             json.decode(res.body) as Map<String, dynamic>,
           ),
         );
-      }
       return ReelOperationResult(
         success: false,
         errorMessage: _err(res.body, res.statusCode),
@@ -4615,11 +4612,21 @@ class ReelsFeedNotifier extends StateNotifier<AsyncValue<List<ReelModel>>> {
     state = AsyncValue.data(List.from(list));
   }
 
-  void incrementComments(String id) {
+  void incrementComments(String reelId) {
     final list = state.value;
     if (list == null) return;
-    final i = list.indexWhere((x) => x.id == id);
-    if (i >= 0) list[i].commentsCount++;
+    final idx = list.indexWhere((r) => r.id == reelId);
+    if (idx != -1) list[idx].commentsCount++;
+    state = AsyncValue.data(List.from(list));
+  }
+
+  void decrementComments(String reelId) {
+    final list = state.value;
+    if (list == null) return;
+    final idx = list.indexWhere((r) => r.id == reelId);
+    if (idx != -1) {
+      list[idx].commentsCount = (list[idx].commentsCount - 1).clamp(0, 999999);
+    }
     state = AsyncValue.data(List.from(list));
   }
 
@@ -4669,63 +4676,31 @@ final reelsFeedProvider =
     );
 
 // ════════════════════════════════════════════════════════════════════════════
-// SLOT MANAGER
-//
-// THE BUG THIS FIXES:
-// ─────────────────────────────────────────────────────────────────────────
-// The old code used `pageIndex % 3` for slot assignment.
-//
-//   Page 0 → slot 0 (User A)
-//   Page 1 → slot 1 (User B)
-//   Page 2 → slot 2 (User C)
-//   Page 3 → slot 0 ← REUSED! Still has User A's video initially!
-//
-// When you swiped to page 3, switchSurface(0) would briefly play USER A's
-// video behind USER D's overlay (correct name/avatar shown, wrong video).
-//
-// THE FIX — Ring-buffer rotation:
-// ─────────────────────────────────────────────────────────────────────────
-// We maintain 3 logical roles that rotate between the 3 physical slots:
-//   • curSlot  = slot currently playing (has the display surface)
-//   • nextSlot = slot pre-buffering the NEXT reel
-//   • prevSlot = slot pre-buffering the PREVIOUS reel (for back-swipe)
-//
-// On forward swipe: prevSlot ← curSlot ← nextSlot ← (recycled prevSlot)
-// On backward swipe: nextSlot ← curSlot ← prevSlot ← (recycled nextSlot)
-//
-// The recycled slot gets prepared with the new reel's URL.
-// This guarantees: curSlot ALWAYS has the correct reel's video. No mismatch.
-// ════════════════════════════════════════════════════════════════════════════
-
-class _SlotManager {
-  // Physical slot numbers (0, 1, 2). These roles rotate.
-  int curSlot = 0; // Currently playing
-  int nextSlot = 1; // Pre-buffering next reel
-  int prevSlot = 2; // Pre-buffering previous reel
-
-  // Rotate forward (user swiped to next reel)
-  // Returns the recycled slot that needs to be prepared with the new next URL.
-  int rotateForward() {
-    final recycled = prevSlot;
-    prevSlot = curSlot;
-    curSlot = nextSlot;
-    nextSlot = recycled;
-    return nextSlot; // caller should prepare this slot with reels[newIndex+1]
-  }
-
-  // Rotate backward (user swiped to previous reel)
-  // Returns the recycled slot that needs to be prepared with the new prev URL.
-  int rotateBackward() {
-    final recycled = nextSlot;
-    nextSlot = curSlot;
-    curSlot = prevSlot;
-    prevSlot = recycled;
-    return prevSlot; // caller should prepare this slot with reels[newIndex-1]
-  }
-}
-
-// ════════════════════════════════════════════════════════════════════════════
 // REELS SCREEN
+//
+// ROOT CAUSE OF ALL BLACK SCREEN ISSUES (confirmed from logs):
+//
+//   I/PlatformViewsController: Hosting view in a VIRTUAL DISPLAY
+//
+// Flutter's PageView puts AndroidView in "virtual display" mode which:
+//   1. Destroys the SurfaceView when it scrolls just 1px off screen
+//   2. Recreates it when it comes back — but ExoPlayer is mid-decode
+//   3. The abandoned BufferQueue triggers codec crash: error 0xffffffff
+//   4. ExoPlayer enters Released state → setSurface() throws
+//   5. Skipped 184 frames on main thread
+//
+// THE FIX:
+//   Instead of putting ReelsSurfaceWidget inside PageView items,
+//   we use a SINGLE Stack with 3 surfaces that are ALWAYS in the tree.
+//   Only the overlay content (username, buttons, caption) scrolls with PageView.
+//   The surfaces never leave the tree → never destroyed → no crashes.
+//
+//   Layout:
+//     Stack (full screen)
+//       ├── Surface slot 0  (always present, visibility toggled)
+//       ├── Surface slot 1  (always present, visibility toggled)
+//       ├── Surface slot 2  (always present, visibility toggled)
+//       └── PageView        (transparent, handles swipe gestures + overlays)
 // ════════════════════════════════════════════════════════════════════════════
 
 class ReelsScreen extends ConsumerStatefulWidget {
@@ -4738,17 +4713,16 @@ class ReelsScreen extends ConsumerStatefulWidget {
 class _ReelsScreenState extends ConsumerState<ReelsScreen>
     with WidgetsBindingObserver {
   late final PageController _pageCtrl;
-
   int _currentPage = 0;
   bool _isMuted = false;
   bool _feedReady = false;
 
-  // Slot manager: guarantees curSlot always has the correct reel's video
-  final _slots = _SlotManager();
-
   String get _token => AppData().accessToken ?? '';
 
-  // ── lifecycle ─────────────────────────────────────────────────────────────
+  // Which slot is assigned to which page index
+  // slot = pageIndex % 3
+  int _slotFor(int pageIndex) => pageIndex % 3;
+  int get _currentSlot => _slotFor(_currentPage);
 
   @override
   void initState() {
@@ -4772,102 +4746,65 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState s) {
     if (s == AppLifecycleState.paused || s == AppLifecycleState.inactive) {
-      ReelsPlayer.pause(_slots.curSlot);
+      ReelsPlayer.pause(_currentSlot);
     } else if (s == AppLifecycleState.resumed) {
-      ReelsPlayer.play(_slots.curSlot);
+      ReelsPlayer.play(_currentSlot);
     }
   }
-
-  // ── Feed init ─────────────────────────────────────────────────────────────
 
   void _onFeedReady(List<ReelModel> reels) {
     if (_feedReady || reels.isEmpty) return;
     _feedReady = true;
-
-    // Initial slot assignment:
-    //   curSlot  (0) = page 0 (first reel)
-    //   nextSlot (1) = page 1 (second reel, pre-buffering)
-    //   prevSlot (2) = empty  (no previous reel yet)
-    _prepareIndex(0, reels, _slots.curSlot);
-    if (reels.length > 1) _prepareIndex(1, reels, _slots.nextSlot);
-
-    // Wait for SurfaceView to be created, then connect + play
-    Future.delayed(const Duration(milliseconds: 400), () {
-      if (!mounted) return;
-      ReelsPlayer.switchSurface(_slots.curSlot);
-      Future.delayed(const Duration(milliseconds: 60), () {
-        if (!mounted) return;
-        ReelsPlayer.play(_slots.curSlot);
+    _prepareSlot(0, reels);
+    if (reels.length > 1) _prepareSlot(1, reels);
+    // Delay play slightly so surfaces are mounted
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        ReelsPlayer.play(_slotFor(0));
         ReelsApiService.recordView(reels[0].id);
-      });
+      }
     });
   }
 
-  /// Prepare a specific physical slot with the reel at [reelIndex].
-  void _prepareIndex(int reelIndex, List<ReelModel> reels, int physicalSlot) {
+  void _prepareSlot(int reelIndex, List<ReelModel> reels) {
     if (reelIndex < 0 || reelIndex >= reels.length) return;
     final url = reels[reelIndex].bestVideoUrl;
-    if (url == null || url.isEmpty) return;
-    developer.log(
-      '[Reels] prepare slot=$physicalSlot for reelIndex=$reelIndex (${reels[reelIndex].username})',
-    );
-    ReelsPlayer.prepare(physicalSlot, url, _token);
+    if (url == null) return;
+    final slot = _slotFor(reelIndex);
+    developer.log('[Feed] prepare slot=$slot reelIndex=$reelIndex');
+    ReelsPlayer.prepare(slot, url, _token);
   }
 
-  // ── Page change ───────────────────────────────────────────────────────────
-
   void _onPageChanged(int newIndex, List<ReelModel> reels) {
-    final goingForward = newIndex > _currentPage;
+    final oldSlot = _currentSlot;
+    ReelsPlayer.pause(oldSlot);
 
-    // 1. Pause current
-    ReelsPlayer.pause(_slots.curSlot);
-
-    // 2. Rotate slots — curSlot now points to the pre-buffered reel
-    final int recycledSlot;
-    if (goingForward) {
-      recycledSlot = _slots.rotateForward();
-      // Prepare the recycled slot with the reel after the new current
-      _prepareIndex(newIndex + 1, reels, recycledSlot);
-    } else {
-      recycledSlot = _slots.rotateBackward();
-      // Prepare the recycled slot with the reel before the new current
-      _prepareIndex(newIndex - 1, reels, recycledSlot);
-    }
-
-    // 3. Update page state
     setState(() => _currentPage = newIndex);
     ref.read(activeReelIndexProvider.notifier).state = newIndex;
 
-    // 4. Switch surface to the new curSlot (which already has the correct video)
-    //    and play immediately — no mismatch because curSlot was pre-buffered
-    //    with exactly this reel's URL.
-    ReelsPlayer.switchSurface(_slots.curSlot).then((_) {
-      Future.delayed(const Duration(milliseconds: 50), () {
-        if (!mounted) return;
-        ReelsPlayer.play(_slots.curSlot);
-        if (_isMuted) ReelsPlayer.setVolume(_slots.curSlot, 0.0);
-      });
+    final newSlot = _slotFor(newIndex);
+
+    // Small delay — gives the surface time to re-attach after slot switch
+    Future.delayed(const Duration(milliseconds: 80), () {
+      if (!mounted) return;
+      ReelsPlayer.play(newSlot);
+      if (_isMuted) ReelsPlayer.setVolume(newSlot, 0.0);
     });
 
-    // 5. Record view
+    // Pre-buffer next reel
+    _prepareSlot(newIndex + 1, reels);
+
     ReelsApiService.recordView(reels[newIndex].id);
 
-    // 6. Load more if approaching end
     if (newIndex >= reels.length - 3) {
       ref.read(reelsFeedProvider.notifier).loadMore();
     }
-
-    developer.log(
-      '[Reels] page=$newIndex | cur=${_slots.curSlot} next=${_slots.nextSlot} prev=${_slots.prevSlot}',
-    );
   }
 
   void _toggleMute() {
     setState(() => _isMuted = !_isMuted);
-    ReelsPlayer.setVolume(_slots.curSlot, _isMuted ? 0.0 : 1.0);
+    ReelsPlayer.setVolume(_currentSlot, _isMuted ? 0.0 : 1.0);
   }
-
-  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -4883,7 +4820,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
                 onRetry: () => ref.read(reelsFeedProvider.notifier).refresh(),
               ),
           data: (reels) {
-            if (reels.isEmpty) return _buildEmpty();
+            if (reels.isEmpty) return _empty();
 
             WidgetsBinding.instance.addPostFrameCallback(
               (_) => _onFeedReady(reels),
@@ -4892,31 +4829,33 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
             return Stack(
               fit: StackFit.expand,
               children: [
-                // ── Single shared SurfaceView (never leaves the tree) ──────
-                const ReelsSurfaceWidget(),
+                // ── 3 native surfaces — ALWAYS in the widget tree ────────────
+                // This is the critical fix: surfaces never leave the tree,
+                // so SurfaceView is never destroyed between scrolls.
+                // We use Offstage(offstage: true) to hide inactive surfaces
+                // without removing them from the tree.
+                for (int slot = 0; slot < 3; slot++)
+                  Offstage(
+                    offstage: slot != _currentSlot,
+                    child: ReelsSurfaceWidget(slot: slot),
+                  ),
 
-                // ── PageView: transparent, handles swipe + overlays ────────
-                // Each page renders its OWN reel's avatar/name/caption/buttons.
-                // The active overlay also knows the current physical slot for
-                // play/pause control.
+                // ── PageView for swipe gestures + overlays ───────────────────
+                // Background is transparent so the surface layer shows through
                 PageView.builder(
                   controller: _pageCtrl,
                   scrollDirection: Axis.vertical,
                   onPageChanged: (i) => _onPageChanged(i, reels),
                   itemCount: reels.length,
-                  itemBuilder: (ctx, i) {
-                    final isActive = i == _currentPage;
-                    return _ReelOverlay(
-                      key: ValueKey(reels[i].id),
-                      // ↓ Each overlay gets its OWN reel data — always correct
-                      reel: reels[i],
-                      isActive: isActive,
-                      isMuted: _isMuted,
-                      onMuteToggle: _toggleMute,
-                      // ↓ Only the ACTIVE overlay needs the slot for controls
-                      activeSlot: _slots.curSlot,
-                    );
-                  },
+                  itemBuilder:
+                      (ctx, i) => _ReelOverlay(
+                        key: ValueKey(reels[i].id),
+                        reel: reels[i],
+                        slot: _slotFor(i),
+                        isActive: i == _currentPage,
+                        isMuted: _isMuted,
+                        onMuteToggle: _toggleMute,
+                      ),
                 ),
               ],
             );
@@ -4926,7 +4865,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
     );
   }
 
-  Widget _buildEmpty() => Center(
+  Widget _empty() => Center(
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -4951,30 +4890,23 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// REEL OVERLAY
-//
-// Each page in the PageView has its own _ReelOverlay with its own reel data.
-// This means avatar, username, caption, like count, comment count etc. always
-// show the correct user's info — independent of which video slot is active.
-//
-// `activeSlot` is passed from the parent and only used for play/pause controls
-// when this overlay is the active one (isActive == true).
+// REEL OVERLAY  (transparent — sits on top of the always-on surface layer)
 // ════════════════════════════════════════════════════════════════════════════
 
 class _ReelOverlay extends ConsumerStatefulWidget {
   final ReelModel reel;
+  final int slot;
   final bool isActive;
   final bool isMuted;
   final VoidCallback onMuteToggle;
-  final int activeSlot;
 
   const _ReelOverlay({
     Key? key,
     required this.reel,
+    required this.slot,
     required this.isActive,
     required this.isMuted,
     required this.onMuteToggle,
-    required this.activeSlot,
   }) : super(key: key);
 
   @override
@@ -4983,20 +4915,15 @@ class _ReelOverlay extends ConsumerStatefulWidget {
 
 class _ReelOverlayState extends ConsumerState<_ReelOverlay>
     with SingleTickerProviderStateMixin {
-  bool _isPlaying = false;
-  bool _isLoading = true;
+  bool _isPlaying = true;
   bool _showControls = false;
   bool _showComments = false;
-  bool _viewRecorded = false;
-
-  Timer? _loadingTimer;
 
   late AnimationController _heartCtrl;
   late Animation<double> _heartScale, _heartOpacity;
   bool _showHeart = false;
   Offset _heartPos = Offset.zero;
 
-  // ── reaction overlay ──────────────────────────────────────────────────────
   OverlayEntry? _reactionOverlay;
   final LayerLink _reactionLink = LayerLink();
   final ContentLikeService _likeService = ContentLikeService(
@@ -5007,44 +4934,13 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
   void initState() {
     super.initState();
     _initHeart();
-    if (widget.isActive) _scheduleVideoReveal();
-  }
-
-  @override
-  void didUpdateWidget(_ReelOverlay old) {
-    super.didUpdateWidget(old);
-    if (widget.isActive && !old.isActive) {
-      // This reel just became active (user swiped to it)
-      setState(() {
-        _isLoading = true;
-        _isPlaying = true;
-      });
-      _scheduleVideoReveal();
-    } else if (!widget.isActive && old.isActive) {
-      _loadingTimer?.cancel();
-      setState(() {
-        _isPlaying = false;
-        _isLoading = true;
-      });
-    }
   }
 
   @override
   void dispose() {
-    _loadingTimer?.cancel();
     _heartCtrl.dispose();
     _removeOverlay();
     super.dispose();
-  }
-
-  void _scheduleVideoReveal() {
-    _loadingTimer?.cancel();
-    _isPlaying = true;
-    _loadingTimer = Timer(const Duration(milliseconds: 600), () {
-      if (mounted && widget.isActive) {
-        setState(() => _isLoading = false);
-      }
-    });
   }
 
   void _initHeart() {
@@ -5081,8 +4977,6 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
     ]).animate(_heartCtrl);
   }
 
-  // ── gestures ──────────────────────────────────────────────────────────────
-
   void _onTap() {
     _removeOverlay();
     if (!widget.isActive) return;
@@ -5090,9 +4984,7 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
       _isPlaying = !_isPlaying;
       _showControls = true;
     });
-    _isPlaying
-        ? ReelsPlayer.play(widget.activeSlot)
-        : ReelsPlayer.pause(widget.activeSlot);
+    _isPlaying ? ReelsPlayer.play(widget.slot) : ReelsPlayer.pause(widget.slot);
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) setState(() => _showControls = false);
     });
@@ -5112,14 +5004,12 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
   }
 
   void _onLPS(LongPressStartDetails _) {
-    if (widget.isActive) ReelsPlayer.pause(widget.activeSlot);
+    if (widget.isActive) ReelsPlayer.pause(widget.slot);
   }
 
   void _onLPE(LongPressEndDetails _) {
-    if (widget.isActive && _isPlaying) ReelsPlayer.play(widget.activeSlot);
+    if (widget.isActive && _isPlaying) ReelsPlayer.play(widget.slot);
   }
-
-  // ── Reactions ─────────────────────────────────────────────────────────────
 
   Future<void> _react(ReactionType type) async {
     final r = widget.reel;
@@ -5164,7 +5054,7 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
       AppData().isMe(widget.reel.username);
 
   void _options() {
-    if (widget.isActive) ReelsPlayer.pause(widget.activeSlot);
+    if (widget.isActive) ReelsPlayer.pause(widget.slot);
     _removeOverlay();
     showModalBottomSheet(
       context: context,
@@ -5179,7 +5069,7 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
           ),
     ).then((_) {
       if (widget.isActive && mounted && _isPlaying)
-        ReelsPlayer.play(widget.activeSlot);
+        ReelsPlayer.play(widget.slot);
     });
   }
 
@@ -5319,7 +5209,6 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
   void _share() => Share.share(
     'Check out this reel by @${widget.reel.username}!\n${widget.reel.bestVideoUrl ?? ''}',
   );
-
   void _snack(String msg, {bool err = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -5334,37 +5223,38 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
   }
 
   String _fmt(int n) {
-    if (n >= 1_000_000) return '${(n / 1_000_000).toStringAsFixed(1)}M';
-    if (n >= 1_000) return '${(n / 1_000).toStringAsFixed(1)}K';
+    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
     return n > 0 ? '$n' : '';
   }
-
-  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final ctrl = _ctrl;
-
-    if (ctrl != null) {
-      return NativeVideoPlayer(
-        controller: ctrl,
-        overlayBuilder: (_, __) => _buildOverlay(size),
-      );
-    }
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Loading overlay — covers the surface while video is buffering.
-        // Prevents seeing a previous reel's final frame during transition.
-        if (widget.isActive)
-          AnimatedOpacity(
-            opacity: _isLoading ? 1.0 : 0.0,
-            duration: const Duration(milliseconds: 300),
-            child: _buildLoadingOverlay(),
-          ),
+        // Thumbnail fades out once active and playing (covers surface until video renders)
+        if (widget.reel.thumbnail != null && widget.reel.thumbnail!.isNotEmpty)
+          IgnorePointer(
+            child: AnimatedOpacity(
+              opacity: (widget.isActive && _isPlaying) ? 0.0 : 1.0,
+              duration: const Duration(milliseconds: 500),
+              child: CachedNetworkImage(
+                imageUrl: widget.reel.thumbnail!,
+                fit: BoxFit.cover,
+                width: size.width,
+                height: size.height,
+                placeholder: (_, __) => const ColoredBox(color: Colors.black),
+                errorWidget:
+                    (_, __, ___) => const ColoredBox(color: Colors.black),
+              ),
+            ),
+          )
+        else
+          const ColoredBox(color: Colors.black),
 
-        // Gesture layer (transparent)
+        // Gesture layer
         Positioned.fill(
           child: GestureDetector(
             onTap: _onTap,
@@ -5377,62 +5267,30 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
           ),
         ),
 
-        _buildGradients(),
-        _buildTopBar(),
-        // ↓ This always shows THIS reel's info — never the wrong user
-        _buildBottomLeft(size),
-        _buildActions(),
-        if (_showControls) _buildPauseHint(),
-        if (_showHeart) _buildHeartBurst(),
-        if (_showComments) _buildCommentsSheet(),
+        _gradients(),
+        _topBar(),
+        _bottomLeft(size),
+        _actions(),
+        if (_showControls) _pauseHint(),
+        if (_showHeart) _heartBurst(),
+        if (_showComments) _commentsSheet(),
       ],
     );
   }
 
-  Widget _buildLoadingOverlay() => Stack(
-    fit: StackFit.expand,
-    children: [
-      Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF0D0D0D), Color(0xFF1A1A1A), Color(0xFF0D0D0D)],
-          ),
-        ),
-      ),
-      Shimmer.fromColors(
-        baseColor: Colors.white.withOpacity(0.03),
-        highlightColor: Colors.white.withOpacity(0.08),
-        period: const Duration(milliseconds: 1200),
-        child: Container(color: Colors.white.withOpacity(0.03)),
-      ),
-      const Center(
-        child: SizedBox(
-          width: 36,
-          height: 36,
-          child: CircularProgressIndicator(
-            color: Colors.white54,
-            strokeWidth: 2.5,
-          ),
-        ),
-      ),
-    ],
-  );
-
-  Widget _buildGradients() => Stack(
+  Widget _gradients() => Stack(
     children: [
       Positioned(
         top: 0,
         left: 0,
         right: 0,
-        height: 140,
+        height: 120,
         child: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Colors.black.withOpacity(0.6), Colors.transparent],
+              colors: [Colors.black.withOpacity(0.5), Colors.transparent],
             ),
           ),
         ),
@@ -5441,13 +5299,13 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
         bottom: 0,
         left: 0,
         right: 0,
-        height: 340,
+        height: 320,
         child: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.bottomCenter,
               end: Alignment.topCenter,
-              colors: [Colors.black.withOpacity(0.85), Colors.transparent],
+              colors: [Colors.black.withOpacity(0.8), Colors.transparent],
             ),
           ),
         ),
@@ -5455,7 +5313,7 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
     ],
   );
 
-  Widget _buildTopBar() => Positioned(
+  Widget _topBar() => Positioned(
     top: MediaQuery.of(context).padding.top + 8,
     left: 8,
     right: 16,
@@ -5487,12 +5345,10 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
     ),
   );
 
-  /// Bottom-left overlay: avatar, username, follow button, caption.
-  /// Uses widget.reel — always THIS page's reel data, never another user's.
-  Widget _buildBottomLeft(Size size) => Positioned(
-    bottom: 80,
-    left: 14,
-    right: 88,
+  Widget _bottomLeft(Size size) => Positioned(
+    bottom: 70,
+    left: 12,
+    right: 80,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -5519,8 +5375,6 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
               ],
             ),
           ),
-
-        // Avatar + username + follow
         GestureDetector(
           onTap:
               () => Navigator.push(
@@ -5533,7 +5387,7 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
               ),
           child: Row(
             children: [
-              _buildAvatar(),
+              _avatar(),
               const SizedBox(width: 10),
               Flexible(
                 child: Text(
@@ -5568,8 +5422,6 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
             ],
           ),
         ),
-
-        // Caption
         if (widget.reel.caption.isNotEmpty) ...[
           const SizedBox(height: 8),
           _ExpandableCaption(caption: widget.reel.caption),
@@ -5578,7 +5430,7 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
     ),
   );
 
-  Widget _buildAvatar() {
+  Widget _avatar() {
     final url = widget.reel.avatar;
     final init =
         widget.reel.username.isNotEmpty
@@ -5604,7 +5456,7 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
       ),
       child: ClipOval(
         child:
-            (url != null && url.isNotEmpty)
+            url.isNotEmpty
                 ? CachedNetworkImage(
                   imageUrl: url,
                   fit: BoxFit.cover,
@@ -5616,18 +5468,15 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
     );
   }
 
-  /// Right-side action buttons: like, comment, repost, share, mute.
-  /// Uses widget.reel for counts — always THIS reel's data.
-  Widget _buildActions() {
+  Widget _actions() {
     final reel = widget.reel;
     final reaction = reel.currentReactionType;
     return Positioned(
       right: 8,
-      bottom: 88,
+      bottom: 80,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Like / reaction
           CompositedTransformTarget(
             link: _reactionLink,
             child: GestureDetector(
@@ -5668,16 +5517,12 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
             ),
           ),
           const SizedBox(height: 20),
-
-          // Comments
           _ActionButton(
             icon: Icons.chat_bubble_outline_rounded,
             label: _fmt(reel.commentsCount),
             onTap: () => setState(() => _showComments = !_showComments),
           ),
           const SizedBox(height: 20),
-
-          // Repost (not own reel)
           if (!_isMe()) ...[
             _ActionButton(
               icon: Icons.repeat_rounded,
@@ -5686,15 +5531,11 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
             ),
             const SizedBox(height: 20),
           ],
-
-          // Share
           _ActionButton(
             icon: Icons.send_rounded,
             label: 'Share',
             onTap: _share,
           ),
-
-          // More options
           IconButton(
             icon: const Icon(
               Icons.more_vert_rounded,
@@ -5703,9 +5544,7 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
             ),
             onPressed: _options,
           ),
-          const SizedBox(height: 12),
-
-          // Mute
+          const SizedBox(height: 20),
           _ActionButton(
             icon:
                 widget.isMuted
@@ -5719,7 +5558,7 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
     );
   }
 
-  Widget _buildPauseHint() => Center(
+  Widget _pauseHint() => Center(
     child: AnimatedOpacity(
       opacity: _showControls ? 1.0 : 0.0,
       duration: const Duration(milliseconds: 200),
@@ -5739,7 +5578,7 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
     ),
   );
 
-  Widget _buildHeartBurst() => Positioned(
+  Widget _heartBurst() => Positioned(
     left: _heartPos.dx - 48,
     top: _heartPos.dy - 48,
     child: IgnorePointer(
@@ -5765,7 +5604,7 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
     ),
   );
 
-  Widget _buildCommentsSheet() => Positioned(
+  Widget _commentsSheet() => Positioned(
     bottom: 0,
     left: 0,
     right: 0,
@@ -5803,8 +5642,6 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
             Expanded(
               child: CommentSection(
                 contentId: widget.reel.id,
-                isReel: true,
-
                 onCommentCountChanged: (delta) {
                   if (delta > 0) {
                     ref
@@ -5823,12 +5660,6 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
       ),
     ),
   );
-
-  String _fmt(int n) {
-    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
-    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
-    return n > 0 ? '$n' : '';
-  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -5839,7 +5670,6 @@ class _ReelOptionsSheet extends StatelessWidget {
   final bool isOwner;
   final ReelModel reel;
   final VoidCallback? onEdit, onDelete, onRepost;
-
   const _ReelOptionsSheet({
     required this.isOwner,
     required this.reel,
@@ -5910,14 +5740,12 @@ class _Tile extends StatelessWidget {
   final String label;
   final Color color;
   final VoidCallback onTap;
-
   const _Tile({
     required this.icon,
     required this.label,
     this.color = Colors.white,
     required this.onTap,
   });
-
   @override
   Widget build(BuildContext context) => InkWell(
     onTap: onTap,
@@ -5950,14 +5778,12 @@ class _VerticalReactionPicker extends StatefulWidget {
   final ReactionType? currentReaction;
   final void Function(ReactionType) onSelect;
   final VoidCallback onDismiss;
-
   const _VerticalReactionPicker({
     required this.layerLink,
     required this.currentReaction,
     required this.onSelect,
     required this.onDismiss,
   });
-
   @override
   State<_VerticalReactionPicker> createState() => _VRPState();
 }
@@ -6114,14 +5940,12 @@ class _ActionButton extends StatefulWidget {
   final Color iconColor;
   final String label;
   final VoidCallback onTap;
-
   const _ActionButton({
     required this.icon,
     this.iconColor = Colors.white,
     required this.label,
     required this.onTap,
   });
-
   @override
   State<_ActionButton> createState() => _ABState();
 }
@@ -6129,7 +5953,6 @@ class _ActionButton extends StatefulWidget {
 class _ABState extends State<_ActionButton>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
-
   @override
   void initState() {
     super.initState();
@@ -6246,7 +6069,7 @@ class _ReelsShimmer extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Shimmer.fromColors(
     baseColor: Colors.grey.shade900,
-    highlightColor: Colors.grey.shade800,
+    highlightColor: Colors.grey.shade700,
     period: const Duration(milliseconds: 1400),
     child: Container(color: Colors.black),
   );

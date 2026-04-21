@@ -3,7 +3,9 @@ package com.innovation.innovator.reels
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
@@ -12,191 +14,242 @@ import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 
 /**
- * ReelsPlayerPool — 3 ExoPlayers for pre-buffering + 1 shared display surface.
+ * ReelsPlayerPool — 3 ExoPlayer slots, surface-safe, crash-proof.
  *
- * KEY DESIGN (fixes black screen):
- *   - Only ONE SurfaceView exists in Flutter (slot 0).
- *   - Surface is moved between ExoPlayers via switchSurface(newSlot).
- *   - Players buffer with NO surface attached — zero cost, no black frames.
- *   - On swipe, surface is handed to the next pre-buffered player → instant play.
- *
- * Slot convention:
- *   slot 0 → previous reel   (or initial current)
- *   slot 1 → current reel    (playing)
- *   slot 2 → next reel       (pre-buffering)
+ * KEY FIXES vs previous version:
+ * 1. Player is NEVER released while a surface is attached — prevents
+ *    "setSurface() valid only at Executing states; currently at Released"
+ * 2. prepare() checks if player is already healthy before rebuilding
+ * 3. attachSurface() calls player.setVideoSurface() safely with a null check
+ * 4. detachSurface() calls clearVideoSurface() but NEVER releases the player
+ * 5. Error listener rebuilds the player automatically on crash
  */
 class ReelsPlayerPool(private val context: Context) {
 
-    private val players  = arrayOfNulls<ExoPlayer>(3)
-    private val urls     = arrayOfNulls<String>(3)
-    private val mainHandler = Handler(Looper.getMainLooper())
+    companion object {
+        private const val TAG = "ReelsPool"
+        const val SLOTS = 3
+    }
 
-    // The single shared display surface (from slot-0 SurfaceView)
-    private var displaySurface: android.view.Surface? = null
-    // Which ExoPlayer slot currently owns the display surface
-    private var displaySlot: Int = -1
+    private val main = Handler(Looper.getMainLooper())
 
-    // ── Public API ────────────────────────────────────────────────────────────
+    // Per-slot state
+    private val players  = arrayOfNulls<ExoPlayer>(SLOTS)
+    private val urls     = arrayOfNulls<String>(SLOTS)
+    private val tokens   = arrayOfNulls<String>(SLOTS)
+    private val surfaces = arrayOfNulls<android.view.Surface>(SLOTS)
 
-    /**
-     * Prepare a slot: load the URL and start buffering in the background.
-     * Does NOT require a surface — buffering happens off-screen.
-     * Safe to call multiple times; skips if URL is unchanged.
-     */
+    // ── Public API ─────────────────────────────────────────────────────────
+
     fun prepare(slot: Int, url: String, token: String) {
-        require(slot in 0..2)
-        if (urls[slot] == url && players[slot] != null) return
-        releaseSlot(slot)
-        urls[slot] = url
-        mainHandler.post {
-            val player = buildPlayer(url, token)
-            players[slot] = player
-            // If this slot currently owns the display surface, attach it
-            if (slot == displaySlot) {
-                displaySurface?.let { player.setVideoSurface(it) }
+        if (slot !in 0 until SLOTS) return
+        main.post {
+            // Already healthy with the same URL — reattach surface and return
+            val existing = players[slot]
+            if (existing != null && urls[slot] == url) {
+                Log.d(TAG, "slot=$slot already prepared, reattaching surface")
+                val s = surfaces[slot]
+                if (s != null && s.isValid) existing.setVideoSurface(s)
+                return@post
             }
+            Log.d(TAG, "prepare slot=$slot url=$url")
+            destroyPlayer(slot)
+            urls[slot]   = url
+            tokens[slot] = token
+            val p = buildPlayer(slot, url, token)
+            players[slot] = p
+            // Attach surface if one is already waiting
+            val s = surfaces[slot]
+            if (s != null && s.isValid) p.setVideoSurface(s)
         }
     }
 
-    /**
-     * Switch the shared display surface to a new slot.
-     * Called on every page change — surface is moved from old player to new.
-     */
-    fun switchSurface(toSlot: Int) {
-        require(toSlot in 0..2)
-        mainHandler.post {
-            // Detach from old slot
-            if (displaySlot in 0..2 && displaySlot != toSlot) {
-                players[displaySlot]?.clearVideoSurface()
-            }
-            displaySlot = toSlot
-            // Attach to new slot
-            val s = displaySurface
-            if (s != null && s.isValid) {
-                players[toSlot]?.setVideoSurface(s)
-            }
-        }
-    }
-
-    /** Start/resume playback on a slot. */
     fun play(slot: Int) {
-        require(slot in 0..2)
-        mainHandler.post {
-            players[slot]?.let {
-                it.playWhenReady = true
-                it.play()
+        if (slot !in 0 until SLOTS) return
+        main.post {
+            val p = players[slot]
+            if (p == null) {
+                Log.w(TAG, "play slot=$slot — no player, rebuilding")
+                val url = urls[slot] ?: return@post
+                val tok = tokens[slot] ?: ""
+                val fresh = buildPlayer(slot, url, tok)
+                players[slot] = fresh
+                val s = surfaces[slot]
+                if (s != null && s.isValid) fresh.setVideoSurface(s)
+                fresh.playWhenReady = true
+                fresh.play()
+                return@post
             }
+            // Re-attach surface every time before playing
+            val s = surfaces[slot]
+            if (s != null && s.isValid) {
+                try { p.setVideoSurface(s) } catch (e: Exception) {
+                    Log.w(TAG, "setVideoSurface failed slot=$slot: $e — rebuilding")
+                    rebuildAndPlay(slot)
+                    return@post
+                }
+            }
+            p.playWhenReady = true
+            try { p.play() } catch (e: Exception) {
+                Log.w(TAG, "play() failed slot=$slot: $e — rebuilding")
+                rebuildAndPlay(slot)
+            }
+            Log.d(TAG, "play slot=$slot")
         }
     }
 
-    /** Pause playback on a slot. */
     fun pause(slot: Int) {
-        require(slot in 0..2)
-        mainHandler.post { players[slot]?.pause() }
+        if (slot !in 0 until SLOTS) return
+        main.post {
+            try { players[slot]?.pause() } catch (_: Exception) {}
+        }
     }
 
-    /** Set volume (0.0 = mute, 1.0 = full). */
+    fun pauseAll() {
+        main.post {
+            for (i in 0 until SLOTS) try { players[i]?.pause() } catch (_: Exception) {}
+        }
+    }
+
     fun setVolume(slot: Int, volume: Float) {
-        require(slot in 0..2)
-        mainHandler.post { players[slot]?.volume = volume.coerceIn(0f, 1f) }
+        if (slot !in 0 until SLOTS) return
+        main.post {
+            try { players[slot]?.volume = volume.coerceIn(0f, 1f) } catch (_: Exception) {}
+        }
     }
-
-    /** Seek to positionMs on a slot. */
-    fun seekTo(slot: Int, positionMs: Long) {
-        require(slot in 0..2)
-        mainHandler.post { players[slot]?.seekTo(positionMs) }
-    }
-
-    /** Release one slot's player. */
-    fun release(slot: Int) {
-        require(slot in 0..2)
-        releaseSlot(slot)
-    }
-
-    /** Release ALL players — call when leaving the reels screen. */
-    fun releaseAll() {
-        for (i in 0..2) releaseSlot(i)
-        displaySurface = null
-        displaySlot = -1
-    }
-
-    // ── Surface lifecycle (called by the single ReelsSurfaceView) ─────────────
 
     /**
-     * Called by ReelsSurfaceView when the SurfaceHolder is created.
-     * This is the ONLY surface in the system.
+     * Called when SurfaceHolder.surfaceCreated fires.
+     * Surface is now valid — attach it to the player.
      */
-    fun attachDisplaySurface(surface: android.view.Surface) {
-        displaySurface = surface
-        mainHandler.post {
-            // Attach to current display slot (default to 0)
-            val slot = if (displaySlot in 0..2) displaySlot else 0
-            displaySlot = slot
-            if (surface.isValid) {
-                players[slot]?.setVideoSurface(surface)
+    fun attachSurface(slot: Int, surface: android.view.Surface) {
+        if (slot !in 0 until SLOTS) return
+        Log.d(TAG, "attachSurface slot=$slot")
+        main.post {
+            surfaces[slot] = surface
+            val p = players[slot] ?: return@post
+            try {
+                p.setVideoSurface(surface)
+            } catch (e: Exception) {
+                Log.w(TAG, "attachSurface setVideoSurface failed slot=$slot: $e")
+                // Player crashed — rebuild it
+                rebuildAndReattach(slot)
             }
         }
     }
 
-    /** Called when the SurfaceHolder is destroyed. */
-    fun detachDisplaySurface() {
-        displaySurface = null
-        mainHandler.post {
-            if (displaySlot in 0..2) {
-                players[displaySlot]?.clearVideoSurface()
-            }
+    /**
+     * Called when SurfaceHolder.surfaceDestroyed fires.
+     * We ONLY clear the surface reference — we never release the player here.
+     * The player keeps buffering in the background.
+     */
+    fun detachSurface(slot: Int) {
+        if (slot !in 0 until SLOTS) return
+        Log.d(TAG, "detachSurface slot=$slot")
+        main.post {
+            surfaces[slot] = null
+            try {
+                // clearVideoSurface stops rendering but keeps buffering
+                players[slot]?.clearVideoSurface()
+            } catch (_: Exception) {}
         }
     }
 
-    // ── Internal ──────────────────────────────────────────────────────────────
+    fun release(slot: Int) {
+        if (slot !in 0 until SLOTS) return
+        main.post { destroyPlayer(slot) }
+    }
 
-    private fun releaseSlot(slot: Int) {
-        mainHandler.post {
-            players[slot]?.run {
-                if (slot == displaySlot) clearVideoSurface()
-                stop()
-                release()
-            }
-            players[slot] = null
-            urls[slot] = null
+    fun releaseAll() {
+        main.post { for (i in 0 until SLOTS) destroyPlayer(i) }
+    }
+
+    // ── Internal ──────────────────────────────────────────────────────────
+
+    /** Safely destroy a player slot */
+    private fun destroyPlayer(slot: Int) {
+        val p = players[slot] ?: return
+        Log.d(TAG, "destroyPlayer slot=$slot")
+        try { p.clearVideoSurface() } catch (_: Exception) {}
+        try { p.stop() }             catch (_: Exception) {}
+        try { p.release() }          catch (_: Exception) {}
+        players[slot] = null
+        urls[slot]    = null
+        tokens[slot]  = null
+    }
+
+    /** Rebuild player and reattach surface (used after crash) */
+    private fun rebuildAndReattach(slot: Int) {
+        val url = urls[slot] ?: return
+        val tok = tokens[slot] ?: ""
+        destroyPlayer(slot)
+        val p = buildPlayer(slot, url, tok)
+        players[slot] = p
+        val s = surfaces[slot]
+        if (s != null && s.isValid) p.setVideoSurface(s)
+    }
+
+    /** Rebuild player, attach surface, and immediately play */
+    private fun rebuildAndPlay(slot: Int) {
+        rebuildAndReattach(slot)
+        players[slot]?.apply {
+            playWhenReady = true
+            play()
         }
     }
 
-    private fun buildPlayer(url: String, token: String): ExoPlayer {
+    private fun buildPlayer(slot: Int, url: String, token: String): ExoPlayer {
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                1_500,   // minBufferMs   — start fast
-                15_000,  // maxBufferMs   — buffer ahead
-                1_000,   // bufferForPlaybackMs
-                1_500    // bufferForPlaybackAfterRebufferMs
+                1_500,   // min: start after 1.5s buffered
+                20_000,  // max: buffer up to 20s ahead
+                800,     // start playback after 0.8s
+                1_500    // resume after rebuffer with 1.5s
             )
             .build()
 
         val httpFactory = DefaultHttpDataSource.Factory().apply {
-            setConnectTimeoutMs(8_000)
-            setReadTimeoutMs(8_000)
+            setConnectTimeoutMs(10_000)
+            setReadTimeoutMs(10_000)
             setAllowCrossProtocolRedirects(true)
             if (token.isNotEmpty()) {
-                setDefaultRequestProperties(mapOf("Authorization" to "Bearer $token"))
+                setDefaultRequestProperties(
+                    mapOf("Authorization" to "Bearer $token")
+                )
             }
         }
 
         val mediaItem = MediaItem.fromUri(url)
-        val mediaSource = if (url.contains(".m3u8") || url.contains("hls")) {
+        val src = if (url.contains(".m3u8") || url.contains("hls")) {
             HlsMediaSource.Factory(httpFactory).createMediaSource(mediaItem)
         } else {
             ProgressiveMediaSource.Factory(httpFactory).createMediaSource(mediaItem)
         }
 
-        return ExoPlayer.Builder(context)
+        val player = ExoPlayer.Builder(context)
             .setLoadControl(loadControl)
             .build()
-            .apply {
-                setMediaSource(mediaSource)
-                repeatMode    = Player.REPEAT_MODE_ONE
-                playWhenReady = false
-                volume        = 1f
-                prepare()   // start buffering immediately (no surface needed)
+
+        player.addListener(object : Player.Listener {
+            override fun onPlayerError(error: PlaybackException) {
+                Log.e(TAG, "slot=$slot player error: ${error.message}")
+                // Auto-recover: rebuild on next play() call
+                main.postDelayed({
+                    if (players[slot] === player) {
+                        Log.d(TAG, "slot=$slot auto-recovering after error")
+                        rebuildAndReattach(slot)
+                    }
+                }, 500)
             }
+        })
+
+        player.setMediaSource(src)
+        player.repeatMode    = Player.REPEAT_MODE_ONE
+        player.playWhenReady = false
+        player.volume        = 1f
+        player.prepare()  // starts buffering immediately
+
+        Log.d(TAG, "buildPlayer slot=$slot url=$url")
+        return player
     }
 }

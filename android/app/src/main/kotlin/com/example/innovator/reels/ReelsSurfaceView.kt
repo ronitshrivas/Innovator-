@@ -6,42 +6,33 @@ import android.view.SurfaceView
 import android.view.View
 import io.flutter.plugin.platform.PlatformView
 
-/**
- * ReelsSurfaceView — the SINGLE shared display surface.
- *
- * There is now only ONE of these in the entire app.
- * It connects to ReelsPlayerPool via attachDisplaySurface / detachDisplaySurface.
- * ExoPlayers share this surface; switching which player renders is done via switchSurface().
- */
 class ReelsSurfaceView(
     context: Context,
+    private val slot: Int,
     private val pool: ReelsPlayerPool
 ) : PlatformView, SurfaceHolder.Callback {
 
     private val surfaceView = SurfaceView(context).apply {
+        setZOrderMediaOverlay(true)
         holder.addCallback(this@ReelsSurfaceView)
     }
-
-    // ── PlatformView ─────────────────────────────────────────────────────────
 
     override fun getView(): View = surfaceView
 
     override fun dispose() {
-        pool.detachDisplaySurface()
         surfaceView.holder.removeCallback(this)
+        pool.detachSurface(slot)
     }
 
-    // ── SurfaceHolder.Callback ───────────────────────────────────────────────
-
     override fun surfaceCreated(holder: SurfaceHolder) {
-        pool.attachDisplaySurface(holder.surface)
+        pool.attachSurface(slot, holder.surface)
     }
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-        // ExoPlayer adapts internally
+        if (holder.surface.isValid) pool.attachSurface(slot, holder.surface)
     }
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
-        pool.detachDisplaySurface()
+        pool.detachSurface(slot)
     }
 }
