@@ -747,9 +747,18 @@ class _RepostEntryCardState extends State<_RepostEntryCard>
                             child: CommentSection(
                               contentId: e.id,
                               // In CommentSection onCommentAdded:
-                              onCommentAdded: () {
+                              // onCommentAdded: () {
+                              //   if (!mounted) return;
+                              //   setState(() => _localCommentCount++);
+                              // },
+                              onCommentCountChanged: (delta) {
                                 if (!mounted) return;
-                                setState(() => _localCommentCount++);
+                                setState(
+                                  () =>
+                                      _localCommentCount = (_localCommentCount +
+                                              delta)
+                                          .clamp(0, 999999),
+                                );
                               },
                             ),
                           )

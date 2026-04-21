@@ -52,6 +52,37 @@ class CommentService {
     }
   }
 
+
+    Future<List<Comment>> getReelComments(String reelId, {int page = 0}) async {
+    try {
+      final uri = Uri.parse(ApiConstants.getcomments).replace(
+        queryParameters: {
+          'reel': reelId,
+          if (page > 0) 'page': page.toString(),
+        },
+      );
+      final response = await http.get(uri, headers: _headers(json: false));
+      log('[Comment] GET $uri → ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        final List<dynamic> raw =
+            decoded is List
+                ? decoded
+                : (decoded['results'] ?? decoded['data'] ?? []);
+        return raw
+            .whereType<Map<String, dynamic>>()
+            .map(Comment.fromJson)
+            .toList();
+      } else {
+        throw Exception('getComments failed: ${response.statusCode}');
+      }
+    } catch (e) {
+      log('[Comment] getComments error: $e');
+      rethrow;
+    }
+  }
+
   // ── Fetch replies for a comment ────────────────────────────────────────────
   // GET /api/replies/?parent=<commentId>
   Future<List<Comment>> getReplies(String commentId) async {
@@ -92,6 +123,26 @@ class CommentService {
       Uri.parse(ApiConstants.addcomments),
       headers: _headers(),
       body: jsonEncode({isReel ? 'reel' : 'post': postId, 'content': content}),
+    );
+    log(
+      '[Comment] POST /api/comments/ → ${response.statusCode}: ${response.body}',
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return Comment.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
+    }
+    throw Exception('addComment failed: ${response.statusCode}');
+  }
+
+  Future<Comment> addCommentReel({
+    required String postId,
+    required String content,
+  }) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.addcomments),
+      headers: _headers(),
+      body: jsonEncode({'reel': postId, 'content': content}),
     );
     log(
       '[Comment] POST /api/comments/ → ${response.statusCode}: ${response.body}',
