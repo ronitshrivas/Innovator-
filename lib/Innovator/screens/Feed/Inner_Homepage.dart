@@ -774,29 +774,18 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ElevatedButton.icon(
-              onPressed: _refresh,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Refresh'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: AppColors.whitecolor,
-              ),
+        ElevatedButton.icon(
+          onPressed: _refresh,
+          icon: const Icon(Icons.refresh),
+          label: const Text('Try Again'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color.fromRGBO(244, 135, 6, 1),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
-            const SizedBox(width: 12),
-            ElevatedButton.icon(
-              onPressed: _retryLoadWithDifferentParams,
-              icon: const Icon(Icons.replay),
-              label: const Text('Retry'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: AppColors.whitecolor,
-              ),
-            ),
-          ],
+          ),
         ),
       ],
     ),
