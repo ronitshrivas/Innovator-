@@ -2,7 +2,6 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart'; // ← NEW
 import 'package:in_app_update/in_app_update.dart';
-import 'package:innovator/Innovator/provider/notification_provider.dart';
 import 'package:innovator/Innovator/screens/Feed/Inner_Homepage.dart';
 import 'package:innovator/Innovator/screens/Feed/Video_Feed.dart';
 import 'package:innovator/Innovator/widget/FloatingMenuwidget.dart';

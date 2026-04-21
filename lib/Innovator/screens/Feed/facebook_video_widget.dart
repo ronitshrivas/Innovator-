@@ -55,7 +55,7 @@ class _FacebookVideoWidgetState extends State<FacebookVideoWidget>
   static final Map<String, _FacebookVideoWidgetState> _registry = {};
 
   @override
-  bool get wantKeepAlive => true;
+  bool get wantKeepAlive => false;
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
@@ -98,8 +98,9 @@ class _FacebookVideoWidgetState extends State<FacebookVideoWidget>
     if (_initStarted || _disposed) return;
     _initStarted = true;
 
+    VideoPlayerController? controller;
     try {
-      final controller = VideoPlayerController.networkUrl(
+      controller = VideoPlayerController.networkUrl(
         Uri.parse(widget.url),
         videoPlayerOptions: VideoPlayerOptions(
           mixWithOthers: true,
@@ -114,7 +115,6 @@ class _FacebookVideoWidgetState extends State<FacebookVideoWidget>
         return;
       }
 
-      // Read actual video dimensions → compute clamped aspect ratio
       final size = controller.value.size;
       double raw = _kMaxAspectRatio;
       if (size.height > 0) raw = size.width / size.height;
@@ -132,7 +132,6 @@ class _FacebookVideoWidgetState extends State<FacebookVideoWidget>
           _isMuted = widget.startMuted;
         });
 
-        // Auto-play immediately
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && !_disposed && _controller != null) {
             _controller!.play();
@@ -142,7 +141,13 @@ class _FacebookVideoWidgetState extends State<FacebookVideoWidget>
       }
     } catch (e) {
       developer.log('[FBVideo] init error: $e');
-      _initStarted = false;
+      controller?.dispose();
+
+      if (mounted && !_disposed) {
+        setState(() {
+          _initStarted = false;
+        });
+      }
     }
   }
 
@@ -171,10 +176,15 @@ class _FacebookVideoWidgetState extends State<FacebookVideoWidget>
           if (mounted) setState(() => _isPlaying = true);
         }
       } else if (fraction < 0.4) {
-        if (_initialized && _controller != null) {
+        if (_controller != null) {
+          _controller!.removeListener(_onVideoListener);
           _controller!.pause();
-          if (mounted) setState(() => _isPlaying = false);
+          _controller!.dispose();
+          _controller = null;
+          _initialized = false;
+          _initStarted = false;
         }
+        if (mounted && !_disposed) setState(() => _isPlaying = false);
       }
     });
   }
@@ -379,6 +389,9 @@ class _FacebookVideoWidgetState extends State<FacebookVideoWidget>
   }
 
   Widget _buildThumbnail() {
+    final showPlayIcon =
+        !_initStarted; // only show play icon if not attempted yet
+
     if (widget.thumbnailUrl != null && widget.thumbnailUrl!.isNotEmpty) {
       return Stack(
         fit: StackFit.expand,
@@ -390,12 +403,40 @@ class _FacebookVideoWidgetState extends State<FacebookVideoWidget>
             errorWidget:
                 (_, __, ___) => const ColoredBox(color: Colors.black12),
           ),
-          if (!_initStarted)
+          if (showPlayIcon)
             const Center(
               child: Icon(
                 Icons.play_circle_fill_rounded,
                 color: AppColors.whitecolor,
                 size: 54,
+              ),
+            ),
+          // Show format error badge if init failed
+          if (_initStarted && !_initialized)
+            Positioned(
+              bottom: 8,
+              left: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      color: Colors.orange,
+                      size: 14,
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      'Format unsupported',
+                      style: TextStyle(color: Colors.white70, fontSize: 11),
+                    ),
+                  ],
+                ),
               ),
             ),
         ],

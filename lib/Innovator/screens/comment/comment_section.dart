@@ -14,9 +14,14 @@ import 'package:innovator/Innovator/utils/triangle_tool_tip.dart';
 class CommentSection extends StatefulWidget {
   final String contentId; // = postId in new API
   final VoidCallback? onCommentAdded;
+  final bool isReel;
 
-  const CommentSection({Key? key, required this.contentId, this.onCommentAdded})
-    : super(key: key);
+  const CommentSection({
+    Key? key,
+    required this.contentId,
+    this.onCommentAdded,
+    this.isReel = false,
+  }) : super(key: key);
 
   @override
   State<CommentSection> createState() => _CommentSectionState();
@@ -183,6 +188,7 @@ class _CommentSectionState extends State<CommentSection> {
         final comment = await _service.addComment(
           postId: widget.contentId,
           content: text,
+          isReel: widget.isReel,
         );
         setState(() => _comments.insert(0, comment));
         widget.onCommentAdded?.call();

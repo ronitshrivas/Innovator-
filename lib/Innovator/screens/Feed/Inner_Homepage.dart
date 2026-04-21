@@ -196,8 +196,8 @@ class FeedApiService {
       // If we have a cursor it IS the full next URL; otherwise use base endpoint
       final uri =
           cursor != null && cursor.isNotEmpty
-              ? Uri.parse(cursor)
-              : Uri.parse(ApiConstants.post);
+              ? Uri.parse('http://36.253.137.34:8005/api/feed/?cursor=$cursor')
+              : Uri.parse('http://36.253.137.34:8005/api/feed/');
 
       developer.log('[Feed] GET $uri');
 
@@ -284,17 +284,13 @@ class ContentData {
       } else if (rawJson is Map<String, dynamic>) {
         // Cursor-paginated DRF response:
         //   { "next": "http://…?cursor=…", "previous": "…", "results": [...] }
-        final rawNext = rawJson['next'];
-        if (rawNext != null && rawNext.toString().isNotEmpty) {
-          nextCursor = rawNext.toString(); // store full URL as cursor
-          hasMore = true;
+        hasMore = rawJson['has_next'] == true;
+        final rawCursor = rawJson['next_cursor'];
+        if (hasMore && rawCursor != null) {
+          nextCursor = rawCursor.toString();
         }
 
-        postList =
-            rawJson['results'] as List? ??
-            rawJson['data'] as List? ??
-            rawJson['posts'] as List? ??
-            [];
+        postList = rawJson['results'] as List? ?? [];
       }
 
       developer.log(
@@ -1272,73 +1268,81 @@ class _FeedItemState extends State<FeedItem>
                             ),
                           ),
                       child: Column(
+                        mainAxisSize:
+                            MainAxisSize.min, // ← key: don't expand vertically
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              FittedBox(
-                                child: Text(
-                                  widget.content.author.name,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 16.0,
-                                    fontFamily: 'InterThin',
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
+                              // ── Expanded owns ALL space except the more button ──
+                              Expanded(
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // ✅ Flexible: shows FULL name by default.
+                                    //    Adds ... ONLY when name is too long to fit beside the Follow button.
+                                    Flexible(
+                                      child: Text(
+                                        widget.content.author.name,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 16.0,
+                                          fontFamily: 'InterThin',
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Container(
+                                      width: 4.0,
+                                      height: 4.0,
+                                      decoration: BoxDecoration(
+                                        color: _getTypeColor(
+                                          widget.content.type,
+                                        ),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8.0),
+                                    if (!isOwnContent)
+                                      GestureDetector(
+                                        behavior: HitTestBehavior.opaque,
+                                        onTap: () {},
+                                        child: FollowButton(
+                                          targetUserId:
+                                              widget.content.author.id,
+                                          initialFollowStatus:
+                                              widget.content.isFollowed,
+                                          onFollowSuccess: () {
+                                            SoundPlayer().FollowSound();
+                                            if (mounted) {
+                                              setState(
+                                                () =>
+                                                    widget.content.isFollowed =
+                                                        true,
+                                              );
+                                              widget.onFollowToggled(true);
+                                            }
+                                          },
+                                          onUnfollowSuccess: () {
+                                            SoundPlayer().FollowSound();
+                                            if (mounted) {
+                                              setState(
+                                                () =>
+                                                    widget.content.isFollowed =
+                                                        false,
+                                              );
+                                              widget.onFollowToggled(false);
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(width: 5),
-                              Container(
-                                width: 4.0,
-                                height: 4.0,
-                                decoration: BoxDecoration(
-                                  color: _getTypeColor(widget.content.type),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              SizedBox(width: 8.0),
-                              if (!isOwnContent) ...[
-                                // GestureDetector here absorbs taps so the
-                                // parent's onTap (navigate to profile) is NOT
-                                // triggered when the Follow button is pressed.
-                                GestureDetector(
-                                  behavior: HitTestBehavior.opaque,
-                                  onTap:
-                                      () {}, // absorb — FollowButton handles its own tap
-                                  child: FollowButton(
-                                    targetUserId: widget.content.author.id,
-                                    initialFollowStatus:
-                                        widget.content.isFollowed,
-                                    onFollowSuccess: () {
-                                      SoundPlayer().FollowSound();
-                                      developer.log(
-                                        'Follow success: \${widget.content.author.name}',
-                                      );
-                                      if (mounted) {
-                                        setState(
-                                          () =>
-                                              widget.content.isFollowed = true,
-                                        );
-                                        widget.onFollowToggled(true);
-                                      }
-                                    },
-                                    onUnfollowSuccess: () {
-                                      SoundPlayer().FollowSound();
-                                      developer.log(
-                                        'Unfollow success: \${widget.content.author.name}',
-                                      );
-                                      if (mounted) {
-                                        setState(
-                                          () =>
-                                              widget.content.isFollowed = false,
-                                        );
-                                        widget.onFollowToggled(false);
-                                      }
-                                    },
-                                  ),
-                                ),
-                              ],
-                              const Spacer(),
+
+                              // ── More button always pinned to far right ──
                               InkWell(
                                 borderRadius: BorderRadius.circular(12.0),
                                 onTap: () {
@@ -1359,6 +1363,8 @@ class _FeedItemState extends State<FeedItem>
                               ),
                             ],
                           ),
+
+                          // ── Row 2: timestamp · type tag ────────────────────────────────
                           Row(
                             children: [
                               const SizedBox(width: 4.0),
@@ -1507,6 +1513,7 @@ class _FeedItemState extends State<FeedItem>
                         contentId: widget.content.id,
                         initialLikeStatus: widget.content.isLiked,
                         likeService: likeService,
+                        isReel: widget.content.isReel,
                         initialReactionType: widget.content.currentUserReaction,
                         onLikeToggled: (isLiked) {
                           widget.onLikeToggled(isLiked);
@@ -1615,6 +1622,7 @@ class _FeedItemState extends State<FeedItem>
                         padding: const EdgeInsets.all(16.0),
                         child: CommentSection(
                           contentId: widget.content.id,
+                          isReel: widget.content.isReel,
                           onCommentAdded: () {
                             setState(() => widget.content.comments++);
                             widget.onCommentAdded?.call();
@@ -3299,10 +3307,6 @@ class _FullscreenVideoPageState extends State<FullscreenVideoPage>
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// AutoPlayVideoWidget
-// ─────────────────────────────────────────────────────────────────────────────
-
 class AutoPlayVideoWidget extends StatefulWidget {
   final String url;
   final double? height;
@@ -3442,13 +3446,13 @@ class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
         }
       } else if (visibleFraction < 0.5) {
         _activeVideos.remove(videoId);
-        if (_initialized &&
-            _controller != null &&
-            _controller!.value.isPlaying) {
+        if (_initialized && _controller != null) {
           _controller!.pause();
-          developer.log(
-            'Video paused (visibility: ${visibleFraction.toStringAsFixed(2)})',
-          );
+          // ADD THESE:
+          _controller!.dispose();
+          _controller = null;
+          _initialized = false;
+          if (mounted) setState(() => _isPlaying = false);
         }
       }
     });
@@ -3752,8 +3756,6 @@ class _SCircle extends StatelessWidget {
   }
 }
 
-/// Single shimmer post card — no-media variant (text-only post).
-/// Exactly mirrors the real FeedItem header + 3 text lines + action bar.
 class _ShimmerCardTextOnly extends StatelessWidget {
   const _ShimmerCardTextOnly();
 
@@ -3947,6 +3949,8 @@ class _ShimmerFeedList extends StatelessWidget {
 
 /// Convenience aliases used in Inner_HomePage
 typedef _ShimmerFeedCard = _ShimmerCardTextOnly;
+
+typedef _ShimmerFeedCardWithMedia = _ShimmerCardWithMedia;
 
 /// Thin orange progress bar pinned to screen top during refresh
 /// when the list already has content (no skeleton overlay needed).
