@@ -90,7 +90,11 @@ class _CommentSectionState extends State<CommentSection> {
         _page = 0;
         _hasMore = true;
       }
-      final loaded = await _service.getComments(widget.contentId, page: _page);
+      // final loaded = await _service.getComments(widget.contentId, page: _page);
+      final loaded =
+          widget.isReel
+              ? await _service.getReelComments(widget.contentId, page: _page)
+              : await _service.getComments(widget.contentId, page: _page);
       setState(() {
         if (refresh) _comments.clear();
         _comments.addAll(loaded);
@@ -103,6 +107,31 @@ class _CommentSectionState extends State<CommentSection> {
       _err('Failed to load comments');
     }
   }
+
+  // Future<void> _loadReelComments({bool refresh = false}) async {
+  //   if (_isLoading) return;
+  //   setState(() => _isLoading = true);
+  //   try {
+  //     if (refresh) {
+  //       _page = 0;
+  //       _hasMore = true;
+  //     }
+  //     final loaded = await _service.getReelComments(
+  //       widget.contentId,
+  //       page: _page,
+  //     );
+  //     setState(() {
+  //       if (refresh) _comments.clear();
+  //       _comments.addAll(loaded);
+  //       _page++;
+  //       _hasMore = loaded.length >= 10;
+  //       _isLoading = false;
+  //     });
+  //   } catch (e) {
+  //     if (mounted) setState(() => _isLoading = false);
+  //     _err('Failed to load comments');
+  //   }
+  // }
 
   Future<void> _loadMore() => _loadComments();
 
@@ -131,85 +160,245 @@ class _CommentSectionState extends State<CommentSection> {
   }
 
   // ── Send / edit ────────────────────────────────────────────────────────────
-  Future<void> _submit() async {
-    final text = _inputCtrl.text.trim();
-    if (text.isEmpty || _isSending) return;
+  // Future<void> _submit() async {
+  //   final text = _inputCtrl.text.trim();
+  //   if (text.isEmpty || _isSending) return;
 
-    setState(() => _isSending = true);
-    try {
-      if (_editingCommentId != null) {
-        // ── Route to the correct endpoint based on whether it's a reply ──
-        final Comment updated;
-        if (_editingIsReply) {
-          updated = await _service.updateReply(
-            replyId: _editingCommentId!,
-            content: text,
-          );
-          // Update inside the replies map
-          setState(() {
-            for (final key in _replies.keys) {
-              final idx = _replies[key]?.indexWhere(
-                (r) => r.id == _editingCommentId,
-              );
-              if (idx != null && idx != -1) {
-                _replies[key]![idx] = updated;
-                break;
-              }
-            }
-          });
-        } else {
-          updated = await _service.updateComment(
-            commentId: _editingCommentId!,
-            content: text,
-          );
-          setState(() {
-            final idx = _comments.indexWhere((c) => c.id == _editingCommentId);
-            if (idx != -1) _comments[idx] = updated;
-          });
-        }
-        _ok('${_editingIsReply ? 'Reply' : 'Comment'} updated');
-      } else if (_replyToCommentId != null) {
-        // ── Reply to a comment ───────────────────────────────────────────────
-        final reply = await _service.addReply(
-          parentCommentId: _replyToCommentId!,
+  //   setState(() => _isSending = true);
+  //   try {
+  //     if (_editingCommentId != null) {
+  //       // ── Route to the correct endpoint based on whether it's a reply ──
+  //       final Comment updated;
+  //       if (_editingIsReply) {
+  //         updated = await _service.updateReply(
+  //           replyId: _editingCommentId!,
+  //           content: text,
+  //         );
+  //         // Update inside the replies map
+  //         setState(() {
+  //           for (final key in _replies.keys) {
+  //             final idx = _replies[key]?.indexWhere(
+  //               (r) => r.id == _editingCommentId,
+  //             );
+  //             if (idx != null && idx != -1) {
+  //               _replies[key]![idx] = updated;
+  //               break;
+  //             }
+  //           }
+  //         });
+  //       } else {
+  //         updated = await _service.updateComment(
+  //           commentId: _editingCommentId!,
+  //           content: text,
+  //         );
+  //         setState(() {
+  //           final idx = _comments.indexWhere((c) => c.id == _editingCommentId);
+  //           if (idx != -1) _comments[idx] = updated;
+  //         });
+  //       }
+  //       _ok('${_editingIsReply ? 'Reply' : 'Comment'} updated');
+  //     } else if (_replyToCommentId != null) {
+  //       // ── Reply to a comment ───────────────────────────────────────────────
+  //       final reply = await _service.addReply(
+  //         parentCommentId: _replyToCommentId!,
+  //         content: text,
+  //       );
+  //       setState(() {
+  //         _replies[_replyToCommentId!] = [
+  //           ...(_replies[_replyToCommentId!] ?? []),
+  //           reply,
+  //         ];
+  //         _expandedReplies.add(_replyToCommentId!);
+  //       });
+  //       widget.onCommentCountChanged?.call(1);
+  //       _ok('Reply posted');
+  //     } else {
+  //       // ── New top-level comment ────────────────────────────────────────────
+  //       final comment = await _service.addComment(
+  //         postId: widget.contentId,
+  //         content: text,
+  //       );
+  //       setState(() => _comments.insert(0, comment));
+  //       widget.onCommentCountChanged?.call(1);
+  //       _ok('Comment posted');
+  //     }
+  //   } catch (e) {
+  //     _err('Failed: $e');
+  //   } finally {
+  //     if (mounted) {
+  //       setState(() {
+  //         _isSending = false;
+  //         _editingCommentId = null;
+  //         _editingIsReply = false;
+  //         _replyToCommentId = null;
+  //         _replyToUsername = null;
+  //       });
+  //       _inputCtrl.clear();
+  //       _focusNode.unfocus();
+  //     }
+  //   }
+  // }
+
+  
+
+  // Future<void> _submitReel() async {
+  //   final text = _inputCtrl.text.trim();
+  //   if (text.isEmpty || _isSending) return;
+
+  //   setState(() => _isSending = true);
+  //   try {
+  //     if (_editingCommentId != null) {
+  //       // ── Route to the correct endpoint based on whether it's a reply ──
+  //       final Comment updated;
+  //       if (_editingIsReply) {
+  //         updated = await _service.updateReply(
+  //           replyId: _editingCommentId!,
+  //           content: text,
+  //         );
+  //         // Update inside the replies map
+  //         setState(() {
+  //           for (final key in _replies.keys) {
+  //             final idx = _replies[key]?.indexWhere(
+  //               (r) => r.id == _editingCommentId,
+  //             );
+  //             if (idx != null && idx != -1) {
+  //               _replies[key]![idx] = updated;
+  //               break;
+  //             }
+  //           }
+  //         });
+  //       } else {
+  //         updated = await _service.updateComment(
+  //           commentId: _editingCommentId!,
+  //           content: text,
+  //         );
+  //         setState(() {
+  //           final idx = _comments.indexWhere((c) => c.id == _editingCommentId);
+  //           if (idx != -1) _comments[idx] = updated;
+  //         });
+  //       }
+  //       _ok('${_editingIsReply ? 'Reply' : 'Comment'} updated');
+  //     } else if (_replyToCommentId != null) {
+  //       // ── Reply to a comment ───────────────────────────────────────────────
+  //       final reply = await _service.addReply(
+  //         parentCommentId: _replyToCommentId!,
+  //         content: text,
+  //       );
+  //       setState(() {
+  //         _replies[_replyToCommentId!] = [
+  //           ...(_replies[_replyToCommentId!] ?? []),
+  //           reply,
+  //         ];
+  //         _expandedReplies.add(_replyToCommentId!);
+  //       });
+  //       widget.onCommentCountChanged?.call(1);
+  //       _ok('Reply posted');
+  //     } else {
+  //       // ── New top-level comment ────────────────────────────────────────────
+  //       final comment = await _service.addCommentReel(
+  //         postId: widget.contentId,
+  //         content: text,
+  //       );
+  //       setState(() => _comments.insert(0, comment));
+  //       widget.onCommentCountChanged?.call(1);
+  //       _ok('Comment posted');
+  //     }
+  //   } catch (e) {
+  //     _err('Failed: $e');
+  //   } finally {
+  //     if (mounted) {
+  //       setState(() {
+  //         _isSending = false;
+  //         _editingCommentId = null;
+  //         _editingIsReply = false;
+  //         _replyToCommentId = null;
+  //         _replyToUsername = null;
+  //       });
+  //       _inputCtrl.clear();
+  //       _focusNode.unfocus();
+  //     }
+  //   }
+  // }
+
+
+  Future<void> _submit() async {
+  final text = _inputCtrl.text.trim();
+  if (text.isEmpty || _isSending) return;
+
+  setState(() => _isSending = true);
+  try {
+    if (_editingCommentId != null) {
+      final Comment updated;
+      if (_editingIsReply) {
+        updated = await _service.updateReply(
+          replyId: _editingCommentId!,
           content: text,
         );
         setState(() {
-          _replies[_replyToCommentId!] = [
-            ...(_replies[_replyToCommentId!] ?? []),
-            reply,
-          ];
-          _expandedReplies.add(_replyToCommentId!);
+          for (final key in _replies.keys) {
+            final idx = _replies[key]?.indexWhere(
+              (r) => r.id == _editingCommentId,
+            );
+            if (idx != null && idx != -1) {
+              _replies[key]![idx] = updated;
+              break;
+            }
+          }
         });
-        widget.onCommentAdded?.call();
-        _ok('Reply posted');
       } else {
-        // ── New top-level comment ────────────────────────────────────────────
-        final comment = await _service.addComment(
-          postId: widget.contentId,
+        updated = await _service.updateComment(
+          commentId: _editingCommentId!,
           content: text,
           isReel: widget.isReel,
         );
-        setState(() => _comments.insert(0, comment));
-        widget.onCommentAdded?.call();
-        _ok('Comment posted');
-      }
-    } catch (e) {
-      _err('Failed: $e');
-    } finally {
-      if (mounted) {
         setState(() {
-          _isSending = false;
-          _editingCommentId = null;
-          _editingIsReply = false;
-          _replyToCommentId = null;
-          _replyToUsername = null;
+          final idx = _comments.indexWhere((c) => c.id == _editingCommentId);
+          if (idx != -1) _comments[idx] = updated;
         });
-        _inputCtrl.clear();
-        _focusNode.unfocus();
       }
+      _ok('${_editingIsReply ? 'Reply' : 'Comment'} updated');
+
+    } else if (_replyToCommentId != null) {
+      final reply = await _service.addReply(
+        parentCommentId: _replyToCommentId!,
+        content: text,
+      );
+      setState(() {
+        _replies[_replyToCommentId!] = [
+          ...(_replies[_replyToCommentId!] ?? []),
+          reply,
+        ];
+        _expandedReplies.add(_replyToCommentId!);
+      });
+      widget.onCommentCountChanged?.call(1);
+      _ok('Reply posted');
+
+    } else {
+      // ← single routing decision based on isReel
+      final comment = widget.isReel
+          ? await _service.addCommentReel(postId: widget.contentId, content: text)
+          : await _service.addComment(postId: widget.contentId, content: text);
+      setState(() => _comments.insert(0, comment));
+      widget.onCommentCountChanged?.call(1);
+      _ok('Comment posted');
+    }
+  } catch (e) {
+    _err('Failed: $e');
+  } finally {
+    if (mounted) {
+      setState(() {
+        _isSending = false;
+        _editingCommentId = null;
+        _editingIsReply = false;
+        _replyToCommentId = null;
+        _replyToUsername = null;
+      });
+      _inputCtrl.clear();
+      _focusNode.unfocus();
     }
   }
+}
+ 
 
   Future<void> _delete(Comment comment) async {
     final ok = await showDialog<bool>(
@@ -252,7 +441,7 @@ class _CommentSectionState extends State<CommentSection> {
           _replies[key]?.removeWhere((r) => r.id == comment.id);
         }
       });
-      widget.onCommentAdded?.call();
+      widget.onCommentCountChanged?.call(-1);
       _ok('Comment deleted');
     } catch (e) {
       _err('Failed to delete');
@@ -262,7 +451,7 @@ class _CommentSectionState extends State<CommentSection> {
   void _startEdit(Comment comment, {required bool isReply}) {
     setState(() {
       _editingCommentId = comment.id;
-      _editingIsReply = isReply; // ← capture reply flag
+      _editingIsReply = isReply;
       _replyToCommentId = null;
       _replyToUsername = null;
       _inputCtrl.text = comment.content;
@@ -447,6 +636,7 @@ class _CommentSectionState extends State<CommentSection> {
                             : Icons.send_rounded,
                         color: const Color.fromRGBO(244, 135, 6, 1),
                       ),
+                      // onPressed: _submitReel,
                       onPressed: _submit,
                     ),
           ),
@@ -600,36 +790,13 @@ class _CommentSectionState extends State<CommentSection> {
                       ],
                       if (isOwn) ...[
                         const SizedBox(width: 12),
-
-                        // PopupMenuButton(
-                        //   color: Colors.white,
-                        //   itemBuilder:
-                        //       (context) => [
-                        //         PopupMenuItem(
-                        //           value: "edit",
-                        //           child: Text("Edit"),
-                        //         ),
-                        //         PopupMenuItem(
-                        //           value: "delete",
-                        //           child: Text("Delete"),
-                        //         ),
-                        //       ],
-                        //   onSelected: (value) {
-                        //     if (value == 'edit') {
-                        //       _startEdit(comment, isReply: isReply);
-                        //     }
-                        //     if (value == "delete") {
-                        //       _delete(comment);
-                        //     }
-                        //   },
-                        // ),
                         ArrowPopupMenu(
                           child: const Icon(
                             Icons.more_horiz,
                             color: Colors.grey,
                           ),
-                          arrowPosition: ArrowPosition.topRight,
-                          arrowColor: Colors.white,
+                          arrowPosition: ArrowPosition.leftCenter,
+                          arrowColor: Colors.grey,
                           backgroundColor: Colors.white,
                           menuWidth: 140,
                           items: [
