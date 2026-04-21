@@ -32,7 +32,7 @@ class _SplashScreenState extends State<SplashScreen> {
       //await _checkAndHandleAuthState();
 
       // Add a small delay to show the splash screen
-      await Future.delayed(const Duration(milliseconds: 800));
+      await Future.delayed(const Duration(milliseconds: 1300));
 
       // Navigate based on final auth state
       if (AppData().isAuthenticated) {
@@ -97,9 +97,7 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
               const SizedBox(height: 20),
               const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  Color.fromRGBO(244, 135, 6, 1),
-                ),
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.yellow),
               ),
             ],
           ),
