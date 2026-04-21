@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/Authorization/Login.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
@@ -12,6 +14,7 @@ import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/screens/Feed/Inner_Homepage.dart';
 import 'package:innovator/Innovator/screens/Feed/Optimize%20Media/full_screen_image_viewer.dart';
 import 'package:innovator/Innovator/screens/Follow/follow_Button.dart';
+import 'package:innovator/Innovator/screens/Profile/profile_page.dart';
 import 'package:innovator/Innovator/screens/chatrrom/screen/chatlistscreen.dart';
 import 'package:innovator/Innovator/screens/comment/comment_screen.dart';
 import 'package:innovator/Innovator/screens/show_Specific_Profile/show_Specific_followers.dart';
@@ -50,11 +53,19 @@ class _SpecificUserProfilePageState
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  // Posts come directly from GET /api/users/{id}/ response["posts"]
+  // ── NEW: upload state ────────────────────────────────────────────────────
+  bool _isUploading = false;
+  bool _isPickingImage = false;
+  String? _uploadError;
+  // ─────────────────────────────────────────────────────────────────────────
+
   List<FeedContent> _posts = [];
   final ScrollController _scrollController = ScrollController();
   bool isExpanded = false;
   final Map<String, bool> _reactionState = {};
+
+  // Lazily resolved — set once _isCurrentUser() returns true
+  UserController? _userController;
 
   @override
   void initState() {
@@ -75,6 +86,11 @@ class _SpecificUserProfilePageState
     _profileFuture = _fetchUserProfile();
     _animationController.forward();
 
+    // Resolve UserController if it exists (only used when current user)
+    if (Get.isRegistered<UserController>()) {
+      _userController = Get.find<UserController>();
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.scrollToPostId != null && _posts.isNotEmpty) {
         _scrollToPost(widget.scrollToPostId!);
@@ -89,9 +105,7 @@ class _SpecificUserProfilePageState
     super.dispose();
   }
 
-  // ── Single API call: GET /api/users/{id}/ ─────────────────────────────────
-  // Response includes { ..., "posts": [...] }
-  // We parse the posts array directly — no second feed call needed.
+  // ── API ───────────────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> _fetchUserProfile() async {
     try {
@@ -114,7 +128,6 @@ class _SpecificUserProfilePageState
       if (response.statusCode == 200) {
         final data = json.decode(response.body) as Map<String, dynamic>;
 
-        // Parse posts from the "posts" field in the profile response
         final rawPosts = data['posts'] as List<dynamic>? ?? [];
         final parsed =
             rawPosts
@@ -180,6 +193,78 @@ class _SpecificUserProfilePageState
     }
   }
 
+  // ── NEW: pick & upload profile picture ───────────────────────────────────
+
+  Future<void> _pickAndUploadImage() async {
+    if (_isPickingImage || _isUploading) return;
+
+    setState(() {
+      _isPickingImage = true;
+      _uploadError = null;
+    });
+
+    try {
+      final XFile? image = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 100,
+      );
+
+      setState(() => _isPickingImage = false);
+      if (image == null) return;
+
+      setState(() => _isUploading = true);
+
+      // Evict old image from cache
+      final oldPath = _userController?.getFullProfilePicturePath();
+      if (oldPath != null) {
+        imageCache.evict(NetworkImage(oldPath));
+        imageCache.evict(
+          NetworkImage(
+            '$oldPath?v=${_userController?.profilePictureVersion.value ?? 0}',
+          ),
+        );
+      }
+
+      // Upload via the shared service (same as UserProfileScreen)
+      final newAvatarPath = await UserProfileService.uploadProfilePicture(
+        File(image.path),
+      );
+
+      // Update controller & AppData
+      _userController?.updateProfilePicture(newAvatarPath);
+      await AppData().updateProfilePicture(newAvatarPath);
+
+      // Bust caches
+      imageCache.evict(NetworkImage(newAvatarPath));
+      _userController?.profilePictureVersion.value =
+          (_userController?.profilePictureVersion.value ?? 0) + 1;
+
+      if (mounted) {
+        setState(() => _isUploading = false);
+        // Re-fetch profile so the UI reflects the new avatar
+        await _refreshProfile();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isPickingImage = false;
+          _isUploading = false;
+          _uploadError = e.toString();
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Upload failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+
   void _scrollToPost(String postId) {
     final index = _posts.indexWhere((c) => c.id == postId);
     if (index != -1 && _scrollController.hasClients) {
@@ -207,6 +292,14 @@ class _SpecificUserProfilePageState
   }
 
   String? _avatar(Map<String, dynamic> d) {
+    // If this is the current user, prefer the live controller value
+    if (_isCurrentUser(d) && _userController != null) {
+      final controllerPath = _userController!.getFullProfilePicturePath();
+      if (controllerPath != null && controllerPath.isNotEmpty) {
+        return '$controllerPath?v=${_userController!.profilePictureVersion.value}';
+      }
+    }
+
     final raw = d['profile']?['avatar']?.toString() ?? '';
     if (raw.isEmpty) return null;
     if (raw.startsWith('http')) return raw;
@@ -247,9 +340,6 @@ class _SpecificUserProfilePageState
       widget.userId == _appData.currentUserId ||
       d['email']?.toString() == _appData.currentUserEmail;
 
-  bool isFollowing(Map<String, dynamic> d) =>
-      d['is_followed'] as bool? ?? false;
-
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
@@ -288,8 +378,9 @@ class _SpecificUserProfilePageState
                 !_isRefreshing) {
               return _buildLoadingView();
             }
-            if (snapshot.hasError)
+            if (snapshot.hasError) {
               return _buildErrorView(snapshot.error.toString());
+            }
             if (!snapshot.hasData) {
               return const Center(child: Text('No profile data available'));
             }
@@ -357,7 +448,6 @@ class _SpecificUserProfilePageState
                               ),
                             ),
 
-                            // Only this user's posts from profile response
                             if (_posts.isNotEmpty)
                               SliverList(
                                 delegate: SliverChildBuilderDelegate(
@@ -407,7 +497,7 @@ class _SpecificUserProfilePageState
         ),
       ),
       floatingActionButton: CountBadgeFAB(
-        count: unreadCount, // ← real-time total
+        count: unreadCount,
         gifAsset: 'animation/chaticon.gif',
         backgroundColor: Colors.transparent,
         onPressed: () {
@@ -417,14 +507,13 @@ class _SpecificUserProfilePageState
             MaterialPageRoute(builder: (_) => const ChatListScreen()),
           ).then((_) {
             ref.invalidate(mutualFriendsProvider);
-            //ref.read(mutualFriendsProvider.notifier).refresh();
           });
         },
       ),
     );
   }
 
-  // ── Profile header ─────────────────────────────────────────────────────────
+  // ── Profile header ────────────────────────────────────────────────────────
 
   Widget _buildProfileHeader(Map<String, dynamic> profileData) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -433,50 +522,121 @@ class _SpecificUserProfilePageState
     final name = _name(profileData);
     final avatarUrl = _avatar(profileData);
     final bio = _bio(profileData);
-    final isFollowing = profileData['is_following'] as bool? ?? false;
 
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10),
         child: Column(
           children: [
-            // Avatar with gradient ring
-            Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [primaryColor, primaryColor.withAlpha(70)],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: primaryColor.withAlpha(30),
-                    blurRadius: 20,
-                    spreadRadius: 5,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.all(4),
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (_) => FullScreenImageViewer(
-                            imageUrl: '$avatarUrl',
-                            tag: name,
-                          ),
+            // ── Avatar with gradient ring + optional upload button ──────────
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                // Gradient ring
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [primaryColor, primaryColor.withAlpha(70)],
                     ),
-                  );
-                },
-                child: _buildAvatar(avatarUrl, name, radius: 70),
-              ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: primaryColor.withAlpha(30),
+                        blurRadius: 20,
+                        spreadRadius: 5,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(4),
+                  // Wrap in Obx only when it's the current user so the avatar
+                  // updates instantly after a successful upload.
+                  child:
+                      isCurrentUser && _userController != null
+                          ? Obx(() {
+                            // Reading .value triggers reactivity
+                            final _ =
+                                _userController!.profilePictureVersion.value;
+                            final liveUrl =
+                                _userController!.getFullProfilePicturePath();
+                            final displayUrl =
+                                (liveUrl != null && liveUrl.isNotEmpty)
+                                    ? '$liveUrl?v=${_userController!.profilePictureVersion.value}'
+                                    : avatarUrl;
+                            return GestureDetector(
+                              onTap:
+                                  () => _openAvatarViewer(
+                                    displayUrl ?? avatarUrl,
+                                    name,
+                                  ),
+                              child: _buildAvatar(
+                                displayUrl ?? avatarUrl,
+                                name,
+                                radius: 70,
+                              ),
+                            );
+                          })
+                          : GestureDetector(
+                            onTap: () => _openAvatarViewer(avatarUrl, name),
+                            child: _buildAvatar(avatarUrl, name, radius: 70),
+                          ),
+                ),
+
+                // ── Camera button (only for current user) ────────────────
+                if (isCurrentUser)
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: GestureDetector(
+                      onTap:
+                          (_isUploading || _isPickingImage)
+                              ? null
+                              : _pickAndUploadImage,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color.fromRGBO(244, 135, 6, 1),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color:
+                                isDarkMode
+                                    ? const Color(0xFF0A0A0A)
+                                    : AppColors.whitecolor,
+                            width: 2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.18),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child:
+                            _isUploading
+                                ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    color: AppColors.whitecolor,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                                : const Icon(
+                                  Icons.camera_alt,
+                                  color: AppColors.whitecolor,
+                                  size: 16,
+                                ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
 
+            // ── End avatar block ───────────────────────────────────────────
             const SizedBox(height: 12),
 
-            // Name + Follow button
+            // Name + Follow button row
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -551,7 +711,6 @@ class _SpecificUserProfilePageState
                   style: TextStyle(
                     fontSize: 15,
                     color: isDarkMode ? AppColors.whitecolor : Colors.black87,
-                    //fontStyle: FontStyle.italic,
                   ),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
@@ -562,6 +721,16 @@ class _SpecificUserProfilePageState
             const SizedBox(height: 8),
           ],
         ),
+      ),
+    );
+  }
+
+  void _openAvatarViewer(String? url, String name) {
+    if (url == null || url.isEmpty) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FullScreenImageViewer(imageUrl: url, tag: name),
       ),
     );
   }
@@ -613,7 +782,7 @@ class _SpecificUserProfilePageState
     );
   }
 
-  // ── Stats ──────────────────────────────────────────────────────────────────
+  // ── Stats ─────────────────────────────────────────────────────────────────
 
   Widget _buildProfileStats(Map<String, dynamic> profileData) {
     return Padding(
@@ -853,8 +1022,7 @@ class _SpecificUserProfilePageState
 
   Widget _buildPostItem(FeedContent content) {
     return HeroMode(
-      // ← ADD THIS
-      enabled: false, // ← ADD THIS
+      enabled: false,
       child: RepaintBoundary(
         key: ValueKey(content.id),
         child: FeedItem(
@@ -876,7 +1044,9 @@ class _SpecificUserProfilePageState
             if (!mounted) return;
             setState(() {
               for (final p in _posts) {
-                if (p.author.id == content.author.id) p.isFollowed = isFollowed;
+                if (p.author.id == content.author.id) {
+                  p.isFollowed = isFollowed;
+                }
               }
             });
           },
@@ -890,8 +1060,8 @@ class _SpecificUserProfilePageState
             if (mounted) setState(() => content.comments++);
           },
         ),
-      ), // ← ADD THIS
-    ); // ← ADD THIS
+      ),
+    );
   }
 
   // ── Loading / error ───────────────────────────────────────────────────────

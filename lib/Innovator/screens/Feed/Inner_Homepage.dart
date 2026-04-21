@@ -193,8 +193,8 @@ class FeedApiService {
       // If we have a cursor it IS the full next URL; otherwise use base endpoint
       final uri =
           cursor != null && cursor.isNotEmpty
-              ? Uri.parse(cursor)
-              : Uri.parse(ApiConstants.post);
+              ? Uri.parse('http://36.253.137.34:8005/api/feed/?cursor=$cursor')
+              : Uri.parse('http://36.253.137.34:8005/api/feed/');
 
       developer.log('[Feed] GET $uri');
 
@@ -281,17 +281,13 @@ class ContentData {
       } else if (rawJson is Map<String, dynamic>) {
         // Cursor-paginated DRF response:
         //   { "next": "http://…?cursor=…", "previous": "…", "results": [...] }
-        final rawNext = rawJson['next'];
-        if (rawNext != null && rawNext.toString().isNotEmpty) {
-          nextCursor = rawNext.toString(); // store full URL as cursor
-          hasMore = true;
+        hasMore = rawJson['has_next'] == true;
+        final rawCursor = rawJson['next_cursor'];
+        if (hasMore && rawCursor != null) {
+          nextCursor = rawCursor.toString();
         }
 
-        postList =
-            rawJson['results'] as List? ??
-            rawJson['data'] as List? ??
-            rawJson['posts'] as List? ??
-            [];
+        postList = rawJson['results'] as List? ?? [];
       }
 
       developer.log(
@@ -3294,10 +3290,6 @@ class _FullscreenVideoPageState extends State<FullscreenVideoPage>
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// AutoPlayVideoWidget
-// ─────────────────────────────────────────────────────────────────────────────
-
 class AutoPlayVideoWidget extends StatefulWidget {
   final String url;
   final double? height;
@@ -3437,13 +3429,13 @@ class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
         }
       } else if (visibleFraction < 0.5) {
         _activeVideos.remove(videoId);
-        if (_initialized &&
-            _controller != null &&
-            _controller!.value.isPlaying) {
+        if (_initialized && _controller != null) {
           _controller!.pause();
-          developer.log(
-            'Video paused (visibility: ${visibleFraction.toStringAsFixed(2)})',
-          );
+          // ADD THESE:
+          _controller!.dispose();
+          _controller = null;
+          _initialized = false;
+          if (mounted) setState(() => _isPlaying = false);
         }
       }
     });
@@ -3747,8 +3739,6 @@ class _SCircle extends StatelessWidget {
   }
 }
 
-/// Single shimmer post card — no-media variant (text-only post).
-/// Exactly mirrors the real FeedItem header + 3 text lines + action bar.
 class _ShimmerCardTextOnly extends StatelessWidget {
   const _ShimmerCardTextOnly();
 
@@ -3942,6 +3932,8 @@ class _ShimmerFeedList extends StatelessWidget {
 
 /// Convenience aliases used in Inner_HomePage
 typedef _ShimmerFeedCard = _ShimmerCardTextOnly;
+
+typedef _ShimmerFeedCardWithMedia = _ShimmerCardWithMedia;
 
 /// Thin orange progress bar pinned to screen top during refresh
 /// when the list already has content (no skeleton overlay needed).

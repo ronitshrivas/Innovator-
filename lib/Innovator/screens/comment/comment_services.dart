@@ -117,11 +117,12 @@ class CommentService {
   Future<Comment> addComment({
     required String postId,
     required String content,
+    bool isReel = false,
   }) async {
     final response = await http.post(
       Uri.parse(ApiConstants.addcomments),
       headers: _headers(),
-      body: jsonEncode({'post': postId, 'content': content}),
+      body: jsonEncode({isReel ? 'reel' : 'post': postId, 'content': content}),
     );
     log(
       '[Comment] POST /api/comments/ → ${response.statusCode}: ${response.body}',

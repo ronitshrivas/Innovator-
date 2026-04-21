@@ -25,9 +25,10 @@ enum _MenuMode { floating, bottomNav, topNav }
 
 class FloatingMenuOverlay {
   static OverlayEntry? _entry;
-
+  static bool _isShowing = false;
   static void show(BuildContext context) {
-    if (_entry != null) return;
+    if (_isShowing) return;
+    _isShowing = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       try {
         final overlay = Overlay.of(context, rootOverlay: true);
@@ -38,6 +39,7 @@ class FloatingMenuOverlay {
         );
         overlay.insert(_entry!);
       } catch (e) {
+        _isShowing = false;
         developer.log('Error showing FloatingMenuOverlay: $e');
       }
     });
@@ -46,6 +48,7 @@ class FloatingMenuOverlay {
   static void remove() {
     _entry?.remove();
     _entry = null;
+    _isShowing = false;
   }
 }
 
