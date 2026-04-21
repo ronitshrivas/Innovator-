@@ -567,7 +567,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
         source: ImageSource.gallery,
         maxWidth: 800,
         maxHeight: 800,
-        imageQuality: 80,
+        imageQuality: 100,
       );
 
       setState(() => _isPickingImage = false);
@@ -981,7 +981,11 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                 'Posts',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              Image.asset('assets/icon/repost.png', height: 35,color: Colors.grey,),
+              Image.asset(
+                'assets/icon/repost.png',
+                height: 35,
+                color: Colors.grey,
+              ),
               ElevatedButton.icon(
                 onPressed:
                     () => Navigator.push(

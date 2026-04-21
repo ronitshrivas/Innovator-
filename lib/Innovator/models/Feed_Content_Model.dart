@@ -140,7 +140,7 @@ class FeedContent {
   /// Non-null when this post IS a repost (has `shared_post` field)
   final String? sharedPostId;
   final SharedPostDetails? sharedPostDetails;
-
+  final bool isReel;
   bool get isRepost => sharedPostId != null && sharedPostId!.isNotEmpty;
 
   FeedContent({
@@ -164,6 +164,7 @@ class FeedContent {
     this.reactionTypes = const [],
     this.sharedPostId,
     this.sharedPostDetails,
+    this.isReel = false,
   });
 
   // ── Legacy factory ─────────────────────────────────────────────────────────
@@ -222,9 +223,10 @@ class FeedContent {
     final id = post['id']?.toString() ?? '';
     final userId = post['user_id']?.toString() ?? '';
     final username = post['username']?.toString() ?? 'Unknown';
-    final avatar = post['avatar']?.toString() ?? '';
-    final content = post['content']?.toString() ?? '';
-
+    final avatar =
+        post['avatar'] != null ? _resolveUrl(post['avatar'].toString()) : '';
+    final content =
+        post['content']?.toString() ?? post['caption']?.toString() ?? '';
     // ── Categories ──────────────────────────────────────────────────────────
     final rawCategories = post['categories_detail'] as List<dynamic>? ?? [];
     final categoriesDetail =
@@ -250,8 +252,9 @@ class FeedContent {
         DateTime.tryParse(post['created_at']?.toString() ?? '') ??
         DateTime.now();
 
-    final type = categoryNames.isNotEmpty ? categoryNames.first : 'post';
-
+    final type =
+        post['type']?.toString() ??
+        (categoryNames.isNotEmpty ? categoryNames.first : 'post');
     final author = Author(
       id: userId,
       name: username,
@@ -270,10 +273,18 @@ class FeedContent {
         }
       }
     }
+    // Handle reel video field
+    final videoUrl = post['video']?.toString();
+    if (videoUrl != null && videoUrl.isNotEmpty) {
+      files.add(_resolveUrl(videoUrl));
+    }
 
     // ── Reaction types ───────────────────────────────────────────────────────
-    final rawReactions = post['reaction_types'] as List<dynamic>? ?? [];
-    final reactionTypes = rawReactions.whereType<String>().toList();
+    final rawReactions = post['reaction_types'];
+    final reactionTypes =
+        rawReactions is List
+            ? rawReactions.whereType<String>().toList()
+            : <String>[];
 
     // ── Repost fields ────────────────────────────────────────────────────────
     final sharedPostId = post['shared_post']?.toString();
@@ -292,7 +303,10 @@ class FeedContent {
       files: files,
       mediaUrls: List<String>.from(files),
       optimizedFiles: const [],
-      thumbnailUrl: null,
+      thumbnailUrl:
+          post['thumbnail'] != null
+              ? _resolveUrl(post['thumbnail'].toString())
+              : null,
       likes: reactCount,
       isLiked: isLiked,
       currentUserReaction: currentUserReaction,
@@ -304,6 +318,7 @@ class FeedContent {
       reactionTypes: reactionTypes,
       sharedPostId: sharedPostId,
       sharedPostDetails: sharedPostDetails,
+      isReel: post['type']?.toString() == 'reel',
     );
   }
 

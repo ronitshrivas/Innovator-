@@ -1,5 +1,5 @@
 package com.innovation.innovator
-
+import com.innovation.innovator.reels.ReelsPlayerPlugin
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -10,6 +10,7 @@ import io.flutter.embedding.engine.FlutterEngine
 class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        flutterEngine.plugins.add(ReelsPlayerPlugin())
         createNotificationChannels()
     }
 

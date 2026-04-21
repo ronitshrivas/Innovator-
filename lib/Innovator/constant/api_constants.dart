@@ -43,7 +43,7 @@ class ApiConstants {
   static const String register = '$authBase/register/';
 
   //Social Media Endpoints
-  static const String post = '$feedBase/posts/';
+  static const String post = '$feedBase/feed/';
 
   static const String recordview = '$feedBase/posts/';
 

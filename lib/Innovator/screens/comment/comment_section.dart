@@ -13,17 +13,13 @@ import 'package:innovator/Innovator/utils/triangle_tool_tip.dart';
 
 class CommentSection extends StatefulWidget {
   final String contentId; // = postId in new API
-  // final VoidCallback? onCommentAdded;
+  final VoidCallback? onCommentAdded;
   final bool isReel;
-  final void Function(int delta)? onCommentCountChanged;
-
-  // const CommentSection({Key? key, required this.contentId, this.onCommentAdded})
-  //   : super(key: key);
 
   const CommentSection({
     Key? key,
     required this.contentId,
-    this.onCommentCountChanged,
+    this.onCommentAdded,
     this.isReel = false,
   }) : super(key: key);
 
@@ -353,6 +349,7 @@ class _CommentSectionState extends State<CommentSection> {
         updated = await _service.updateComment(
           commentId: _editingCommentId!,
           content: text,
+          isReel: widget.isReel,
         );
         setState(() {
           final idx = _comments.indexWhere((c) => c.id == _editingCommentId);
