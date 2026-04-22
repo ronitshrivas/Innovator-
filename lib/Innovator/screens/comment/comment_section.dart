@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
+import 'package:innovator/Innovator/hive/feed_cache_service.dart';
 import 'package:innovator/Innovator/models/comment_Model.dart';
 import 'package:innovator/Innovator/screens/comment/comment_services.dart';
 import 'package:innovator/Innovator/utils/triangle_tool_tip.dart';
@@ -108,7 +109,7 @@ class _CommentSectionState extends State<CommentSection> {
       });
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
-      _err('Failed to load comments');
+      // _err('Failed to load comments');
     }
   }
 
@@ -172,7 +173,7 @@ class _CommentSectionState extends State<CommentSection> {
             if (idx != -1) _comments[idx] = updated;
           });
         }
-        _ok('${_editingIsReply ? 'Reply' : 'Comment'} updated');
+        // _ok('${_editingIsReply ? 'Reply' : 'Comment'} updated');
       } else if (_replyToCommentId != null) {
         final reply = await _service.addReply(
           parentCommentId: _replyToCommentId!,
@@ -186,7 +187,8 @@ class _CommentSectionState extends State<CommentSection> {
           _expandedReplies.add(_replyToCommentId!);
         });
         widget.onCommentCountChanged?.call(1);
-        _ok('Reply posted');
+        FeedCacheService.instance.updateCommentCount(widget.contentId, 1);
+        // _ok('Reply posted');
       } else {
         // ← single routing decision based on isReel
         final comment =
@@ -201,10 +203,11 @@ class _CommentSectionState extends State<CommentSection> {
                 );
         setState(() => _comments.insert(0, comment));
         widget.onCommentCountChanged?.call(1);
-        _ok('Comment posted');
+        FeedCacheService.instance.updateCommentCount(widget.contentId, -1);
+        //_ok('Comment posted');
       }
     } catch (e) {
-      _err('Failed: $e');
+      //_err('Failed: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -267,9 +270,9 @@ class _CommentSectionState extends State<CommentSection> {
       });
 
       widget.onCommentCountChanged?.call(-1);
-      _ok('Comment deleted');
+      // _ok('Comment deleted');
     } catch (e) {
-      _err('Failed to delete');
+      // _err('Failed to delete');
     }
   }
 
@@ -307,21 +310,6 @@ class _CommentSectionState extends State<CommentSection> {
   }
 
   // ── Snackbars ─────────────────────────────────────────────────────────────
-  void _ok(String msg) => Get.snackbar(
-    'Success',
-    msg,
-    backgroundColor: Colors.green,
-    colorText: AppColors.whitecolor,
-    duration: const Duration(seconds: 2),
-  );
-
-  void _err(String msg) => Get.snackbar(
-    'Error',
-    msg,
-    backgroundColor: Colors.red,
-    colorText: AppColors.whitecolor,
-    duration: const Duration(seconds: 3),
-  );
 
   // ── Build ──────────────────────────────────────────────────────────────────
   @override
