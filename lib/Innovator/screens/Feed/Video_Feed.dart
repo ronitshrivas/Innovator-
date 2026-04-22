@@ -5343,12 +5343,17 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
     );
   }
 
+  // String _fmt(int n) {
+  //   if (n >= 1_000_000) return '${(n / 1_000_000).toStringAsFixed(1)}M';
+  //   if (n >= 1_000) return '${(n / 1_000).toStringAsFixed(1)}K';
+  //   return n > 0 ? '$n' : '';
+  // }
+
   String _fmt(int n) {
-    if (n >= 1_000_000) return '${(n / 1_000_000).toStringAsFixed(1)}M';
-    if (n >= 1_000) return '${(n / 1_000).toStringAsFixed(1)}K';
+    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
     return n > 0 ? '$n' : '';
   }
-
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override

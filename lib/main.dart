@@ -7,8 +7,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
+import 'package:innovator/Innovator/hive/feed_cache_service.dart';
 import 'package:innovator/Innovator/provider/global_chat_listener.dart';
 import 'package:innovator/Innovator/screens/Splash_Screen/splash_screen.dart';
 import 'package:innovator/Innovator/services/fcm_services.dart';
@@ -35,12 +38,15 @@ void main() async {
       try {
         developer.log('App starting...');
         WidgetsFlutterBinding.ensureInitialized();
+        await Hive.initFlutter(); // must be before openBox
+        await FeedCacheService.instance.init();
         SystemChrome.setSystemUIOverlayStyle(
           const SystemUiOverlayStyle(
             statusBarColor: Colors.transparent,
             statusBarIconBrightness: Brightness.dark,
           ),
         );
+
         await Firebase.initializeApp();
         FirebaseMessaging.onBackgroundMessage(
           _firebaseMessagingBackgroundHandler,

@@ -915,6 +915,15 @@ class _NotificationListScreenState extends State<NotificationListScreen>
               color: _getNotificationColor(notification.type),
             ),
           ),
+
+        if (notification.senderUsername != null)
+          Text(
+            notification.senderUsername!,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: _getNotificationColor(notification.type),
+            ),
+          ),
         //const SizedBox(height: 2),
         // Message body (e.g. "ram reacted haha to your post.")
         // RichText(
