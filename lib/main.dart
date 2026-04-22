@@ -13,6 +13,7 @@ import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/hive/feed_cache_service.dart';
 import 'package:innovator/Innovator/provider/global_chat_listener.dart';
+import 'package:innovator/Innovator/provider/notification_provider.dart';
 import 'package:innovator/Innovator/screens/Splash_Screen/splash_screen.dart';
 import 'package:innovator/Innovator/services/fcm_services.dart';
 import 'package:innovator/KMS/screens/auth/login_screen.dart';
@@ -85,7 +86,7 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
     developer.log('InnovatorHomePage initialized');
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       _setupFCM();
-      // ref.read(notificationProvider.notifier).startPolling();
+      ref.read(notificationProvider.notifier).startPolling();
       final fcmToken = await FirebaseMessaging.instance.getToken();
       ref
           .read(elearningNotificationServiceProvider)

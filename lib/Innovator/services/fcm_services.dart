@@ -14,7 +14,7 @@ class FCMService {
   FCMService._internal();
 
   static const String _baseUrl = 'http://36.253.137.34:8005/api/fcm-tokens/';
-  static const String _prefKey = 'fcm_token_id';
+  static const String _prefKey = 'fcm_token_id';  
 
   /// Call this after login AND on app start
   Future<void> registerToken() async {
