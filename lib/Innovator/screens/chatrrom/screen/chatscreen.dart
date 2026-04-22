@@ -215,6 +215,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
       final isMine = senderId == _myId;
       final serverId = data['id']?.toString();
 
+      if (!isMine && senderId != otherUserId) {
+        developer.log(
+          '[WS] Ignored stray msg from $senderId in chat with $otherUserId',
+        );
+        return;
+      }
+
       // ── Deduplicate: already in list by server id ──────────────────────
       if (serverId != null && state.messages.any((m) => m.id == serverId)) {
         return;
@@ -255,6 +262,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         _ref.read(friendActivityProvider.notifier).markActivity(otherUserId);
         _markAsRead();
         _ref.read(mutualFriendsProvider.notifier).bumpToTop(otherUserId);
+        _ref.read(lastActiveFriendProvider.notifier).state = otherUserId;
       }
 
       // Mark as read immediately if it's from the other person
@@ -292,8 +300,6 @@ class ChatNotifier extends StateNotifier<ChatState> {
     _reconnectTimer = Timer(delay, _connect);
   }
 
-  // ── Send ───────────────────────────────────────────────────────────────────
-
   void sendMessage(String text) {
     if (text.trim().isEmpty) return;
     if (state.wsStatus != WsStatus.connected) {
@@ -310,18 +316,21 @@ class ChatNotifier extends StateNotifier<ChatState> {
       status: MessageStatus.sending,
     );
 
+    // Clear reply immediately so the UI snaps back
     state = state.copyWith(
       messages: [...state.messages, mine],
       isSending: true,
     );
 
     try {
-      _channel!.sink.add(json.encode({'message': text.trim()}));
-      _ref
-          .read(friendActivityProvider.notifier)
-          .markActivity(otherUserId); // ← ADD
+      // ← include reply_to id in WS payload if present
+      final payload = <String, dynamic>{'message': text.trim()};
+      _channel!.sink.add(json.encode(payload));
+
+      _ref.read(friendActivityProvider.notifier).markActivity(otherUserId);
       _ref.read(lastActiveFriendProvider.notifier).state = otherUserId;
       _ref.read(mutualFriendsProvider.notifier).bumpToTop(otherUserId);
+
       final updated =
           state.messages.map((m) {
             if (m.id == tempId) m.status = MessageStatus.sent;
