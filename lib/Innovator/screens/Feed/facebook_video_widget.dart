@@ -10,8 +10,8 @@ import 'dart:developer' as developer;
 // ─────────────────────────────────────────────────────────────────────────────
 // Aspect ratio limits — exactly like Facebook/Instagram
 // ─────────────────────────────────────────────────────────────────────────────
-const double _kMinAspectRatio = 4 / 5; // tallest portrait allowed
-const double _kMaxAspectRatio = 16 / 9; // widest landscape allowed
+// const double _kMinAspectRatio = 9 / 16; // tallest portrait allowed
+// const double _kMaxAspectRatio = 16 / 9; // widest landscape allowed
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FacebookVideoWidget — Feed auto-play with adaptive height
@@ -40,7 +40,7 @@ class FacebookVideoWidget extends StatefulWidget {
 class _FacebookVideoWidgetState extends State<FacebookVideoWidget>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   VideoPlayerController? _controller;
-  double _aspectRatio = _kMaxAspectRatio;
+  double _aspectRatio = 16 / 9;
   bool _initialized = false;
   bool _disposed = false;
   bool _initStarted = false;
@@ -115,10 +115,12 @@ class _FacebookVideoWidgetState extends State<FacebookVideoWidget>
         return;
       }
 
+      // ↓ Read real size from initialized controller
       final size = controller.value.size;
-      double raw = _kMaxAspectRatio;
-      if (size.height > 0) raw = size.width / size.height;
-      final clamped = raw.clamp(_kMinAspectRatio, _kMaxAspectRatio);
+      final realRatio =
+          (size.height > 0)
+              ? size.width / size.height
+              : 16 / 9; // fallback if size unknown
 
       await controller.setLooping(widget.looping);
       await controller.setVolume(widget.startMuted ? 0.0 : 1.0);
@@ -127,7 +129,7 @@ class _FacebookVideoWidgetState extends State<FacebookVideoWidget>
       if (mounted && !_disposed) {
         setState(() {
           _controller = controller;
-          _aspectRatio = clamped;
+          _aspectRatio = realRatio; // ← UPDATE state variable here
           _initialized = true;
           _isMuted = widget.startMuted;
         });
@@ -142,11 +144,8 @@ class _FacebookVideoWidgetState extends State<FacebookVideoWidget>
     } catch (e) {
       developer.log('[FBVideo] init error: $e');
       controller?.dispose();
-
       if (mounted && !_disposed) {
-        setState(() {
-          _initStarted = false;
-        });
+        setState(() => _initStarted = false);
       }
     }
   }
@@ -275,42 +274,69 @@ class _FacebookVideoWidgetState extends State<FacebookVideoWidget>
   Widget build(BuildContext context) {
     super.build(context);
 
-    final screenWidth = MediaQuery.of(context).size.width;
-    final videoHeight = (screenWidth / _aspectRatio).clamp(
-      screenWidth / _kMaxAspectRatio,
-      widget.maxPortraitHeight,
-    );
-
     return VisibilityDetector(
       key: Key(_id),
       onVisibilityChanged: _onVisibilityChanged,
       child: GestureDetector(
         onTap: _onTap,
-        child: Container(
-          width: screenWidth,
-          height: videoHeight,
-          color: Colors.black,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // ── Video or placeholder ──────────────────────────────────────
-              if (_initialized && _controller != null)
-                Center(
-                  child: AspectRatio(
-                    aspectRatio: _aspectRatio,
-                    child: VideoPlayer(_controller!),
-                  ),
-                )
-              else
-                _buildThumbnail(),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
 
-              // ── Buffering spinner ─────────────────────────────────────────
-              if (_initialized && _controller != null)
-                ValueListenableBuilder<VideoPlayerValue>(
-                  valueListenable: _controller!,
-                  builder: (_, value, __) {
-                    if (value.isBuffering) {
-                      return const Center(
+            // Use real video ratio after init, else default to 9:16 portrait
+            final videoRatio =
+                (_initialized && _controller != null)
+                    ? _controller!
+                        .value
+                        .aspectRatio // e.g. 0.5625 for 9:16
+                    : (9 / 16); // tall default before init
+
+            // Height grows freely — no max clamp
+            final height = width / _aspectRatio;
+
+            return SizedBox(
+              width: width,
+              height: height,
+              child: ColoredBox(
+                color: Colors.black,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // ── Video or placeholder ──────────────────────────────
+                    if (_initialized && _controller != null)
+                      Center(
+                        child: AspectRatio(
+                          aspectRatio: _controller!.value.aspectRatio,
+                          child: VideoPlayer(_controller!),
+                        ),
+                      )
+                    else
+                      _buildThumbnail(),
+
+                    // ── Buffering spinner ─────────────────────────────────
+                    if (_initialized && _controller != null)
+                      ValueListenableBuilder<VideoPlayerValue>(
+                        valueListenable: _controller!,
+                        builder: (_, value, __) {
+                          if (value.isBuffering) {
+                            return const Center(
+                              child: SizedBox(
+                                width: 32,
+                                height: 32,
+                                child: CircularProgressIndicator(
+                                  color: Color(0xFFF48706),
+                                  strokeWidth: 2.5,
+                                ),
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+
+                    // ── Init loading ──────────────────────────────────────
+                    if (!_initialized && _initStarted)
+                      const Center(
                         child: SizedBox(
                           width: 32,
                           height: 32,
@@ -319,70 +345,56 @@ class _FacebookVideoWidgetState extends State<FacebookVideoWidget>
                             strokeWidth: 2.5,
                           ),
                         ),
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
+                      ),
 
-              // ── Init loading ──────────────────────────────────────────────
-              if (!_initialized && _initStarted)
-                const Center(
-                  child: SizedBox(
-                    width: 32,
-                    height: 32,
-                    child: CircularProgressIndicator(
-                      color: Color(0xFFF48706),
-                      strokeWidth: 2.5,
-                    ),
-                  ),
-                ),
+                    // ── Controls overlay ──────────────────────────────────
+                    if (_initialized)
+                      AnimatedOpacity(
+                        opacity: (_showControls || !_isPlaying) ? 1.0 : 0.0,
+                        duration: const Duration(milliseconds: 250),
+                        child: _buildControlsOverlay(),
+                      ),
 
-              // ── Controls overlay ──────────────────────────────────────────
-              if (_initialized)
-                AnimatedOpacity(
-                  opacity: (_showControls || !_isPlaying) ? 1.0 : 0.0,
-                  duration: const Duration(milliseconds: 250),
-                  child: _buildControlsOverlay(),
-                ),
+                    // ── Progress bar always at bottom ─────────────────────
+                    if (_initialized && _controller != null)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: _buildProgressBar(),
+                      ),
 
-              // ── Progress bar always at bottom ─────────────────────────────
-              if (_initialized && _controller != null)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: _buildProgressBar(),
-                ),
-
-              // ── Mute button always visible bottom-right ───────────────────
-              if (_initialized)
-                Positioned(
-                  bottom: 10,
-                  right: 10,
-                  child: GestureDetector(
-                    onTap: _toggleMute,
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.55),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.whitecolor.withOpacity(0.2),
+                    // ── Mute button always visible bottom-right ───────────
+                    if (_initialized)
+                      Positioned(
+                        bottom: 10,
+                        right: 10,
+                        child: GestureDetector(
+                          onTap: _toggleMute,
+                          behavior: HitTestBehavior.opaque,
+                          child: Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.55),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.whitecolor.withOpacity(0.2),
+                              ),
+                            ),
+                            child: Icon(
+                              _isMuted ? Icons.volume_off : Icons.volume_up,
+                              color: AppColors.whitecolor,
+                              size: 17,
+                            ),
+                          ),
                         ),
                       ),
-                      child: Icon(
-                        _isMuted ? Icons.volume_off : Icons.volume_up,
-                        color: AppColors.whitecolor,
-                        size: 17,
-                      ),
-                    ),
-                  ),
+                  ],
                 ),
-            ],
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
