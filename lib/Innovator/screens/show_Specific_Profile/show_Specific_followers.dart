@@ -75,7 +75,7 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
       }
     } catch (e) {
       setState(() {
-        errorFollowers = 'Network error: $e';
+        errorFollowers = 'Network error';
         isLoadingFollowers = false;
       });
     }
@@ -111,7 +111,7 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
       }
     } catch (e) {
       setState(() {
-        errorFollowing = 'Network error: $e';
+        errorFollowing = 'Network error';
         isLoadingFollowing = false;
       });
     }
@@ -486,7 +486,7 @@ class _FollowersFollowingContentState extends State<FollowersFollowingContent>
       }
     } catch (e) {
       setState(() {
-        errorFollowers = 'Network error: $e';
+        errorFollowers = 'Network error';
         isLoadingFollowers = false;
       });
     }
@@ -522,7 +522,7 @@ class _FollowersFollowingContentState extends State<FollowersFollowingContent>
       }
     } catch (e) {
       setState(() {
-        errorFollowing = 'Network error: $e';
+        errorFollowing = 'Network error';
         isLoadingFollowing = false;
       });
     }

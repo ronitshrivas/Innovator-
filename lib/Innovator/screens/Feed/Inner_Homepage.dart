@@ -13,7 +13,6 @@ import 'package:innovator/Innovator/Authorization/Login.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/controllers/user_controller.dart';
-import 'package:innovator/Innovator/hive/feed_cache_service.dart';
 import 'package:innovator/Innovator/screens/Feed/Optimize%20Media/OptimizeMediaScreen.dart';
 import 'package:innovator/Innovator/screens/Feed/Optimize%20Media/full_screen_image_viewer.dart';
 import 'package:innovator/Innovator/screens/Feed/facebook_video_widget.dart';
@@ -509,26 +508,11 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
 
   Future<void> _loadInitialContent() async {
     developer.log('[Feed] Loading initial content...');
-
-    // ── Show cached feed instantly while we fetch fresh data ─────────────
-    final cached = FeedCacheService.instance.loadFeed();
-    if (cached.isNotEmpty) {
-      setState(() {
-        _allContents.clear();
-        _allContents.addAll(cached);
-        _isLoading = false; // hide shimmer immediately
-      });
-      developer.log('[Feed] Showed ${cached.length} cached posts instantly');
-    } else {
-      setState(() => _isLoading = true);
-    }
-    // ─────────────────────────────────────────────────────────────────────
-
     setState(() {
+      _isLoading = true;
       _hasError = false;
       _errorMessage = '';
     });
-
     try {
       await FeedApiService.testCursorFormat();
       final data = await FeedApiService.fetchContents(
@@ -541,32 +525,18 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
         setState(() {
           _allContents.clear();
           _allContents.addAll(data.contents);
-          _nextCursor = data.nextCursor;
+          _nextCursor = data.nextCursor; // full URL or null
           _hasMoreContent = data.hasMore;
           _isLoading = false;
           _currentOffset = data.contents.length;
           _useCursorPagination = true;
         });
         _preloadVisibleUsers();
-
-        // ── Save fresh feed to Hive ──────────────────────────────────────
-        await FeedCacheService.instance.saveFeed(data.contents);
-        // ────────────────────────────────────────────────────────────────
-
         developer.log('[Feed] Initial: ${_allContents.length} posts');
       }
     } catch (e) {
       developer.log('[Feed] loadInitialContent error: $e');
-      if (mounted) {
-        setState(() => _isLoading = false);
-        // If fetch failed but we had cache, the user already sees it — no error state
-        if (_allContents.isEmpty) {
-          setState(() {
-            _hasError = true;
-            _errorMessage = 'Could not load feed. Check your connection.';
-          });
-        }
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -659,7 +629,6 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
           _isLoading = false;
           _currentOffset = data.contents.length;
         });
-        await FeedCacheService.instance.saveFeed(data.contents);
         developer.log('[Feed] Refreshed: ${_allContents.length} posts');
         if (_scrollController.hasClients) {
           _scrollController.animateTo(
@@ -888,6 +857,7 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
           if (!mounted) return;
           setState(() {
             final hadReaction = _reactionState[content.id] ?? content.isLiked;
+            // Only change count when presence changes (not on type switch 👍→❤️)
             if (hasReaction && !hadReaction) {
               content.likes = (content.likes + 1).clamp(0, 999999);
             } else if (!hasReaction && hadReaction) {
@@ -896,36 +866,28 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
             content.isLiked = hasReaction;
             _reactionState[content.id] = hasReaction;
           });
-          // ── Sync like to cache ────────────────────────────────────────
-          FeedCacheService.instance.updateLike(
-            content.id,
-            hasReaction,
-            content.likes,
-            content.currentUserReaction,
-          );
-          // ─────────────────────────────────────────────────────────────
         },
         onFollowToggled: (isFollowed) {
           if (!mounted) return;
           setState(() {
+            // Update ALL posts by same author — not just this one card
             final authorId = content.author.id;
             for (final c in _allContents) {
-              if (c.author.id == authorId) c.isFollowed = isFollowed;
+              if (c.author.id == authorId) {
+                c.isFollowed = isFollowed;
+              }
             }
           });
         },
         onDeleted: () {
           if (mounted) setState(() => _allContents.remove(content));
-          // ── Remove from cache ─────────────────────────────────────────
-          FeedCacheService.instance.removePost(content.id);
-          // ─────────────────────────────────────────────────────────────
         },
         onStatusUpdated: (newStatus) {
           if (mounted) setState(() => content.status = newStatus);
-          // ── Sync edit to cache ────────────────────────────────────────
-          FeedCacheService.instance.updatePostStatus(content.id, newStatus);
-          // ─────────────────────────────────────────────────────────────
         },
+        // onCommentAdded: () {
+        //   if (mounted) setState(() => content.comments++);
+        // },
       ),
     );
   }
@@ -1284,12 +1246,7 @@ class _FeedItemState extends State<FeedItem>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Padding(
-                        padding: const EdgeInsets.only(
-                          left: 8.0,
-                          right: 8.0,
-                          top: 8.0,
-                          bottom: 2.0,
-                        ),
+                        padding: const EdgeInsets.all(8.0),
                         child: Row(
                           children: [
                             // ── Expanded owns ALL space except the more button ──
@@ -1297,6 +1254,8 @@ class _FeedItemState extends State<FeedItem>
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
+                                  // ✅ Flexible: shows FULL name by default.
+                                  //    Adds ... ONLY when name is too long to fit beside the Follow button.
                                   Flexible(
                                     child: Text(
                                       widget.content.author.name,
@@ -1492,7 +1451,10 @@ class _FeedItemState extends State<FeedItem>
 
           // Own media (only shown when NOT a repost)
           if (!widget.content.isRepost && widget.content.files.isNotEmpty)
-            _buildMediaPreview(),
+            Container(
+              margin: EdgeInsets.symmetric(horizontal: 1.0),
+              child: _buildMediaPreview(),
+            ),
           const SizedBox(height: 10.0),
           Divider(
             color: Colors.grey.shade300,
@@ -1520,7 +1482,6 @@ class _FeedItemState extends State<FeedItem>
                       contentId: widget.content.id,
                       initialLikeStatus: widget.content.isLiked,
                       likeService: likeService,
-                      isReel: widget.content.isReel,
                       initialReactionType: widget.content.currentUserReaction,
                       onLikeToggled: (isLiked) {
                         widget.onLikeToggled(isLiked);
@@ -1628,7 +1589,7 @@ class _FeedItemState extends State<FeedItem>
                       padding: const EdgeInsets.all(16.0),
                       child: CommentSection(
                         contentId: widget.content.id,
-                        isReel: widget.content.isReel,
+
                         // onCommentAdded: () {
                         //   setState(() => widget.content.comments++);
                         //   widget.onCommentAdded?.call();
@@ -3318,6 +3279,408 @@ class _FullscreenVideoPageState extends State<FullscreenVideoPage>
           ],
         ),
       ),
+    );
+  }
+}
+
+class AutoPlayVideoWidget extends StatefulWidget {
+  final String url;
+  final double? height;
+  final double? width;
+  final String? thumbnailUrl;
+
+  const AutoPlayVideoWidget({
+    required this.url,
+    this.thumbnailUrl,
+    this.height,
+    this.width,
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  State<AutoPlayVideoWidget> createState() => AutoPlayVideoWidgetState();
+}
+
+class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
+    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
+  VideoPlayerController? _controller;
+  bool _initialized = false;
+  bool _isMuted = true;
+  bool _disposed = false;
+  Timer? _initTimer;
+  bool _isPlaying = true;
+  final String videoId = UniqueKey().toString();
+  static final Map<String, AutoPlayVideoWidgetState> _activeVideos = {};
+
+  @override
+  bool get wantKeepAlive => true;
+
+  void _safeSetState(VoidCallback fn) {
+    if (mounted && !_disposed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_disposed) setState(fn);
+      });
+    }
+  }
+
+  void pauseVideo() {
+    if (_controller != null && !_disposed && _initialized) {
+      _controller!.pause();
+      _safeSetState(() => _isPlaying = false);
+    }
+  }
+
+  void playVideo() {
+    if (_controller != null && !_disposed && _initialized) {
+      _controller!.play();
+      _safeSetState(() => _isPlaying = true);
+    }
+  }
+
+  void muteVideo() {
+    if (_controller != null && !_disposed && _initialized) {
+      _controller!
+          .setVolume(0.0)
+          .then((_) {
+            _safeSetState(() => _isMuted = true);
+          })
+          .catchError((e) {
+            developer.log('Error muting video: $e');
+          });
+    }
+  }
+
+  void unmuteVideo() {
+    if (_controller != null && !_disposed && _initialized) {
+      _controller!.setVolume(1.0);
+      _safeSetState(() => _isMuted = false);
+    }
+  }
+
+  bool get isMuted => _isMuted;
+  bool get isPlaying => _isPlaying;
+  bool get isInitialized => _initialized;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _activeVideos[videoId] = this;
+  }
+
+  void _initializeVideoPlayer() {
+    if (_disposed) return;
+    _initTimer = Timer(const Duration(seconds: 30), () {
+      if (!_initialized && !_disposed) _handleInitializationError();
+    });
+    _controller = VideoPlayerController.networkUrl(
+      Uri.parse(widget.url),
+      videoPlayerOptions: VideoPlayerOptions(
+        mixWithOthers: true,
+        allowBackgroundPlayback: false,
+      ),
+    );
+    _controller!
+      ..setLooping(true)
+      ..setVolume(0.0)
+      ..initialize()
+          .then((_) {
+            _initTimer?.cancel();
+            if (!_disposed) {
+              _safeSetState(() => _initialized = true);
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted && !_disposed) _controller!.play();
+              });
+            }
+          })
+          .catchError((error) {
+            _initTimer?.cancel();
+            if (!_disposed) _handleInitializationError();
+          });
+  }
+
+  void _handleVisibilityChanged(VisibilityInfo info) {
+    if (!mounted || _disposed) return;
+    final visibleFraction = info.visibleFraction;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _disposed) return;
+      if (visibleFraction > 0.7) {
+        if (!_initialized && !_disposed && _controller == null) {
+          try {
+            _initializeVideoPlayer();
+          } catch (e) {
+            developer.log('Error initializing video: $e');
+          }
+        }
+        _activeVideos[videoId] = this;
+        _muteOtherVideos();
+        if (_initialized &&
+            _controller != null &&
+            !_controller!.value.isPlaying &&
+            _isPlaying) {
+          _controller!.play();
+        }
+      } else if (visibleFraction < 0.5) {
+        _activeVideos.remove(videoId);
+        if (_initialized && _controller != null) {
+          _controller!.pause();
+          // ADD THESE:
+          _controller!.dispose();
+          _controller = null;
+          _initialized = false;
+          if (mounted) setState(() => _isPlaying = false);
+        }
+      }
+    });
+  }
+
+  void _muteOtherVideos() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final entry in _activeVideos.entries) {
+        if (entry.key != videoId &&
+            entry.value.mounted &&
+            !entry.value._disposed) {
+          entry.value._controller?.pause();
+          entry.value._controller?.setVolume(0.0);
+          entry.value._safeSetState(() {
+            entry.value._isMuted = true;
+            entry.value._isPlaying = false;
+          });
+        }
+      }
+    });
+  }
+
+  static void pauseAllAutoPlayVideos() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final entry in _activeVideos.entries) {
+        if (entry.value.mounted && !entry.value._disposed) {
+          entry.value._controller?.pause();
+          entry.value._controller?.setVolume(0.0);
+          entry.value._safeSetState(() {
+            entry.value._isMuted = true;
+            entry.value._isPlaying = false;
+          });
+        }
+      }
+    });
+  }
+
+  static void resumeAllAutoPlayVideos() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final entry in _activeVideos.entries) {
+        if (entry.value._initialized &&
+            entry.value.mounted &&
+            !entry.value._disposed) {
+          entry.value._controller?.play();
+          entry.value._controller?.setVolume(0.0);
+          entry.value._safeSetState(() {
+            entry.value._isPlaying = true;
+            entry.value._isMuted = true;
+          });
+        }
+      }
+    });
+  }
+
+  void _handleInitializationError([Object? error]) {
+    _safeSetState(() => _initialized = false);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (_controller == null || _disposed) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _disposed) return;
+      switch (state) {
+        case AppLifecycleState.paused:
+        case AppLifecycleState.inactive:
+          _controller!.pause();
+          break;
+        case AppLifecycleState.resumed:
+          if (_initialized && mounted && _isPlaying) _controller!.play();
+          break;
+        case AppLifecycleState.detached:
+        case AppLifecycleState.hidden:
+          _controller!.pause();
+          break;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _activeVideos.remove(videoId);
+    _initTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _controller?.dispose();
+    _controller = null;
+    super.dispose();
+  }
+
+  void _openFullscreen() {
+    if (!mounted || _controller == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (_) => FullscreenVideoPage(
+              url: widget.url,
+              thumbnail: widget.thumbnailUrl,
+            ),
+      ),
+    );
+  }
+
+  void _toggleMute() {
+    if (_controller == null || _disposed || !_initialized) return;
+    setState(() {
+      _isMuted = !_isMuted;
+      _controller!.setVolume(_isMuted ? 0.0 : 1.0);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return VisibilityDetector(
+      key: Key(videoId),
+      onVisibilityChanged: _handleVisibilityChanged,
+      child: Container(
+        height: widget.height ?? MediaQuery.of(context).size.height,
+        width: widget.width ?? MediaQuery.of(context).size.width,
+        color: AppColors.whitecolor,
+        child:
+            !_initialized || _controller == null
+                ? _buildLoadingOrThumbnail()
+                : _buildVideoPlayer(),
+      ),
+    );
+  }
+
+  Widget _buildLoadingOrThumbnail() {
+    if (widget.thumbnailUrl != null) {
+      return CachedNetworkImage(
+        imageUrl: widget.thumbnailUrl!,
+        fit: BoxFit.cover,
+        placeholder:
+            (_, __) => Center(
+              child: SizedBox(
+                width: 40,
+                height: 40,
+                child: Image.asset(
+                  'animation/IdeaBulb.gif',
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+        errorWidget:
+            (_, __, ___) => Container(
+              color: Colors.grey,
+              child: const Center(
+                child: Icon(Icons.videocam_off, color: AppColors.whitecolor),
+              ),
+            ),
+      );
+    }
+    return Center(
+      child: SizedBox(
+        width: 40,
+        height: 40,
+        child: Image.asset('animation/IdeaBulb.gif', fit: BoxFit.contain),
+      ),
+    );
+  }
+
+  Widget _buildVideoPlayer() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final size = _controller!.value.size;
+        final aspectRatio = size.width / size.height;
+        double targetWidth = constraints.maxWidth;
+        double targetHeight = constraints.maxWidth / aspectRatio;
+        if (targetHeight > constraints.maxHeight) {
+          targetHeight = constraints.maxHeight;
+          targetWidth = constraints.maxHeight * aspectRatio;
+        }
+        return Center(
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              GestureDetector(
+                onTap: _openFullscreen,
+                behavior: HitTestBehavior.opaque,
+                child: SizedBox(
+                  width: targetWidth,
+                  height: targetHeight,
+                  child: VideoPlayer(_controller!),
+                ),
+              ),
+              if (!_isPlaying)
+                IgnorePointer(
+                  child: Container(
+                    width: 80,
+                    height: 80,
+                    decoration: const BoxDecoration(
+                      color: Colors.black54,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.play_arrow,
+                      size: 50,
+                      color: AppColors.whitecolor,
+                    ),
+                  ),
+                ),
+              Positioned(
+                top: 16,
+                right: 16,
+                child: IgnorePointer(
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.fullscreen,
+                      color: AppColors.whitecolor,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 16,
+                right: 16,
+                child: GestureDetector(
+                  onTap: _toggleMute,
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.whitecolor.withAlpha(30),
+                        width: 1,
+                      ),
+                    ),
+                    child: Icon(
+                      _isMuted ? Icons.volume_off : Icons.volume_up,
+                      color: AppColors.whitecolor,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
