@@ -896,28 +896,6 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
   Widget _buildLoadingIndicator() =>
       Column(children: [const _ShimmerFeedCard(), const _ShimmerFeedCard()]);
 
-  // Widget _buildEndMessage() => Container(
-  //   padding: const EdgeInsets.all(20),
-  //   child: Column(
-  //     children: [
-  //       Icon(Icons.check_circle_outline, color: Colors.grey[400], size: 32),
-  //       const SizedBox(height: 8),
-  //       Text(
-  //         "You're all caught up!",
-  //         style: TextStyle(
-  //           color: Colors.grey[600],
-  //           fontSize: 16,
-  //           fontWeight: FontWeight.w500,
-  //         ),
-  //       ),
-  //       Text(
-  //         'No more posts to show',
-  //         style: TextStyle(color: Colors.grey[400], fontSize: 12),
-  //       ),
-  //     ],
-  //   ),
-  // );
-
   bool _shouldShowEndMessage() =>
       !_isLoading && !_hasMoreContent && _allContents.isNotEmpty;
 }
@@ -1246,7 +1224,12 @@ class _FeedItemState extends State<FeedItem>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Padding(
-                        padding: const EdgeInsets.all(8.0),
+                        padding: const EdgeInsets.only(
+                          left: 8.0,
+                          right: 8.0,
+                          top: 6.0,
+                          bottom: 2.0,
+                        ),
                         child: Row(
                           children: [
                             // ── Expanded owns ALL space except the more button ──
