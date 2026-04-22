@@ -3,7 +3,7 @@ class CourseListModel {
   final String vendor;
   final String vendorName;
   final String category;
-  final String categoryName;
+  final String? categoryName;
   final String title;
   final String description;
   final double price;
@@ -19,7 +19,7 @@ class CourseListModel {
     required this.vendor,
     required this.vendorName,
     required this.category,
-    required this.categoryName,
+    this.categoryName,
     required this.title,
     required this.description,
     required this.price,
@@ -88,6 +88,7 @@ class CourseContent {
   final String? documentUrl;
   final String? documentFile;
   final String courseLevel;
+  final bool? isPreview;
   final int order;
   final DateTime createdAt;
 
@@ -103,6 +104,7 @@ class CourseContent {
     this.documentUrl,
     this.documentFile,
     required this.courseLevel,
+    this.isPreview,
     required this.order,
     required this.createdAt,
   });
@@ -120,6 +122,7 @@ class CourseContent {
       documentUrl: json['document_url'],
       documentFile: json['document_file'],
       courseLevel: json['course_level'] ?? '',
+      isPreview: json['is_preview'] ?? false,
       order: json['order'] ?? 0,
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
     );
@@ -138,6 +141,7 @@ class CourseContent {
       'document_url': documentUrl,
       'document_file': documentFile,
       'course_level': courseLevel,
+      'is_preview': isPreview,
       'order': order,
       'created_at': createdAt.toIso8601String(),
     };
