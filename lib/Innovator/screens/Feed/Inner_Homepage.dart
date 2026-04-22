@@ -13,6 +13,7 @@ import 'package:innovator/Innovator/Authorization/Login.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/controllers/user_controller.dart';
+import 'package:innovator/Innovator/hive/feed_cache_service.dart';
 import 'package:innovator/Innovator/screens/Feed/Optimize%20Media/OptimizeMediaScreen.dart';
 import 'package:innovator/Innovator/screens/Feed/Optimize%20Media/full_screen_image_viewer.dart';
 import 'package:innovator/Innovator/screens/Feed/facebook_video_widget.dart';
@@ -508,11 +509,26 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
 
   Future<void> _loadInitialContent() async {
     developer.log('[Feed] Loading initial content...');
+
+    // ── Show cached feed instantly while we fetch fresh data ─────────────
+    final cached = FeedCacheService.instance.loadFeed();
+    if (cached.isNotEmpty) {
+      setState(() {
+        _allContents.clear();
+        _allContents.addAll(cached);
+        _isLoading = false; // hide shimmer immediately
+      });
+      developer.log('[Feed] Showed ${cached.length} cached posts instantly');
+    } else {
+      setState(() => _isLoading = true);
+    }
+    // ─────────────────────────────────────────────────────────────────────
+
     setState(() {
-      _isLoading = true;
       _hasError = false;
       _errorMessage = '';
     });
+
     try {
       await FeedApiService.testCursorFormat();
       final data = await FeedApiService.fetchContents(
@@ -525,18 +541,32 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
         setState(() {
           _allContents.clear();
           _allContents.addAll(data.contents);
-          _nextCursor = data.nextCursor; // full URL or null
+          _nextCursor = data.nextCursor;
           _hasMoreContent = data.hasMore;
           _isLoading = false;
           _currentOffset = data.contents.length;
           _useCursorPagination = true;
         });
         _preloadVisibleUsers();
+
+        // ── Save fresh feed to Hive ──────────────────────────────────────
+        await FeedCacheService.instance.saveFeed(data.contents);
+        // ────────────────────────────────────────────────────────────────
+
         developer.log('[Feed] Initial: ${_allContents.length} posts');
       }
     } catch (e) {
       developer.log('[Feed] loadInitialContent error: $e');
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+        // If fetch failed but we had cache, the user already sees it — no error state
+        if (_allContents.isEmpty) {
+          setState(() {
+            _hasError = true;
+            _errorMessage = 'Could not load feed. Check your connection.';
+          });
+        }
+      }
     }
   }
 
@@ -629,6 +659,7 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
           _isLoading = false;
           _currentOffset = data.contents.length;
         });
+        await FeedCacheService.instance.saveFeed(data.contents);
         developer.log('[Feed] Refreshed: ${_allContents.length} posts');
         if (_scrollController.hasClients) {
           _scrollController.animateTo(
@@ -857,7 +888,6 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
           if (!mounted) return;
           setState(() {
             final hadReaction = _reactionState[content.id] ?? content.isLiked;
-            // Only change count when presence changes (not on type switch 👍→❤️)
             if (hasReaction && !hadReaction) {
               content.likes = (content.likes + 1).clamp(0, 999999);
             } else if (!hasReaction && hadReaction) {
@@ -866,28 +896,36 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
             content.isLiked = hasReaction;
             _reactionState[content.id] = hasReaction;
           });
+          // ── Sync like to cache ────────────────────────────────────────
+          FeedCacheService.instance.updateLike(
+            content.id,
+            hasReaction,
+            content.likes,
+            content.currentUserReaction,
+          );
+          // ─────────────────────────────────────────────────────────────
         },
         onFollowToggled: (isFollowed) {
           if (!mounted) return;
           setState(() {
-            // Update ALL posts by same author — not just this one card
             final authorId = content.author.id;
             for (final c in _allContents) {
-              if (c.author.id == authorId) {
-                c.isFollowed = isFollowed;
-              }
+              if (c.author.id == authorId) c.isFollowed = isFollowed;
             }
           });
         },
         onDeleted: () {
           if (mounted) setState(() => _allContents.remove(content));
+          // ── Remove from cache ─────────────────────────────────────────
+          FeedCacheService.instance.removePost(content.id);
+          // ─────────────────────────────────────────────────────────────
         },
         onStatusUpdated: (newStatus) {
           if (mounted) setState(() => content.status = newStatus);
+          // ── Sync edit to cache ────────────────────────────────────────
+          FeedCacheService.instance.updatePostStatus(content.id, newStatus);
+          // ─────────────────────────────────────────────────────────────
         },
-        // onCommentAdded: () {
-        //   if (mounted) setState(() => content.comments++);
-        // },
       ),
     );
   }
