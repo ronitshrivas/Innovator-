@@ -1022,19 +1022,39 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     );
   }
 
+  // Widget _buildContentItem(int index) {
+  //   final content = _contents[index];
+  //   return RepaintBoundary(
+  //     key: ValueKey(content.id),
+  //     child: FeedItem(
+  //       content: content,
+  //       onLikeToggled:
+  //           (isLiked) => setState(() {
+  //             content.isLiked = isLiked;
+  //             content.likes += isLiked ? 1 : -1;
+  //           }),
+  //       onFollowToggled:
+  //           (isFollowed) => setState(() => content.isFollowed = isFollowed),
+  //     ),
+  //   );
+  // }
+
   Widget _buildContentItem(int index) {
     final content = _contents[index];
     return RepaintBoundary(
       key: ValueKey(content.id),
       child: FeedItem(
         content: content,
-        onLikeToggled:
-            (isLiked) => setState(() {
-              content.isLiked = isLiked;
-              content.likes += isLiked ? 1 : -1;
-            }),
-        onFollowToggled:
-            (isFollowed) => setState(() => content.isFollowed = isFollowed),
+        onLikeToggled: (hasReaction) {
+          if (!mounted) return;
+          setState(() {
+            content.isLiked = hasReaction;
+          });
+        },
+        onFollowToggled: (isFollowed) {
+          if (!mounted) return;
+          setState(() => content.isFollowed = isFollowed);
+        },
       ),
     );
   }
