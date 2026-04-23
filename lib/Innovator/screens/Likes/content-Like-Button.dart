@@ -35,25 +35,24 @@ class LikeButton extends StatefulWidget {
 
 class _LikeButtonState extends State<LikeButton>
     with SingleTickerProviderStateMixin {
- 
   ReactionType? _currentReaction;
- 
+
   bool _isApiInFlight = false;
 
   late int _count;
- 
+
   OverlayEntry? _overlayEntry;
   final LayerLink _layerLink = LayerLink();
- 
+
   late AnimationController _bounceCtrl;
   late Animation<double> _bounceAnim;
- 
+
   @override
   void initState() {
     super.initState();
- 
+
     HiveReactionQueue.instance.setService(widget.likeService);
- 
+
     if (widget.initialLikeStatus) {
       _currentReaction =
           widget.initialReactionType != null
@@ -65,25 +64,31 @@ class _LikeButtonState extends State<LikeButton>
     }
 
     _count = widget.initialCount;
- 
+
     _bounceCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 380),
     );
     _bounceAnim = TweenSequence([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.0, end: 1.45)
-            .chain(CurveTween(curve: Curves.easeOut)),
+        tween: Tween<double>(
+          begin: 1.0,
+          end: 1.45,
+        ).chain(CurveTween(curve: Curves.easeOut)),
         weight: 40,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.45, end: 0.88)
-            .chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween<double>(
+          begin: 1.45,
+          end: 0.88,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 30,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0.88, end: 1.0)
-            .chain(CurveTween(curve: Curves.elasticOut)),
+        tween: Tween<double>(
+          begin: 0.88,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.elasticOut)),
         weight: 30,
       ),
     ]).animate(_bounceCtrl);
@@ -95,7 +100,7 @@ class _LikeButtonState extends State<LikeButton>
     _bounceCtrl.dispose();
     super.dispose();
   }
- 
+
   Future<bool> _isOnline() async {
     try {
       final results = await Connectivity().checkConnectivity();
@@ -109,13 +114,13 @@ class _LikeButtonState extends State<LikeButton>
       return false;
     }
   }
- 
+
   Future<void> _handleTap() async {
     if (_isApiInFlight) return;
     _removeOverlay();
     await _applyReaction(_currentReaction != null ? null : ReactionType.like);
   }
- 
+
   void _handleLongPress() {
     HapticFeedback.mediumImpact();
     if (_overlayEntry != null) {
@@ -125,12 +130,11 @@ class _LikeButtonState extends State<LikeButton>
     _showReactionPicker();
   }
 
- 
   Future<void> _applyReaction(ReactionType? type) async {
     if (_isApiInFlight) return;
 
     final previous = _currentReaction;
- 
+
     _updateLocalState(type, previous);
     widget.onLikeToggled?.call(_currentReaction != null);
     _isApiInFlight = true;
@@ -138,8 +142,10 @@ class _LikeButtonState extends State<LikeButton>
     try {
       final online = await _isOnline();
 
-      if (!online) { 
-        developer.log('[LikeButton] Offline → saving to Hive: ${widget.contentId}');
+      if (!online) {
+        developer.log(
+          '[LikeButton] Offline → saving to Hive: ${widget.contentId}',
+        );
         await HiveReactionQueue.instance.enqueue(
           contentId: widget.contentId,
           type: type,
@@ -147,33 +153,41 @@ class _LikeButtonState extends State<LikeButton>
         );
         return;
       }
- 
+
       ReactionResult result;
 
       if (type == null) {
-        result = widget.isReel
-            ? await widget.likeService.reactReel(
-                widget.contentId, previous ?? ReactionType.like)
-            : await widget.likeService.reactPost(
-                widget.contentId, previous ?? ReactionType.like);
+        result =
+            widget.isReel
+                ? await widget.likeService.reactReel(
+                  widget.contentId,
+                  previous ?? ReactionType.like,
+                )
+                : await widget.likeService.reactPost(
+                  widget.contentId,
+                  previous ?? ReactionType.like,
+                );
       } else {
-        result = widget.isReel
-            ? await widget.likeService.reactReel(widget.contentId, type)
-            : await widget.likeService.reactPost(widget.contentId, type);
+        result =
+            widget.isReel
+                ? await widget.likeService.reactReel(widget.contentId, type)
+                : await widget.likeService.reactPost(widget.contentId, type);
       }
 
-      if (result.success) { 
+      if (result.success) {
         if (type != null && result.reactionType != null && mounted) {
           setState(() => _currentReaction = result.reactionType);
-        } 
+        }
         await HiveReactionQueue.instance.dequeue(widget.contentId);
         developer.log('[LikeButton] ✓ API confirmed: ${widget.contentId}');
-      } else { 
-        developer.log('[LikeButton] ✗ API failed → reverting: ${widget.contentId}');
+      } else {
+        developer.log(
+          '[LikeButton] ✗ API failed → reverting: ${widget.contentId}',
+        );
         _updateLocalState(previous, type);
         widget.onLikeToggled?.call(_currentReaction != null);
       }
-    } catch (e) { 
+    } catch (e) {
       developer.log('[LikeButton] Exception → saving to Hive: $e');
       await HiveReactionQueue.instance.enqueue(
         contentId: widget.contentId,
@@ -184,7 +198,7 @@ class _LikeButtonState extends State<LikeButton>
       if (mounted) setState(() => _isApiInFlight = false);
     }
   }
- 
+
   void _updateLocalState(ReactionType? newType, ReactionType? previous) {
     if (!mounted) return;
     setState(() {
@@ -197,19 +211,20 @@ class _LikeButtonState extends State<LikeButton>
     });
     _bounceCtrl.forward(from: 0);
   }
- 
+
   void _showReactionPicker() {
     final overlay = Overlay.of(context);
     _overlayEntry = OverlayEntry(
-      builder: (_) => _ReactionPickerOverlay(
-        layerLink: _layerLink,
-        onSelect: (type) {
-          _removeOverlay();
-          _applyReaction(type);
-        },
-        onDismiss: _removeOverlay,
-        currentReaction: _currentReaction,
-      ),
+      builder:
+          (_) => _ReactionPickerOverlay(
+            layerLink: _layerLink,
+            onSelect: (type) {
+              _removeOverlay();
+              _applyReaction(type);
+            },
+            onDismiss: _removeOverlay,
+            currentReaction: _currentReaction,
+          ),
     );
     overlay.insert(_overlayEntry!);
   }
@@ -218,15 +233,16 @@ class _LikeButtonState extends State<LikeButton>
     _overlayEntry?.remove();
     _overlayEntry = null;
   }
- 
+
   @override
   Widget build(BuildContext context) {
-    final reaction    = _currentReaction;
+    final reaction = _currentReaction;
     final hasReaction = reaction != null;
-    final emoji       = hasReaction ? reaction.emoji : null;
-    final label       = hasReaction ? reaction.label : 'Like';
-    final iconColor   = hasReaction ? _reactionColor(reaction) : Colors.grey.shade700;
-    final hasPending  = HiveReactionQueue.instance.hasPending(widget.contentId);
+    final emoji = hasReaction ? reaction.emoji : null;
+    final label = hasReaction ? reaction.label : 'Like';
+    final iconColor =
+        hasReaction ? _reactionColor(reaction) : Colors.grey.shade700;
+    final hasPending = HiveReactionQueue.instance.hasPending(widget.contentId);
 
     return CompositedTransformTarget(
       link: _layerLink,
@@ -236,35 +252,37 @@ class _LikeButtonState extends State<LikeButton>
         behavior: HitTestBehavior.opaque,
         child: AnimatedBuilder(
           animation: _bounceAnim,
-          builder: (context, child) =>
-              Transform.scale(scale: _bounceAnim.value, child: child),
+          builder:
+              (context, child) =>
+                  Transform.scale(scale: _bounceAnim.value, child: child),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
- 
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
                     emoji != null
                         ? Text(
-                            emoji,
-                            style: TextStyle(
-                              fontSize: 22,
-                              color: hasPending
+                          emoji,
+                          style: TextStyle(
+                            fontSize: 22,
+                            color:
+                                hasPending
+                                    ? iconColor.withOpacity(0.6)
+                                    : iconColor,
+                          ),
+                        )
+                        : Icon(
+                          Icons.thumb_up_alt_outlined,
+                          color:
+                              hasPending
                                   ? iconColor.withOpacity(0.6)
                                   : iconColor,
-                            ),
-                          )
-                        : Icon(
-                            Icons.thumb_up_alt_outlined,
-                            color: hasPending
-                                ? iconColor.withOpacity(0.6)
-                                : iconColor,
-                            size: 22,
-                          ),
- 
+                          size: 22,
+                        ),
+
                     if (hasPending)
                       Positioned(
                         top: -2,
@@ -308,19 +326,26 @@ class _LikeButtonState extends State<LikeButton>
 
   Color _reactionColor(ReactionType r) {
     switch (r) {
-      case ReactionType.like:      return const Color(0xFF0A66C2);
-      case ReactionType.love:      return Colors.red.shade500;
-      case ReactionType.haha:      return Colors.amber.shade600;
-      case ReactionType.wow:       return Colors.amber.shade700;
-      case ReactionType.sad:       return Colors.amber.shade700;
-      case ReactionType.angry:     return Colors.orange.shade700;
-      case ReactionType.dislike:   return Colors.grey.shade600;
-      case ReactionType.celebrate: return Colors.deepOrange.shade500;
+      case ReactionType.like:
+        return const Color(0xFF0A66C2);
+      case ReactionType.love:
+        return Colors.red.shade500;
+      case ReactionType.haha:
+        return Colors.amber.shade600;
+      case ReactionType.wow:
+        return Colors.amber.shade700;
+      case ReactionType.sad:
+        return Colors.amber.shade700;
+      case ReactionType.angry:
+        return Colors.orange.shade700;
+      case ReactionType.dislike:
+        return Colors.grey.shade600;
+      case ReactionType.celebrate:
+        return Colors.deepOrange.shade500;
     }
   }
 }
 
- 
 class _ReactionPickerOverlay extends StatefulWidget {
   final LayerLink layerLink;
   final void Function(ReactionType) onSelect;
@@ -355,7 +380,7 @@ class _ReactionPickerOverlayState extends State<_ReactionPickerOverlay>
       duration: const Duration(milliseconds: 260),
     );
     _scaleAnim = CurvedAnimation(parent: _ctrl, curve: Curves.easeOutBack);
-    _fadeAnim  = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _fadeAnim = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
     _ctrl.forward();
   }
 
@@ -389,7 +414,9 @@ class _ReactionPickerOverlayState extends State<_ReactionPickerOverlay>
                 color: Colors.transparent,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 6),
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.whitecolor,
                     borderRadius: BorderRadius.circular(50),
@@ -416,35 +443,42 @@ class _ReactionPickerOverlayState extends State<_ReactionPickerOverlay>
   }
 
   Widget _buildReactionItem(ReactionType r) {
-    final isActive  = widget.currentReaction == r;
+    final isActive = widget.currentReaction == r;
     final isHovered = _hovered == r;
-    final targetScale = isHovered ? 1.5  : (isActive ? 1.15 : 1.0);
-    final targetY     = isHovered ? -10.0 : (isActive ? -3.0 : 0.0);
+    final targetScale = isHovered ? 1.5 : (isActive ? 1.15 : 1.0);
+    final targetY = isHovered ? -10.0 : (isActive ? -3.0 : 0.0);
 
     return GestureDetector(
-      onTap:       () => widget.onSelect(r),
-      onTapDown:   (_) => setState(() => _hovered = r),
-      onTapCancel: ()  => setState(() => _hovered = null),
+      onTap: () => widget.onSelect(r),
+      onTapDown: (_) => setState(() => _hovered = r),
+      onTapCancel: () => setState(() => _hovered = null),
       child: TweenAnimationBuilder<double>(
         tween: Tween(begin: 1.0, end: targetScale),
         duration: const Duration(milliseconds: 280),
         curve: Curves.elasticOut,
-        builder: (_, scale, child) => TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0.0, end: targetY),
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOutBack,
-          builder: (_, dy, __) => Transform.translate(
-            offset: Offset(0, dy),
-            child: Transform.scale(scale: scale, child: child),
-          ),
-        ),
+        builder:
+            (_, scale, child) => TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: targetY),
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutBack,
+              builder:
+                  (_, dy, __) => Transform.translate(
+                    offset: Offset(0, dy),
+                    child: Transform.scale(scale: scale, child: child),
+                  ),
+            ),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
           child: Stack(
             alignment: Alignment.center,
             clipBehavior: Clip.none,
             children: [
-              Text(r.emoji, style: TextStyle(fontSize: isActive ? 20 : 18)),
+              Text(
+                r.emoji,
+                style: TextStyle(fontSize: isActive ? 20 : 18,
+                 inherit: false
+                 ),
+              ),
               if (isHovered)
                 Positioned(
                   bottom: 30,
@@ -453,7 +487,9 @@ class _ReactionPickerOverlayState extends State<_ReactionPickerOverlay>
                   child: Center(
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.black87,
                         borderRadius: BorderRadius.circular(8),

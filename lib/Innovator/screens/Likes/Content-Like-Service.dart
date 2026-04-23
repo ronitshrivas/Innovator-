@@ -3,8 +3,7 @@ import 'dart:developer';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
-
-// ── Reaction types matching backend REACTION_CHOICES ──────────────────────────
+ 
 enum ReactionType { like, love, haha, wow, sad, angry, dislike, celebrate }
 
 extension ReactionTypeExtension on ReactionType {
@@ -79,15 +78,12 @@ extension ReactionTypeExtension on ReactionType {
     return null;
   }
 }
-
-// ── API response model ─────────────────────────────────────────────────────────
+ 
 class ReactionResult {
   final bool success;
-
-  /// null means the reaction was removed (un-reacted)
+ 
   final ReactionType? reactionType;
-
-  /// The reaction record id returned by the server (useful for DELETE)
+ 
   final String? reactionId;
 
   const ReactionResult({
@@ -99,14 +95,8 @@ class ReactionResult {
 
 class ContentLikeService {
   final AppData _appData = AppData();
-
-  // Keep baseUrl param for backward-compat but always use _baseUrl internally
-  ContentLikeService({String? baseUrl});
-
-  // ── React to a post ──────────────────────────────────────────────────────────
-  /// POST /api/reactions/  { "post": postId, "type": reactionType }
-  /// If the user already has the same reaction the backend may toggle it off —
-  /// handle both 200/201 (created) and 204 (removed) gracefully.
+ 
+  ContentLikeService({String? baseUrl}); 
   Future<ReactionResult> reactPost(String postId, ReactionType type) async {
     final token = _appData.accessToken;
     if (token == null || token.isEmpty) {
@@ -138,8 +128,7 @@ class ContentLikeService {
           ),
           reactionId: data['id']?.toString(),
         );
-      } else if (response.statusCode == 204) {
-        // Reaction removed (same type tapped again = toggle off)
+      } else if (response.statusCode == 204) { 
         return const ReactionResult(success: true, reactionType: null);
       } else {
         log('[Reaction] Unexpected status ${response.statusCode}');
@@ -182,8 +171,7 @@ class ContentLikeService {
           ),
           reactionId: data['id']?.toString(),
         );
-      } else if (response.statusCode == 204) {
-        // Reaction removed (same type tapped again = toggle off)
+      } else if (response.statusCode == 204) { 
         return const ReactionResult(success: true, reactionType: null);
       } else {
         log('[Reaction] Unexpected status ${response.statusCode}');
@@ -194,34 +182,10 @@ class ContentLikeService {
       return const ReactionResult(success: false);
     }
   }
-  // ── Remove reaction ──────────────────────────────────────────────────────────
-  /// DELETE /api/reactions/{reactionId}/
-  // Future<bool> removeReaction(String reactionId) async {
-  //   final token = _appData.accessToken;
-  //   if (token == null || token.isEmpty) return false;
-
-  //   try {
-  //     final response = await http.delete(
-  //       Uri.parse('${ApiConstants.sendreaction}$reactionId/'),
-  //       headers: {
-  //         'Authorization': 'Bearer $token',
-  //         'Accept': 'application/json',
-  //       },
-  //     );
-  //     log(
-  //       '[Reaction] DELETE /api/reactions/$reactionId/ → ${response.statusCode}',
-  //     );
-  //     return response.statusCode == 204 || response.statusCode == 200;
-  //   } catch (e) {
-  //     log('[Reaction] removeReaction error: $e');
-  //     return false;
-  //   }
-  // }
-
-  // ── Legacy compat wrappers ────────────────────────────────────────────────────
+ 
+ 
   Future<bool> toggleLike(String postId, bool isLiking) async {
-    if (!isLiking) {
-      // Best-effort: no reactionId at this point, just re-post same type to toggle off
+    if (!isLiking) { 
       final r = await reactPost(postId, ReactionType.like);
       return r.success;
     }
