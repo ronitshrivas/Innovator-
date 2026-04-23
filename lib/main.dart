@@ -14,6 +14,7 @@ import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/hive/feed_cache_service.dart';
 import 'package:innovator/Innovator/provider/global_chat_listener.dart';
 import 'package:innovator/Innovator/provider/notification_provider.dart';
+import 'package:innovator/Innovator/screens/Likes/hive_reaction_queue.dart';
 import 'package:innovator/Innovator/screens/Splash_Screen/splash_screen.dart';
 import 'package:innovator/Innovator/services/fcm_services.dart';
 import 'package:innovator/KMS/screens/auth/login_screen.dart';
@@ -40,6 +41,7 @@ void main() async {
         developer.log('App starting...');
         WidgetsFlutterBinding.ensureInitialized();
         await Hive.initFlutter(); // must be before openBox
+        await HiveReactionQueue.instance.init();
         await FeedCacheService.instance.init();
         SystemChrome.setSystemUIOverlayStyle(
           const SystemUiOverlayStyle(
