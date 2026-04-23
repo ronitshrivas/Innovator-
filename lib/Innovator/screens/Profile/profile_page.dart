@@ -1028,17 +1028,19 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
   //     key: ValueKey(content.id),
   //     child: FeedItem(
   //       content: content,
-  //       onLikeToggled:
-  //           (isLiked) => setState(() {
-  //             content.isLiked = isLiked;
-  //             content.likes += isLiked ? 1 : -1;
-  //           }),
-  //       onFollowToggled:
-  //           (isFollowed) => setState(() => content.isFollowed = isFollowed),
+  //       onLikeToggled: (hasReaction) {
+  //         if (!mounted) return;
+  //         setState(() {
+  //           content.isLiked = hasReaction;
+  //         });
+  //       },
+  //       onFollowToggled: (isFollowed) {
+  //         if (!mounted) return;
+  //         setState(() => content.isFollowed = isFollowed);
+  //       },
   //     ),
   //   );
   // }
-
   Widget _buildContentItem(int index) {
     final content = _contents[index];
     return RepaintBoundary(
@@ -1046,10 +1048,15 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       child: FeedItem(
         content: content,
         onLikeToggled: (hasReaction) {
-          if (!mounted) return;
-          setState(() {
-            content.isLiked = hasReaction;
-          });
+          final wasAlreadyLiked = content.isLiked;
+
+          content.isLiked = hasReaction;
+
+          if (hasReaction && !wasAlreadyLiked) {
+            content.likes = content.likes + 1;
+          } else if (!hasReaction && wasAlreadyLiked) {
+            content.likes = (content.likes - 1).clamp(0, 999999);
+          }
         },
         onFollowToggled: (isFollowed) {
           if (!mounted) return;
