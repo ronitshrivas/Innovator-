@@ -40,7 +40,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 import '../../models/Feed_Content_Model.dart';
 
- 
 class ContentResponse {
   final int status;
   final ContentData data;
@@ -251,7 +250,6 @@ class FeedApiService {
   );
 }
 
- 
 class ContentData {
   final List<FeedContent> contents;
   final bool hasMore;
@@ -266,14 +264,12 @@ class ContentData {
   factory ContentData.fromNewFeedApi(dynamic rawJson) {
     try {
       List<dynamic> postList = [];
-      String? nextCursor;  
+      String? nextCursor;
       bool hasMore = false;
 
       if (rawJson is List) {
-      
         postList = rawJson;
       } else if (rawJson is Map<String, dynamic>) {
-        
         hasMore = rawJson['has_next'] == true;
         final rawCursor = rawJson['next_cursor'];
         if (hasMore && rawCursor != null) {
@@ -320,7 +316,7 @@ class ContentData {
   factory ContentData.fromJson(Map<String, dynamic> json) =>
       ContentData.fromNewFeedApi(json);
 
-  static void _cacheAuthors(List<FeedContent> contents) { 
+  static void _cacheAuthors(List<FeedContent> contents) {
     try {
       if (!Get.isRegistered<UserController>()) return;
       final uc = Get.find<UserController>();
@@ -342,7 +338,6 @@ class ContentData {
   int get totalCount => contents.length;
 }
 
- 
 class Inner_HomePage extends ConsumerStatefulWidget {
   const Inner_HomePage({Key? key}) : super(key: key);
 
@@ -389,7 +384,7 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
   @override
   void initState() {
     super.initState();
-    if (!Get.isRegistered<UserController>()) Get.put(UserController()); 
+    if (!Get.isRegistered<UserController>()) Get.put(UserController());
     _initializeInfiniteScroll();
     _checkConnectivity();
   }
@@ -400,7 +395,7 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
     _scrollController.dispose();
     super.dispose();
   }
- 
+
   Future<void> _initializeInfiniteScroll() async {
     try {
       await _appData.initialize();
@@ -482,7 +477,7 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
       developer.log('prefetchAvatars error: $e');
     }
   }
- 
+
   Future<void> _loadInitialContent() async {
     developer.log('[Feed] Loading initial content...');
     setState(() {
@@ -502,7 +497,7 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
         setState(() {
           _allContents.clear();
           _allContents.addAll(data.contents);
-          _nextCursor = data.nextCursor;  
+          _nextCursor = data.nextCursor;
           _hasMoreContent = data.hasMore;
           _isLoading = false;
           _currentOffset = data.contents.length;
@@ -527,7 +522,6 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
     });
     _lastLoadTime = DateTime.now();
     try {
- 
       final data = await FeedApiService.fetchContents(
         cursor: _nextCursor,
         limit: 20,
@@ -536,7 +530,7 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
       if (mounted) {
         setState(() {
           _allContents.addAll(data.contents);
-          _nextCursor = data.nextCursor;  
+          _nextCursor = data.nextCursor;
           _hasMoreContent = data.hasMore;
           _isLoading = false;
           _isLoadingMore = false;
@@ -643,7 +637,6 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
     }
   }
 
- 
   Future<bool> _verifyToken() async {
     try {
       if (_appData.accessToken == null || _appData.accessToken!.isEmpty) {
@@ -670,20 +663,21 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
   Future<void> _checkConnectivity() async {
     try {
       final result = await InternetAddress.lookup('google.com');
-      if (!mounted) return;  
+      if (!mounted) return;
       setState(() {
         _isOnline = result.isNotEmpty && result[0].rawAddress.isNotEmpty;
       });
       if (_isOnline) _refresh();
     } on SocketException catch (_) {
-      if (!mounted) return;  
+      if (!mounted) return;
       setState(() => _isOnline = false);
     }
   }
 
   @override
-  Widget build(BuildContext context) { 
+  Widget build(BuildContext context) {
     final unreadCount = ref.watch(chatUnreadCountProvider);
+
     return Scaffold(
       backgroundColor: AppColors.whitecolor,
       body: CustomRefreshIndicator(
@@ -692,7 +686,7 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
         child: _buildContent(),
       ),
       floatingActionButton: CountBadgeFAB(
-        count: unreadCount, 
+        count: unreadCount,
         gifAsset: 'animation/chaticon.gif',
         backgroundColor: Colors.transparent,
         onPressed: () {
@@ -701,22 +695,22 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
             context,
             MaterialPageRoute(builder: (_) => const ChatListScreen()),
           ).then((_) {
-            ref.invalidate(mutualFriendsProvider); 
+            ref.invalidate(mutualFriendsProvider);
           });
         },
       ),
     );
   }
 
-  Widget _buildContent() { 
+  Widget _buildContent() {
     if ((_isInitialLoad || _isLoading) && _allContents.isEmpty) {
       return _buildShimmerList();
     }
     if (_hasError && _allContents.isEmpty) return _buildErrorState();
     return _buildInfiniteScrollList();
   }
- 
-  Widget _buildInitialLoadingState() => _buildShimmerList(); 
+
+  Widget _buildInitialLoadingState() => _buildShimmerList();
   Widget _buildShimmerList() => const _ShimmerFeedList();
 
   Widget _buildErrorState() => Center(
@@ -772,7 +766,7 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
               ),
             ),
           ],
-        ), 
+        ),
         if (_isLoading && _allContents.isNotEmpty)
           const Positioned(top: 0, left: 0, right: 0, child: _FeedRefreshBar()),
       ],
@@ -809,7 +803,7 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
     }
     if (adjusted == _allContents.length && _isLoading) {
       return _buildLoadingIndicator();
-    } 
+    }
     return const SizedBox.shrink();
   }
 
@@ -821,7 +815,7 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
         onLikeToggled: (hasReaction) {
           if (!mounted) return;
           setState(() {
-            final hadReaction = _reactionState[content.id] ?? content.isLiked; 
+            final hadReaction = _reactionState[content.id] ?? content.isLiked;
             if (hasReaction && !hadReaction) {
               content.likes = (content.likes + 1).clamp(0, 999999);
             } else if (!hasReaction && hadReaction) {
@@ -833,7 +827,7 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
         },
         onFollowToggled: (isFollowed) {
           if (!mounted) return;
-          setState(() { 
+          setState(() {
             final authorId = content.author.id;
             for (final c in _allContents) {
               if (c.author.id == authorId) {
@@ -848,21 +842,17 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
         onStatusUpdated: (newStatus) {
           if (mounted) setState(() => content.status = newStatus);
         },
-        
       ),
     );
   }
- 
+
   Widget _buildLoadingIndicator() =>
       Column(children: [const _ShimmerFeedCard(), const _ShimmerFeedCard()]);
-
-   
 
   bool _shouldShowEndMessage() =>
       !_isLoading && !_hasMoreContent && _allContents.isNotEmpty;
 }
 
- 
 class FeedItem extends StatefulWidget {
   final FeedContent content;
   final Function(bool) onLikeToggled;
@@ -892,7 +882,7 @@ class _FeedItemState extends State<FeedItem>
   bool _hasRecordedView = false;
   late AnimationController _controller;
   late String formattedTimeAgo;
-  bool _showComments = false; 
+  bool _showComments = false;
 
   final ContentLikeService likeService = ContentLikeService(
     baseUrl: 'http://36.253.137.34:8005',
@@ -1005,8 +995,7 @@ class _FeedItemState extends State<FeedItem>
     }
   }
 
- 
-  Widget _buildAuthorAvatar() { 
+  Widget _buildAuthorAvatar() {
     final avatarUrl =
         widget.content.author.picture.isNotEmpty
             ? widget.content.author.picture
@@ -1016,7 +1005,7 @@ class _FeedItemState extends State<FeedItem>
             ? widget.content.author.name[0].toUpperCase()
             : '?';
 
-    if (avatarUrl == null) { 
+    if (avatarUrl == null) {
       return CircleAvatar(
         backgroundColor: Colors.grey.shade300,
         child: Text(
@@ -1033,8 +1022,8 @@ class _FeedItemState extends State<FeedItem>
     return ClipOval(
       child: CachedNetworkImage(
         imageUrl: avatarUrl,
-        cacheKey: 'feed_avatar_${widget.content.author.id}', 
-        fit: BoxFit.cover, 
+        cacheKey: 'feed_avatar_${widget.content.author.id}',
+        fit: BoxFit.cover,
         fadeInDuration: const Duration(milliseconds: 150),
         placeholder:
             (ctx, url) => CircleAvatar(
@@ -1062,7 +1051,6 @@ class _FeedItemState extends State<FeedItem>
     );
   }
 
-   
   @override
   Widget build(BuildContext context) {
     final bool isOwnContent = _isAuthorCurrentUser();
@@ -1071,7 +1059,7 @@ class _FeedItemState extends State<FeedItem>
       duration: const Duration(milliseconds: 200),
       margin: const EdgeInsets.symmetric(vertical: 5),
       padding: const EdgeInsets.symmetric(horizontal: 8.0),
-      decoration: BoxDecoration( 
+      decoration: BoxDecoration(
         color: AppColors.whitecolor,
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(20.0),
@@ -1096,7 +1084,7 @@ class _FeedItemState extends State<FeedItem>
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [ 
+        children: [
           Row(
             children: [
               GestureDetector(
@@ -1170,11 +1158,10 @@ class _FeedItemState extends State<FeedItem>
                         padding: const EdgeInsets.all(8.0),
                         child: Row(
                           children: [
-                             
                             Expanded(
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
-                                children: [ 
+                                children: [
                                   Flexible(
                                     child: Text(
                                       widget.content.author.name,
@@ -1232,7 +1219,7 @@ class _FeedItemState extends State<FeedItem>
                                 ],
                               ),
                             ),
- 
+
                             InkWell(
                               borderRadius: BorderRadius.circular(12.0),
                               onTap: () {
@@ -1290,7 +1277,7 @@ class _FeedItemState extends State<FeedItem>
               ),
             ],
           ),
- 
+
           if (widget.content.status.isNotEmpty)
             Container(
               padding: EdgeInsets.only(
@@ -1360,11 +1347,11 @@ class _FeedItemState extends State<FeedItem>
                 ],
               ),
             ),
- 
+
           if (widget.content.isRepost &&
               widget.content.sharedPostDetails != null)
             SharedPostCard(details: widget.content.sharedPostDetails!),
- 
+
           if (!widget.content.isRepost && widget.content.files.isNotEmpty)
             Container(
               margin: EdgeInsets.symmetric(horizontal: 1.0),
@@ -1379,7 +1366,7 @@ class _FeedItemState extends State<FeedItem>
             thickness: 1.0,
           ),
           const SizedBox(height: 10),
- 
+
           Padding(
             padding: EdgeInsets.only(
               right: 10,
@@ -1387,7 +1374,7 @@ class _FeedItemState extends State<FeedItem>
               bottom: 13,
               // top: 10,
             ),
-            child: Row( 
+            child: Row(
               children: [
                 Row(
                   children: [
@@ -1400,7 +1387,7 @@ class _FeedItemState extends State<FeedItem>
                         widget.onLikeToggled(isLiked);
                         SoundPlayer().playlikeSound();
                       },
-                    ), 
+                    ),
                     GestureDetector(
                       onTap: () => _showReactionsList(context),
                       child: Text(
@@ -1411,7 +1398,7 @@ class _FeedItemState extends State<FeedItem>
                           fontSize: 11.0,
                         ),
                       ),
-                    ), 
+                    ),
                   ],
                 ),
                 const SizedBox(width: 30),
@@ -1465,7 +1452,7 @@ class _FeedItemState extends State<FeedItem>
                           ),
                         );
                       },
-                    ), 
+                    ),
                   ],
                 ),
                 const Spacer(),
@@ -1480,7 +1467,7 @@ class _FeedItemState extends State<FeedItem>
               ],
             ),
           ),
- 
+
           AnimatedSize(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
@@ -1496,7 +1483,7 @@ class _FeedItemState extends State<FeedItem>
                       ),
                       padding: const EdgeInsets.all(16.0),
                       child: CommentSection(
-                        contentId: widget.content.id, 
+                        contentId: widget.content.id,
                         onCommentCountChanged: (delta) {
                           setState(
                             () =>
@@ -1524,7 +1511,6 @@ class _FeedItemState extends State<FeedItem>
       builder: (_) => reeactionsheet(postId: widget.content.id),
     );
   }
- 
 
   Widget _buildMediaPreview() {
     final hasOptimizedImages = widget.content.optimizedFiles.any(
@@ -1744,7 +1730,7 @@ class _FeedItemState extends State<FeedItem>
         context,
         MaterialPageRoute(
           builder:
-              (_) => FacebookFullscreenPage( 
+              (_) => FacebookFullscreenPage(
                 url: selectedUrl,
                 thumbnailUrl: widget.content.thumbnailUrl,
               ),
@@ -1763,7 +1749,6 @@ class _FeedItemState extends State<FeedItem>
       ),
     );
   }
- 
 
   void _showShareOptions(BuildContext context) {
     final shareTextController = TextEditingController();
@@ -1945,8 +1930,6 @@ class _FeedItemState extends State<FeedItem>
     }
   }
 
-  
-
   void _showQuickSuggestions(BuildContext context) {
     showModalBottomSheet<String>(
       context: context,
@@ -2006,7 +1989,6 @@ class _FeedItemState extends State<FeedItem>
     });
   }
 
- 
   void _showQuickspecificSuggestions(BuildContext context) {
     showModalBottomSheet<String>(
       context: context,
@@ -2062,7 +2044,6 @@ class _FeedItemState extends State<FeedItem>
     });
   }
 
- 
   Future<void> _handleEditContent() async {
     final controller = TextEditingController(text: widget.content.status);
     final result = await showDialog<String>(
@@ -2142,7 +2123,7 @@ class _FeedItemState extends State<FeedItem>
         result.trim().isEmpty ||
         result == widget.content.status)
       return;
- 
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -2205,9 +2186,8 @@ class _FeedItemState extends State<FeedItem>
       );
     }
   }
- 
 
-  Future<void> _handleDeleteContent() async { 
+  Future<void> _handleDeleteContent() async {
     final confirm = await showDialog<bool>(
       context: context,
       builder:
@@ -2295,27 +2275,27 @@ class _FeedItemState extends State<FeedItem>
 
     if (confirm != true) return;
     if (!mounted) return;
- 
+
     showDialog(
       context: context,
       barrierDismissible: false,
       barrierColor: Colors.black26,
       builder: (_) => const _DeleteLoadingDialog(),
     );
- 
+
     final success = await ApiService.deleteFiles(
       widget.content.id,
       context: context,
     );
- 
+
     if (mounted && Navigator.canPop(context)) {
       Navigator.pop(context);
     }
 
     if (!mounted) return;
- 
+
     if (success) {
-      widget.onDeleted?.call();  
+      widget.onDeleted?.call();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Row(
@@ -2360,7 +2340,6 @@ class _FeedItemState extends State<FeedItem>
     }
   }
 
- 
   Future<void> _reportUser() async {
     String? selectedReason;
     String description = '';
@@ -2534,7 +2513,7 @@ class _FeedItemState extends State<FeedItem>
         );
         return;
       }
- 
+
       final response = await http
           .post(
             Uri.parse(
@@ -2634,7 +2613,6 @@ class _FeedItemState extends State<FeedItem>
     }
   }
 
- 
   Future<void> _blockUser() async {
     String? selectedReason;
     String description = '';
@@ -2903,7 +2881,6 @@ class _FeedItemState extends State<FeedItem>
   }
 }
 
- 
 class FullscreenVideoPage extends StatefulWidget {
   final String url;
   final String? thumbnail;
@@ -3305,7 +3282,7 @@ class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
       } else if (visibleFraction < 0.5) {
         _activeVideos.remove(videoId);
         if (_initialized && _controller != null) {
-          _controller!.pause(); 
+          _controller!.pause();
           _controller!.dispose();
           _controller = null;
           _initialized = false;
@@ -3565,7 +3542,7 @@ class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
     );
   }
 }
- 
+
 class _SBox extends StatelessWidget {
   final double? width;
   final double height;
@@ -3585,7 +3562,7 @@ class _SBox extends StatelessWidget {
     );
   }
 }
- 
+
 class _SCircle extends StatelessWidget {
   final double size;
   const _SCircle(this.size);
@@ -3611,7 +3588,7 @@ class _ShimmerCardTextOnly extends StatelessWidget {
     return _ShimmerWrapper(child: _PostSkeleton(showMedia: false));
   }
 }
- 
+
 class _ShimmerCardWithMedia extends StatelessWidget {
   const _ShimmerCardWithMedia();
 
@@ -3620,7 +3597,7 @@ class _ShimmerCardWithMedia extends StatelessWidget {
     return _ShimmerWrapper(child: _PostSkeleton(showMedia: true));
   }
 }
- 
+
 class _ShimmerWrapper extends StatelessWidget {
   final Widget child;
   const _ShimmerWrapper({required this.child});
@@ -3635,7 +3612,7 @@ class _ShimmerWrapper extends StatelessWidget {
     );
   }
 }
- 
+
 class _PostSkeleton extends StatelessWidget {
   final bool showMedia;
   const _PostSkeleton({required this.showMedia});
@@ -3672,9 +3649,9 @@ class _PostSkeleton extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
-          children: [ 
+          children: [
             Row(
-              children: [ 
+              children: [
                 Container(
                   padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
@@ -3686,7 +3663,7 @@ class _PostSkeleton extends StatelessWidget {
                   child: const _SCircle(40),
                 ),
                 const SizedBox(width: 10),
- 
+
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -3696,15 +3673,15 @@ class _PostSkeleton extends StatelessWidget {
                       _SBox(width: w * 0.20, height: 10, radius: 4),
                     ],
                   ),
-                ), 
+                ),
                 _SBox(width: 76, height: 26, radius: 20),
-                const SizedBox(width: 8), 
+                const SizedBox(width: 8),
                 const _SCircle(20),
               ],
             ),
 
             const SizedBox(height: 12),
- 
+
             _SBox(width: w * 0.85, height: 12, radius: 4),
             const SizedBox(height: 7),
             _SBox(width: w * 0.72, height: 12, radius: 4),
@@ -3712,11 +3689,11 @@ class _PostSkeleton extends StatelessWidget {
             _SBox(width: w * 0.52, height: 12, radius: 4),
 
             if (showMedia) ...[
-              const SizedBox(height: 12), 
+              const SizedBox(height: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
                 child: _SBox(
-                  width: double.infinity, 
+                  width: double.infinity,
                   height: (w - 16) * 0.72,
                   radius: 4,
                 ),
@@ -3724,7 +3701,7 @@ class _PostSkeleton extends StatelessWidget {
             ],
 
             const SizedBox(height: 12),
- 
+
             Container(
               height: 1,
               color: Colors.grey.shade200,
@@ -3732,21 +3709,21 @@ class _PostSkeleton extends StatelessWidget {
             ),
 
             const SizedBox(height: 12),
- 
+
             Row(
-              children: [ 
+              children: [
                 const _SCircle(18),
                 const SizedBox(width: 6),
                 _SBox(width: 48, height: 11, radius: 4),
 
                 const SizedBox(width: 20),
- 
+
                 const _SCircle(18),
                 const SizedBox(width: 6),
                 _SBox(width: 62, height: 11, radius: 4),
 
                 const Spacer(),
- 
+
                 const _SCircle(18),
               ],
             ),
@@ -3756,12 +3733,12 @@ class _PostSkeleton extends StatelessWidget {
     );
   }
 }
- 
+
 class _ShimmerFeedList extends StatelessWidget {
   const _ShimmerFeedList();
 
   @override
-  Widget build(BuildContext context) { 
+  Widget build(BuildContext context) {
     const pattern = [true, false, true, false, true];
     return ListView.builder(
       physics: const NeverScrollableScrollPhysics(),
@@ -3772,11 +3749,11 @@ class _ShimmerFeedList extends StatelessWidget {
     );
   }
 }
- 
+
 typedef _ShimmerFeedCard = _ShimmerCardTextOnly;
 
 typedef _ShimmerFeedCardWithMedia = _ShimmerCardWithMedia;
- 
+
 class _FeedRefreshBar extends StatelessWidget {
   const _FeedRefreshBar();
 
@@ -3795,7 +3772,6 @@ class _FeedRefreshBar extends StatelessWidget {
     );
   }
 }
- 
 
 class _DeleteLoadingDialog extends StatelessWidget {
   const _DeleteLoadingDialog();
@@ -3904,7 +3880,6 @@ class _SaveLoadingDialog extends StatelessWidget {
     );
   }
 }
- 
 
 class _LinkifyText extends StatelessWidget {
   final String text;

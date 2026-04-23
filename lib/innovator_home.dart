@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart'; // ← NEW
 import 'package:in_app_update/in_app_update.dart';
 import 'package:innovator/Innovator/provider/notification_provider.dart';
+import 'package:innovator/Innovator/provider/upload_provider.dart';
+import 'package:innovator/Innovator/screens/CreatePost/createpost.dart';
 import 'package:innovator/Innovator/screens/Feed/Inner_Homepage.dart';
 import 'package:innovator/Innovator/screens/Feed/Video_Feed.dart';
 import 'package:innovator/Innovator/widget/FloatingMenuwidget.dart';
@@ -150,17 +152,200 @@ class _HomepageState extends ConsumerState<Homepage>
     );
   }
 
+  // @override
+  // Widget build(BuildContext context) {
+  //   return Scaffold(
+  //     key: _scaffoldKey,
+  //     body: GestureDetector(
+  //       onHorizontalDragEnd: (DragEndDetails details) {
+  //         if (details.primaryVelocity! < -200) {
+  //           _navigateToVideoFeed();
+  //         }
+  //       },
+  //       child: Inner_HomePage(),
+  //     ),
+  //   );
+  // }
+
+
+  @override
+Widget build(BuildContext context) {
+  final isUploading = ref.watch(postUploadingProvider);
+  final uploadMessage = ref.watch(postUploadMessageProvider);
+
+  // Auto-clear success/error message after 3 seconds
+  if (uploadMessage != null) {
+    Future.microtask(() async {
+      await Future.delayed(const Duration(seconds: 3));
+      ref.read(postUploadMessageProvider.notifier).state = null;
+    });
+  }
+
+  return Scaffold(
+    key: _scaffoldKey,
+    body: Column(
+      children: [
+        // ✅ Upload banner at the very top
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 400),
+          child: isUploading
+              ? _UploadingBanner()                     
+              : uploadMessage != null
+                  ? _UploadResultBanner(message: uploadMessage)  
+                  : const SizedBox.shrink(),               
+        ),
+ 
+        Expanded(
+          child: GestureDetector(
+            onHorizontalDragEnd: (DragEndDetails details) {
+              if (details.primaryVelocity! < -200) {
+                _navigateToVideoFeed();
+              }
+            },
+            child: Inner_HomePage(),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+}
+
+ 
+class _UploadingBanner extends StatefulWidget {
+  @override
+  State<_UploadingBanner> createState() => _UploadingBannerState();
+}
+
+class _UploadingBannerState extends State<_UploadingBanner>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
+    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      key: _scaffoldKey,
-      body: GestureDetector(
-        onHorizontalDragEnd: (DragEndDetails details) {
-          if (details.primaryVelocity! < -200) {
-            _navigateToVideoFeed();
-          }
-        },
-        child: Inner_HomePage(),
+    return Container(
+      width: double.infinity,
+      color: const Color(0xFF1877F2),  
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [ 
+              Row(
+                children: [
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'Your post is uploading...',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ), 
+                  AnimatedBuilder(
+                    animation: _controller,
+                    builder: (_, __) {
+                      final dots = '.' * ((_controller.value * 3).floor() + 1);
+                      return Text(
+                        dots,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8), 
+              AnimatedBuilder(
+                animation: _animation,
+                builder: (_, __) => ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: null,  
+                    minHeight: 4,
+                    backgroundColor: Colors.white.withOpacity(0.25),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Colors.white.withOpacity(0.9),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+} 
+class _UploadResultBanner extends StatelessWidget {
+  final String message;
+  const _UploadResultBanner({required this.message});
+
+  bool get _isSuccess => message.contains('successfully');
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: _isSuccess ? Colors.green.shade600 : Colors.red.shade600,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            children: [
+              Icon(
+                _isSuccess ? Icons.check_circle : Icons.error_outline,
+                color: Colors.white,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  message,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
