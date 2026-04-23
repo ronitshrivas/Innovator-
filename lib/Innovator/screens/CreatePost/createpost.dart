@@ -1247,7 +1247,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
   List<Map<String, dynamic>> _categories = [];
   bool _categoriesLoading = true;
   String? _selectedCategoryId;
-
   final Color _primaryColor = const Color.fromRGBO(244, 135, 6, 1);
   final Color _facebookBlue = const Color(0xFF1877F2);
   final Color _backgroundColor = const Color(0xFFF0F2F5);

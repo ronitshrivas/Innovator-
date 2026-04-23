@@ -1237,7 +1237,6 @@ class _FeedItemState extends State<FeedItem>
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  // ✅ Flexible: shows FULL name by default.
                                   //    Adds ... ONLY when name is too long to fit beside the Follow button.
                                   Flexible(
                                     child: Text(
