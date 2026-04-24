@@ -1161,28 +1161,37 @@ class _FeedItemState extends State<FeedItem>
                             Expanded(
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Flexible(
-                                    child: Text(
-                                      widget.content.author.name,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 16.0,
-                                        fontFamily: 'InterThin',
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
+                                    child: Row(
+                                      children: [
+                                        Text(
+                                          widget.content.author.name,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 16.0,
+                                            fontFamily: 'InterThin',
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        SizedBox(width: 5),
+                                        Container(
+                                          width: 4.0,
+                                          height: 4.0,
+                                          decoration: BoxDecoration(
+                                            color: _getTypeColor(
+                                              widget.content.type,
+                                            ),
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  const SizedBox(width: 5),
-                                  Container(
-                                    width: 4.0,
-                                    height: 4.0,
-                                    decoration: BoxDecoration(
-                                      color: _getTypeColor(widget.content.type),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
+
                                   const SizedBox(width: 8.0),
                                   if (!isOwnContent)
                                     GestureDetector(
@@ -1525,7 +1534,7 @@ class _FeedItemState extends State<FeedItem>
               .where((url) => url != null)
               .map((url) => widget.content.formatUrl(url))
               .toList();
-      if (imageUrls.isNotEmpty) return _buildImageGallery(imageUrls);
+      if (imageUrls.isNotEmpty) return _buildFacebookImageGrid(imageUrls);
     }
 
     final mediaUrls = widget.content.mediaUrls;
@@ -1533,7 +1542,8 @@ class _FeedItemState extends State<FeedItem>
 
     if (mediaUrls.length == 1) {
       final fileUrl = mediaUrls.first;
-      if (FileTypeHelper.isImage(fileUrl)) return _buildSingleImage(fileUrl);
+      if (FileTypeHelper.isImage(fileUrl))
+        return _buildFacebookImageGrid([fileUrl]);
       if (FileTypeHelper.isVideo(fileUrl)) {
         return FacebookVideoWidget(
           url: fileUrl,
@@ -1559,7 +1569,235 @@ class _FeedItemState extends State<FeedItem>
         );
       }
     }
-    return _buildImageGallery(mediaUrls);
+
+    return _buildFacebookImageGrid(mediaUrls);
+  }
+
+  Widget _buildFacebookImageGrid(List<String> urls) {
+    final n = urls.length;
+    if (n == 0) return const SizedBox.shrink();
+    if (n == 1) return _fbSingleImage(urls[0], urls);
+    final showCount = n > 5 ? 5 : n;
+    final extraCount = n > 5 ? n - 4 : 0;
+
+    if (n == 2) {
+      return SizedBox(
+        height: 240,
+        child: Row(
+          children: [
+            Expanded(child: _fbTile(urls[0], 0, urls, double.infinity)),
+            const SizedBox(width: 2),
+            Expanded(child: _fbTile(urls[1], 1, urls, double.infinity)),
+          ],
+        ),
+      );
+    }
+
+    if (n == 3) {
+      return SizedBox(
+        height: 400,
+        child: Column(
+          children: [
+            SizedBox(
+              height: 240,
+              child: _fbTile(urls[0], 0, urls, double.infinity),
+            ),
+            const SizedBox(height: 2),
+            Expanded(
+              child: Row(
+                children: [
+                  Expanded(child: _fbTile(urls[1], 1, urls, double.infinity)),
+                  const SizedBox(width: 2),
+                  Expanded(child: _fbTile(urls[2], 2, urls, double.infinity)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (n == 4) {
+      return SizedBox(
+        height: 362,
+        child: Column(
+          children: [
+            SizedBox(
+              height: 240,
+              child: _fbTile(urls[0], 0, urls, double.infinity),
+            ),
+            const SizedBox(height: 2),
+            Expanded(
+              child: Row(
+                children: [
+                  Expanded(child: _fbTile(urls[1], 1, urls, double.infinity)),
+                  const SizedBox(width: 2),
+                  Expanded(child: _fbTile(urls[2], 2, urls, double.infinity)),
+                  const SizedBox(width: 2),
+                  Expanded(child: _fbTile(urls[3], 3, urls, double.infinity)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 422,
+      child: Column(
+        children: [
+          SizedBox(
+            height: 240,
+            child: _fbTile(urls[0], 0, urls, double.infinity),
+          ),
+          const SizedBox(height: 2),
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(child: _fbTile(urls[1], 1, urls, double.infinity)),
+                const SizedBox(width: 2),
+                Expanded(child: _fbTile(urls[2], 2, urls, double.infinity)),
+                const SizedBox(width: 2),
+                Expanded(child: _fbTile(urls[3], 3, urls, double.infinity)),
+                const SizedBox(width: 2),
+                Expanded(
+                  child: _fbTile(
+                    urls[4],
+                    4,
+                    urls,
+                    double.infinity,
+                    extraCount: extraCount > 0 ? extraCount : null,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _fbSingleImage(String url, List<String> allUrls) {
+    return GestureDetector(
+      onTap: () => _openMediaGallery(context, allUrls, 0),
+      child: CachedNetworkImage(
+        imageUrl: url,
+        filterQuality: FilterQuality.high,
+        fit: BoxFit.contain,
+        width: double.infinity,
+        memCacheWidth: (MediaQuery.of(context).size.width * 1.5).toInt(),
+        placeholder:
+            (_, __) => Container(
+              height: 280,
+              color: Colors.grey[200],
+              child: Center(
+                child: SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: Image.asset(
+                    'animation/IdeaBulb.gif',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ),
+        errorWidget:
+            (_, __, ___) => Container(
+              height: 280,
+              color: Colors.grey[200],
+              child: const Icon(Icons.broken_image, color: Colors.grey),
+            ),
+      ),
+    );
+  }
+
+  Widget _fbTile(
+    String url,
+    int index,
+    List<String> allUrls,
+    double height, {
+    int? extraCount,
+  }) {
+    return GestureDetector(
+      onTap: () => _openMediaGallery(context, allUrls, index),
+      child: ClipRect(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            CachedNetworkImage(
+              imageUrl: url,
+              fit: BoxFit.cover,
+              memCacheWidth: (MediaQuery.of(context).size.width * 0.6).toInt(),
+              placeholder:
+                  (_, __) => Container(
+                    color: Colors.grey[200],
+                    child: Center(
+                      child: SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: Image.asset(
+                          'animation/IdeaBulb.gif',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  ),
+              errorWidget:
+                  (_, __, ___) => Container(
+                    color: Colors.grey[200],
+                    child: const Icon(Icons.broken_image, color: Colors.grey),
+                  ),
+            ),
+            if (extraCount != null && extraCount > 0)
+              Container(
+                color: Colors.black.withOpacity(0.52),
+                child: Center(
+                  child: Text(
+                    '+$extraCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openMediaGallery(
+    BuildContext context,
+    List<String> mediaUrls,
+    int initialIndex,
+  ) {
+    final selectedUrl = mediaUrls[initialIndex];
+    if (FileTypeHelper.isVideo(selectedUrl)) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (_) => FacebookFullscreenPage(
+                url: selectedUrl,
+                thumbnailUrl: widget.content.thumbnailUrl,
+              ),
+        ),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (_) => OptimizedMediaGalleryScreen(
+              mediaUrls: mediaUrls,
+              initialIndex: initialIndex,
+            ),
+      ),
+    );
   }
 
   Widget _buildSingleImage(String url) => GestureDetector(

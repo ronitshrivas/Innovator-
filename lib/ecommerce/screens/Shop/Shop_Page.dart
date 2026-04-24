@@ -21,7 +21,7 @@ class _ShopPageState extends ConsumerState<ShopPage> {
   String _searchQuery = '';
   String sortBy = 'name';
   bool ascending = true;
-  int cartCount = 0;
+  String? _selectedCategory;
 
   static final _skeletonProducts = List.generate(
     6,
@@ -45,14 +45,34 @@ class _ShopPageState extends ConsumerState<ShopPage> {
     setState(() => _searchQuery = _searchController.text.toLowerCase());
   }
 
+  List<String> _extractCategories(List<ProductModel> products) {
+    final categories =
+        products
+            .where((p) => p.categoryDetails?.name != null)
+            .map((p) => p.categoryDetails!.name!)
+            .toSet()
+            .toList()
+          ..sort();
+    return categories;
+  }
+
   List<ProductModel> _getFilteredAndSorted(List<ProductModel> products) {
     var filtered = List<ProductModel>.from(products);
+
     if (_searchQuery.isNotEmpty) {
       filtered =
           filtered
               .where((p) => p.name.toLowerCase().contains(_searchQuery))
               .toList();
     }
+
+    if (_selectedCategory != null) {
+      filtered =
+          filtered
+              .where((p) => p.categoryDetails?.name == _selectedCategory)
+              .toList();
+    }
+
     filtered.sort((a, b) {
       int comparison = 0;
       if (sortBy == 'name') {
@@ -64,13 +84,13 @@ class _ShopPageState extends ConsumerState<ShopPage> {
       }
       return ascending ? comparison : -comparison;
     });
+
     return filtered;
   }
 
   Future<void> _addToCart(ProductModel product) async {
     try {
       await ref.read(productServiceProvider).addCartItem(product: product.id);
-
       ref.refresh(cartListProvider);
       if (!mounted) return;
       _showSnackBar(
@@ -214,6 +234,55 @@ class _ShopPageState extends ConsumerState<ShopPage> {
     );
   }
 
+  Widget _buildCategoryTabs(List<String> categories) {
+    return SizedBox(
+      height: 36,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 0),
+        itemCount: categories.length + 1,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final isAll = index == 0;
+          final label = isAll ? 'All' : categories[index - 1];
+          final isSelected =
+              isAll ? _selectedCategory == null : _selectedCategory == label;
+
+          return GestureDetector(
+            onTap:
+                () => setState(() => _selectedCategory = isAll ? null : label),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color:
+                    isSelected
+                        ? const Color.fromRGBO(244, 135, 6, 1)
+                        : Colors.grey[100],
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color:
+                      isSelected
+                          ? const Color.fromRGBO(244, 135, 6, 1)
+                          : Colors.grey.shade300,
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? Colors.white : Colors.grey[700],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -223,6 +292,8 @@ class _ShopPageState extends ConsumerState<ShopPage> {
   @override
   Widget build(BuildContext context) {
     final productAsync = ref.watch(productListProvider);
+
+    const double topAreaHeight = 130.0 + 36.0 + 10.0;
 
     return Scaffold(
       floatingActionButton: Container(
@@ -258,7 +329,7 @@ class _ShopPageState extends ConsumerState<ShopPage> {
         children: [
           Column(
             children: [
-              const SizedBox(height: 130),
+              SizedBox(height: topAreaHeight),
               Expanded(
                 child: productAsync.when(
                   loading:
@@ -313,6 +384,8 @@ class _ShopPageState extends ConsumerState<ShopPage> {
                             Text(
                               _searchQuery.isNotEmpty
                                   ? 'No products found'
+                                  : _selectedCategory != null
+                                  ? 'No products in "$_selectedCategory"'
                                   : 'No products available',
                               style: TextStyle(
                                 fontSize: 18,
@@ -336,105 +409,125 @@ class _ShopPageState extends ConsumerState<ShopPage> {
             ],
           ),
 
-          // Top search bar
           Positioned(
             top: MediaQuery.of(context).padding.top + 10,
             left: 16,
             right: 16,
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'Search products...',
-                        hintStyle: TextStyle(color: Colors.grey[600]),
-                        suffixIcon:
-                            _searchQuery.isNotEmpty
-                                ? IconButton(
-                                  icon: const Icon(Icons.clear, size: 20),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() => _searchQuery = '');
-                                  },
-                                )
-                                : Icon(Icons.search, color: Colors.grey[600]),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                IconButton(
-                  onPressed: _showSortBottomSheet,
-                  icon: Stack(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(10),
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.grey.shade300),
                         ),
-                        child: const Icon(
-                          Icons.settings_input_component,
-                          size: 18,
-                          color: Colors.black,
-                        ),
-                      ),
-                      if (sortBy != 'name' || !ascending)
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: const BoxDecoration(
-                              color: Colors.blue,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.check,
-                              size: 8,
-                              color: Colors.white,
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            hintText: 'Search products...',
+                            hintStyle: TextStyle(color: Colors.grey[600]),
+                            suffixIcon:
+                                _searchQuery.isNotEmpty
+                                    ? IconButton(
+                                      icon: const Icon(Icons.clear, size: 20),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() => _searchQuery = '');
+                                      },
+                                    )
+                                    : Icon(
+                                      Icons.search,
+                                      color: Colors.grey[600],
+                                    ),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
                             ),
                           ),
                         ),
-                    ],
-                  ),
-                ),
-                InkWell(
-                  onTap:
-                      () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const EcommerceNotificationScreen(),
-                        ),
                       ),
-                  child: Consumer(
-                    builder: (context, ref, _) {
-                      final unreadAsync = ref.watch(
-                        ecommerceUnreadCountProvider,
-                      );
-                      final count = unreadAsync;
-                      return count > 0
-                          ? Badge.count(
-                            count: count,
-                            child: const Icon(
-                              Icons.notifications_outlined,
-                              size: 25,
+                    ),
+                    IconButton(
+                      onPressed: _showSortBottomSheet,
+                      icon: Stack(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                          )
-                          : const Icon(Icons.notifications_outlined, size: 25);
-                    },
-                  ),
+                            child: const Icon(
+                              Icons.settings_input_component,
+                              size: 18,
+                              color: Colors.black,
+                            ),
+                          ),
+                          if (sortBy != 'name' || !ascending)
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: const BoxDecoration(
+                                  color: Colors.blue,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.check,
+                                  size: 8,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    InkWell(
+                      onTap:
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => const EcommerceNotificationScreen(),
+                            ),
+                          ),
+                      child: Consumer(
+                        builder: (context, ref, _) {
+                          final count = ref.watch(ecommerceUnreadCountProvider);
+                          return count > 0
+                              ? Badge.count(
+                                count: count,
+                                child: const Icon(
+                                  Icons.notifications_outlined,
+                                  size: 25,
+                                ),
+                              )
+                              : const Icon(
+                                Icons.notifications_outlined,
+                                size: 25,
+                              );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 15),
+
+                productAsync.when(
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, __) => const SizedBox.shrink(),
+                  data: (products) {
+                    final categories = _extractCategories(products);
+                    if (categories.isEmpty) return const SizedBox.shrink();
+                    return _buildCategoryTabs(categories);
+                  },
                 ),
               ],
             ),
@@ -479,7 +572,6 @@ class _ShopPageState extends ConsumerState<ShopPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Image
               Container(
                 height: 140,
                 width: double.infinity,
@@ -506,8 +598,6 @@ class _ShopPageState extends ConsumerState<ShopPage> {
                           ),
                         ),
               ),
-
-              // Details
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(10),
@@ -546,8 +636,9 @@ class _ShopPageState extends ConsumerState<ShopPage> {
                             ),
                           ),
                         ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Text(
                             'Rs ${price.toInt()}',
@@ -569,8 +660,6 @@ class _ShopPageState extends ConsumerState<ShopPage> {
                           ),
                         ],
                       ),
-
-                      // Add to Cart button
                       SizedBox(
                         width: double.infinity,
                         height: 34,
