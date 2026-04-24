@@ -152,21 +152,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         if (!mounted) return;
         _navigateAfterLogin(user);
 
-        // WidgetsBinding.instance.addPostFrameCallback((_) async {
-        //   final fcmToken = await FirebaseMessaging.instance.getToken();
-        //   developer.log('FCM TOKEN IS: $fcmToken');
-        //   if (fcmToken == null) return;
-        //   await Future.wait([
-        //     FCMService().registerToken(),
-        //     ref
-        //         .read(elearningNotificationServiceProvider)
-        //         .registerFcmToken(fcmToken),
-        //     ref
-        //         .read(ecommerceNotificationServiceProvider)
-        //         .registerFcmToken(fcmToken),
-        //   ]);
-        // });
-
         final elearningNotif = ref.read(elearningNotificationServiceProvider);
         final ecommerceNotif = ref.read(ecommerceNotificationServiceProvider);
 
@@ -174,13 +159,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         _navigateAfterLogin(user);
 
         WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if (!mounted) return;
           final fcmToken = await FirebaseMessaging.instance.getToken();
           developer.log('FCM TOKEN IS: $fcmToken');
           if (fcmToken == null) return;
+          if (!mounted) return;  
           await Future.wait([
             FCMService().registerToken(),
-            elearningNotif.registerFcmToken(fcmToken),
-            ecommerceNotif.registerFcmToken(fcmToken),
+            ref
+                .read(elearningNotificationServiceProvider)
+                .registerFcmToken(fcmToken),
+            ref
+                .read(ecommerceNotificationServiceProvider)
+                .registerFcmToken(fcmToken),
           ]);
         });
       } else {
@@ -331,23 +322,24 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
         developer.log('SSO login saved. User: $user');
 
-        final elearningNotif = ref.read(elearningNotificationServiceProvider);
-        final ecommerceNotif = ref.read(ecommerceNotificationServiceProvider);
-
         if (mounted) _navigateAfterLogin(user);
 
         WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if (!mounted) return;
           final fcmToken = await FirebaseMessaging.instance.getToken();
           developer.log('FCM TOKEN after Google login: $fcmToken');
           if (fcmToken == null) return;
+          if (!mounted) return;  
           await Future.wait([
             FCMService().registerToken(),
-            elearningNotif.registerFcmToken(fcmToken),
-            ecommerceNotif.registerFcmToken(fcmToken),
+            ref
+                .read(elearningNotificationServiceProvider)
+                .registerFcmToken(fcmToken),
+            ref
+                .read(ecommerceNotificationServiceProvider)
+                .registerFcmToken(fcmToken),
           ]);
         });
-
-        if (mounted) _navigateAfterLogin(user);
       } else {
         // Parse backend error message
         Map<String, dynamic>? errorData;

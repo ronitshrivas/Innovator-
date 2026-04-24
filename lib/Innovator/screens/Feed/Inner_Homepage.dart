@@ -40,10 +40,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 import '../../models/Feed_Content_Model.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helper classes
-// ─────────────────────────────────────────────────────────────────────────────
-
 class ContentResponse {
   final int status;
   final ContentData data;
@@ -254,10 +250,6 @@ class FeedApiService {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ContentData
-// ─────────────────────────────────────────────────────────────────────────────
-
 class ContentData {
   final List<FeedContent> contents;
   final bool hasMore;
@@ -272,15 +264,12 @@ class ContentData {
   factory ContentData.fromNewFeedApi(dynamic rawJson) {
     try {
       List<dynamic> postList = [];
-      String? nextCursor; // full URL for the next page
+      String? nextCursor;
       bool hasMore = false;
 
       if (rawJson is List) {
-        // Plain flat array (legacy responses)
         postList = rawJson;
       } else if (rawJson is Map<String, dynamic>) {
-        // Cursor-paginated DRF response:
-        //   { "next": "http://…?cursor=…", "previous": "…", "results": [...] }
         hasMore = rawJson['has_next'] == true;
         final rawCursor = rawJson['next_cursor'];
         if (hasMore && rawCursor != null) {
@@ -328,10 +317,6 @@ class ContentData {
       ContentData.fromNewFeedApi(json);
 
   static void _cacheAuthors(List<FeedContent> contents) {
-    // Phase 1 — batch-insert every author from this page into the controller's
-    // HashMap in a single O(n) pass.  Avatar URLs from the new API are already
-    // absolute, so no URL-building is done here.  This runs synchronously
-    // before the first frame is painted — same as Facebook's feed pre-loading.
     try {
       if (!Get.isRegistered<UserController>()) return;
       final uc = Get.find<UserController>();
@@ -352,10 +337,6 @@ class ContentData {
   bool get isEmpty => contents.isEmpty;
   int get totalCount => contents.length;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Inner_HomePage
-// ─────────────────────────────────────────────────────────────────────────────
 
 class Inner_HomePage extends ConsumerStatefulWidget {
   const Inner_HomePage({Key? key}) : super(key: key);
@@ -404,7 +385,6 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
   void initState() {
     super.initState();
     if (!Get.isRegistered<UserController>()) Get.put(UserController());
-    // _requestNotificationPermission();
     _initializeInfiniteScroll();
     _checkConnectivity();
   }
@@ -415,8 +395,6 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
     _scrollController.dispose();
     super.dispose();
   }
-
-  // ── Initialization ─────────────────────────────────────────────────────────
 
   Future<void> _initializeInfiniteScroll() async {
     try {
@@ -480,10 +458,6 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
   }
 
   void _preloadVisibleUsers() {
-    // Phase 2 — parallel avatar prefetch using Future.wait.
-    // All N images are fetched concurrently (not sequentially), so the entire
-    // first screenful of avatars is ready before the user even scrolls —
-    // the same technique Instagram uses for feed thumbnails.
     if (_allContents.isEmpty) return;
     try {
       final uc = Get.find<UserController>();
@@ -504,8 +478,6 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
     }
   }
 
-  // ── Load ───────────────────────────────────────────────────────────────────
-
   Future<void> _loadInitialContent() async {
     developer.log('[Feed] Loading initial content...');
     setState(() {
@@ -525,7 +497,7 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
         setState(() {
           _allContents.clear();
           _allContents.addAll(data.contents);
-          _nextCursor = data.nextCursor; // full URL or null
+          _nextCursor = data.nextCursor;
           _hasMoreContent = data.hasMore;
           _isLoading = false;
           _currentOffset = data.contents.length;
@@ -550,7 +522,6 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
     });
     _lastLoadTime = DateTime.now();
     try {
-      // Pass the full next-page URL returned by the server
       final data = await FeedApiService.fetchContents(
         cursor: _nextCursor,
         limit: 20,
@@ -559,7 +530,7 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
       if (mounted) {
         setState(() {
           _allContents.addAll(data.contents);
-          _nextCursor = data.nextCursor; // update cursor for next page
+          _nextCursor = data.nextCursor;
           _hasMoreContent = data.hasMore;
           _isLoading = false;
           _isLoadingMore = false;
@@ -666,8 +637,6 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
     }
   }
 
-  // ── Auth / Connectivity ────────────────────────────────────────────────────
-
   Future<bool> _verifyToken() async {
     try {
       if (_appData.accessToken == null || _appData.accessToken!.isEmpty) {
@@ -694,22 +663,21 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
   Future<void> _checkConnectivity() async {
     try {
       final result = await InternetAddress.lookup('google.com');
-      if (!mounted) return; // ← ADD THIS
+      if (!mounted) return;
       setState(() {
         _isOnline = result.isNotEmpty && result[0].rawAddress.isNotEmpty;
       });
       if (_isOnline) _refresh();
     } on SocketException catch (_) {
-      if (!mounted) return; // ← ADD THIS
+      if (!mounted) return;
       setState(() => _isOnline = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // final realtimeUnread = ref.watch(perFriendUnreadProvider);
-    //final unreadCount = realtimeUnread.values.fold(0, (a, b) => a + b);
     final unreadCount = ref.watch(chatUnreadCountProvider);
+
     return Scaffold(
       backgroundColor: AppColors.whitecolor,
       body: CustomRefreshIndicator(
@@ -718,7 +686,7 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
         child: _buildContent(),
       ),
       floatingActionButton: CountBadgeFAB(
-        count: unreadCount, // ← real-time total
+        count: unreadCount,
         gifAsset: 'animation/chaticon.gif',
         backgroundColor: Colors.transparent,
         onPressed: () {
@@ -728,7 +696,6 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
             MaterialPageRoute(builder: (_) => const ChatListScreen()),
           ).then((_) {
             ref.invalidate(mutualFriendsProvider);
-            //ref.read(mutualFriendsProvider.notifier).refresh();
           });
         },
       ),
@@ -736,7 +703,6 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
   }
 
   Widget _buildContent() {
-    // Show shimmer skeleton on initial load AND during pull-to-refresh
     if ((_isInitialLoad || _isLoading) && _allContents.isEmpty) {
       return _buildShimmerList();
     }
@@ -744,9 +710,7 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
     return _buildInfiniteScrollList();
   }
 
-  // Kept for API compat — actual initial load now uses _buildShimmerList()
   Widget _buildInitialLoadingState() => _buildShimmerList();
-  // Returns a scrollable list of shimmer skeleton cards
   Widget _buildShimmerList() => const _ShimmerFeedList();
 
   Widget _buildErrorState() => Center(
@@ -803,8 +767,6 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
             ),
           ],
         ),
-        // During refresh when we already have content, show a thin
-        // orange progress bar at the top instead of blocking the feed
         if (_isLoading && _allContents.isNotEmpty)
           const Positioned(top: 0, left: 0, right: 0, child: _FeedRefreshBar()),
       ],
@@ -842,9 +804,6 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
     if (adjusted == _allContents.length && _isLoading) {
       return _buildLoadingIndicator();
     }
-    // if (adjusted == _allContents.length && _shouldShowEndMessage()) {
-    //   return _buildEndMessage();
-    // }
     return const SizedBox.shrink();
   }
 
@@ -857,7 +816,6 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
           if (!mounted) return;
           setState(() {
             final hadReaction = _reactionState[content.id] ?? content.isLiked;
-            // Only change count when presence changes (not on type switch 👍→❤️)
             if (hasReaction && !hadReaction) {
               content.likes = (content.likes + 1).clamp(0, 999999);
             } else if (!hasReaction && hadReaction) {
@@ -870,7 +828,6 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
         onFollowToggled: (isFollowed) {
           if (!mounted) return;
           setState(() {
-            // Update ALL posts by same author — not just this one card
             final authorId = content.author.id;
             for (final c in _allContents) {
               if (c.author.id == authorId) {
@@ -885,46 +842,16 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
         onStatusUpdated: (newStatus) {
           if (mounted) setState(() => content.status = newStatus);
         },
-        // onCommentAdded: () {
-        //   if (mounted) setState(() => content.comments++);
-        // },
       ),
     );
   }
 
-  // Bottom-of-list indicator: shows 2 shimmer cards while loading more
   Widget _buildLoadingIndicator() =>
       Column(children: [const _ShimmerFeedCard(), const _ShimmerFeedCard()]);
-
-  // Widget _buildEndMessage() => Container(
-  //   padding: const EdgeInsets.all(20),
-  //   child: Column(
-  //     children: [
-  //       Icon(Icons.check_circle_outline, color: Colors.grey[400], size: 32),
-  //       const SizedBox(height: 8),
-  //       Text(
-  //         "You're all caught up!",
-  //         style: TextStyle(
-  //           color: Colors.grey[600],
-  //           fontSize: 16,
-  //           fontWeight: FontWeight.w500,
-  //         ),
-  //       ),
-  //       Text(
-  //         'No more posts to show',
-  //         style: TextStyle(color: Colors.grey[400], fontSize: 12),
-  //       ),
-  //     ],
-  //   ),
-  // );
 
   bool _shouldShowEndMessage() =>
       !_isLoading && !_hasMoreContent && _allContents.isNotEmpty;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// FeedItem
-// ─────────────────────────────────────────────────────────────────────────────
 
 class FeedItem extends StatefulWidget {
   final FeedContent content;
@@ -956,7 +883,6 @@ class _FeedItemState extends State<FeedItem>
   late AnimationController _controller;
   late String formattedTimeAgo;
   bool _showComments = false;
-  // final List<RepostEntry> _entries = [];
 
   final ContentLikeService likeService = ContentLikeService(
     baseUrl: 'http://36.253.137.34:8005',
@@ -1069,12 +995,7 @@ class _FeedItemState extends State<FeedItem>
     }
   }
 
-  // ── Avatar ────────────────────────────────────────────────────────────────
-
   Widget _buildAuthorAvatar() {
-    // Single source of truth: post['avatar'] field, already absolute URL.
-    // Same logic for every user — own or other. No controller, no cache lookup.
-    // CachedNetworkImage handles memory + disk caching with its own stable key.
     final avatarUrl =
         widget.content.author.picture.isNotEmpty
             ? widget.content.author.picture
@@ -1085,7 +1006,6 @@ class _FeedItemState extends State<FeedItem>
             : '?';
 
     if (avatarUrl == null) {
-      // No avatar in API response — show initial letter
       return CircleAvatar(
         backgroundColor: Colors.grey.shade300,
         child: Text(
@@ -1103,11 +1023,7 @@ class _FeedItemState extends State<FeedItem>
       child: CachedNetworkImage(
         imageUrl: avatarUrl,
         cacheKey: 'feed_avatar_${widget.content.author.id}',
-        // width: 44,
-        // height: 44,
         fit: BoxFit.cover,
-        // memCacheWidth: 88,
-        // memCacheHeight: 88,
         fadeInDuration: const Duration(milliseconds: 150),
         placeholder:
             (ctx, url) => CircleAvatar(
@@ -1135,8 +1051,6 @@ class _FeedItemState extends State<FeedItem>
     );
   }
 
-  // ── Main build ────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     final bool isOwnContent = _isAuthorCurrentUser();
@@ -1146,10 +1060,6 @@ class _FeedItemState extends State<FeedItem>
       margin: const EdgeInsets.symmetric(vertical: 5),
       padding: const EdgeInsets.symmetric(horizontal: 8.0),
       decoration: BoxDecoration(
-        // border: Border(
-        //   top: BorderSide(color: Colors.grey.shade200, width: 1.0),
-        //   bottom: BorderSide(color: Colors.grey.shade200, width: 1.0),
-        // ),
         color: AppColors.whitecolor,
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(20.0),
@@ -1175,7 +1085,6 @@ class _FeedItemState extends State<FeedItem>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Row(
             children: [
               GestureDetector(
@@ -1249,68 +1158,68 @@ class _FeedItemState extends State<FeedItem>
                         padding: const EdgeInsets.all(8.0),
                         child: Row(
                           children: [
-                            FittedBox(
-                              child: Text(
-                                widget.content.author.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16.0,
-                                  fontFamily: 'InterThin',
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
+                            Expanded(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      widget.content.author.name,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 16.0,
+                                        fontFamily: 'InterThin',
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Container(
+                                    width: 4.0,
+                                    height: 4.0,
+                                    decoration: BoxDecoration(
+                                      color: _getTypeColor(widget.content.type),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8.0),
+                                  if (!isOwnContent)
+                                    GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: () {},
+                                      child: FollowButton(
+                                        targetUserId: widget.content.author.id,
+                                        initialFollowStatus:
+                                            widget.content.isFollowed,
+                                        onFollowSuccess: () {
+                                          SoundPlayer().FollowSound();
+                                          if (mounted) {
+                                            setState(
+                                              () =>
+                                                  widget.content.isFollowed =
+                                                      true,
+                                            );
+                                            widget.onFollowToggled(true);
+                                          }
+                                        },
+                                        onUnfollowSuccess: () {
+                                          SoundPlayer().FollowSound();
+                                          if (mounted) {
+                                            setState(
+                                              () =>
+                                                  widget.content.isFollowed =
+                                                      false,
+                                            );
+                                            widget.onFollowToggled(false);
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                ],
                               ),
                             ),
-                            const SizedBox(width: 5),
-                            Container(
-                              width: 4.0,
-                              height: 4.0,
-                              decoration: BoxDecoration(
-                                color: _getTypeColor(widget.content.type),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            SizedBox(width: 8.0),
-                            if (!isOwnContent) ...[
-                              // GestureDetector here absorbs taps so the
-                              // parent's onTap (navigate to profile) is NOT
-                              // triggered when the Follow button is pressed.
-                              GestureDetector(
-                                behavior: HitTestBehavior.opaque,
-                                onTap:
-                                    () {}, // absorb — FollowButton handles its own tap
-                                child: FollowButton(
-                                  targetUserId: widget.content.author.id,
-                                  initialFollowStatus:
-                                      widget.content.isFollowed,
-                                  onFollowSuccess: () {
-                                    SoundPlayer().FollowSound();
-                                    developer.log(
-                                      'Follow success: \${widget.content.author.name}',
-                                    );
-                                    if (mounted) {
-                                      setState(
-                                        () => widget.content.isFollowed = true,
-                                      );
-                                      widget.onFollowToggled(true);
-                                    }
-                                  },
-                                  onUnfollowSuccess: () {
-                                    SoundPlayer().FollowSound();
-                                    developer.log(
-                                      'Unfollow success: \${widget.content.author.name}',
-                                    );
-                                    if (mounted) {
-                                      setState(
-                                        () => widget.content.isFollowed = false,
-                                      );
-                                      widget.onFollowToggled(false);
-                                    }
-                                  },
-                                ),
-                              ),
-                            ],
-                            const Spacer(),
+
                             InkWell(
                               borderRadius: BorderRadius.circular(12.0),
                               onTap: () {
@@ -1369,7 +1278,6 @@ class _FeedItemState extends State<FeedItem>
             ],
           ),
 
-          // Content
           if (widget.content.status.isNotEmpty)
             Container(
               padding: EdgeInsets.only(
@@ -1440,12 +1348,10 @@ class _FeedItemState extends State<FeedItem>
               ),
             ),
 
-          // Media
           if (widget.content.isRepost &&
               widget.content.sharedPostDetails != null)
             SharedPostCard(details: widget.content.sharedPostDetails!),
 
-          // Own media (only shown when NOT a repost)
           if (!widget.content.isRepost && widget.content.files.isNotEmpty)
             Container(
               margin: EdgeInsets.symmetric(horizontal: 1.0),
@@ -1461,7 +1367,6 @@ class _FeedItemState extends State<FeedItem>
           ),
           const SizedBox(height: 10),
 
-          // Action bar
           Padding(
             padding: EdgeInsets.only(
               right: 10,
@@ -1470,7 +1375,6 @@ class _FeedItemState extends State<FeedItem>
               // top: 10,
             ),
             child: Row(
-              //mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 Row(
                   children: [
@@ -1484,7 +1388,6 @@ class _FeedItemState extends State<FeedItem>
                         SoundPlayer().playlikeSound();
                       },
                     ),
-                    //const SizedBox(width: 10),
                     GestureDetector(
                       onTap: () => _showReactionsList(context),
                       child: Text(
@@ -1496,7 +1399,6 @@ class _FeedItemState extends State<FeedItem>
                         ),
                       ),
                     ),
-                    //_buildReactionBubbles(),
                   ],
                 ),
                 const SizedBox(width: 30),
@@ -1551,8 +1453,6 @@ class _FeedItemState extends State<FeedItem>
                         );
                       },
                     ),
-                    // CountPill(count: _entries.length),
-                    //CountPill(count: widget.content., label: 'Reposts'),
                   ],
                 ),
                 const Spacer(),
@@ -1568,7 +1468,6 @@ class _FeedItemState extends State<FeedItem>
             ),
           ),
 
-          // Comments
           AnimatedSize(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
@@ -1585,11 +1484,6 @@ class _FeedItemState extends State<FeedItem>
                       padding: const EdgeInsets.all(16.0),
                       child: CommentSection(
                         contentId: widget.content.id,
-
-                        // onCommentAdded: () {
-                        //   setState(() => widget.content.comments++);
-                        //   widget.onCommentAdded?.call();
-                        // },
                         onCommentCountChanged: (delta) {
                           setState(
                             () =>
@@ -1617,8 +1511,6 @@ class _FeedItemState extends State<FeedItem>
       builder: (_) => reeactionsheet(postId: widget.content.id),
     );
   }
-
-  // ── Media ─────────────────────────────────────────────────────────────────
 
   Widget _buildMediaPreview() {
     final hasOptimizedImages = widget.content.optimizedFiles.any(
@@ -1839,7 +1731,6 @@ class _FeedItemState extends State<FeedItem>
         MaterialPageRoute(
           builder:
               (_) => FacebookFullscreenPage(
-                // ← correct widget
                 url: selectedUrl,
                 thumbnailUrl: widget.content.thumbnailUrl,
               ),
@@ -1858,8 +1749,6 @@ class _FeedItemState extends State<FeedItem>
       ),
     );
   }
-
-  // ── Share ─────────────────────────────────────────────────────────────────
 
   void _showShareOptions(BuildContext context) {
     final shareTextController = TextEditingController();
@@ -2041,8 +1930,6 @@ class _FeedItemState extends State<FeedItem>
     }
   }
 
-  // ── Owner context menu ────────────────────────────────────────────────────
-
   void _showQuickSuggestions(BuildContext context) {
     showModalBottomSheet<String>(
       context: context,
@@ -2102,8 +1989,6 @@ class _FeedItemState extends State<FeedItem>
     });
   }
 
-  // ── Viewer context menu ───────────────────────────────────────────────────
-
   void _showQuickspecificSuggestions(BuildContext context) {
     showModalBottomSheet<String>(
       context: context,
@@ -2158,8 +2043,6 @@ class _FeedItemState extends State<FeedItem>
       }
     });
   }
-
-  // ── Edit ──────────────────────────────────────────────────────────────────
 
   Future<void> _handleEditContent() async {
     final controller = TextEditingController(text: widget.content.status);
@@ -2241,7 +2124,6 @@ class _FeedItemState extends State<FeedItem>
         result == widget.content.status)
       return;
 
-    // Use native showDialog so Navigator.pop is safe (avoids GetX snackbar crash)
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -2305,10 +2187,7 @@ class _FeedItemState extends State<FeedItem>
     }
   }
 
-  // ── Delete ─────────────────────────────────────────────────────────────────
-
   Future<void> _handleDeleteContent() async {
-    // ── Step 1: confirm ────────────────────────────────────────────────────
     final confirm = await showDialog<bool>(
       context: context,
       builder:
@@ -2397,9 +2276,6 @@ class _FeedItemState extends State<FeedItem>
     if (confirm != true) return;
     if (!mounted) return;
 
-    // ── Step 2: loading overlay using Flutter's native showDialog ──────────
-    // Using showDialog (Navigator-based) instead of Get.dialog so that
-    // Navigator.pop(context) is safe and won't crash GetX snackbar state.
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -2407,22 +2283,19 @@ class _FeedItemState extends State<FeedItem>
       builder: (_) => const _DeleteLoadingDialog(),
     );
 
-    // ── Step 3: call API ───────────────────────────────────────────────────
     final success = await ApiService.deleteFiles(
       widget.content.id,
       context: context,
     );
 
-    // ── Step 4: close loading dialog safely ────────────────────────────────
     if (mounted && Navigator.canPop(context)) {
       Navigator.pop(context);
     }
 
     if (!mounted) return;
 
-    // ── Step 5: result feedback ────────────────────────────────────────────
     if (success) {
-      widget.onDeleted?.call(); // remove from feed list immediately
+      widget.onDeleted?.call();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Row(
@@ -2466,8 +2339,6 @@ class _FeedItemState extends State<FeedItem>
       );
     }
   }
-
-  // ── Report user ───────────────────────────────────────────────────────────
 
   Future<void> _reportUser() async {
     String? selectedReason;
@@ -2643,8 +2514,6 @@ class _FeedItemState extends State<FeedItem>
         return;
       }
 
-      // POST /api/users/<userId>/report/
-      // User ID goes in the URL. Body: reason + description only.
       final response = await http
           .post(
             Uri.parse(
@@ -2743,8 +2612,6 @@ class _FeedItemState extends State<FeedItem>
       }
     }
   }
-
-  // ── Block user ────────────────────────────────────────────────────────────
 
   Future<void> _blockUser() async {
     String? selectedReason;
@@ -3013,10 +2880,6 @@ class _FeedItemState extends State<FeedItem>
     }
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// FullscreenVideoPage
-// ─────────────────────────────────────────────────────────────────────────────
 
 class FullscreenVideoPage extends StatefulWidget {
   final String url;
@@ -3420,7 +3283,6 @@ class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
         _activeVideos.remove(videoId);
         if (_initialized && _controller != null) {
           _controller!.pause();
-          // ADD THESE:
           _controller!.dispose();
           _controller = null;
           _initialized = false;
@@ -3681,15 +3543,6 @@ class AutoPlayVideoWidgetState extends State<AutoPlayVideoWidget>
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Shimmer skeleton widgets — Facebook-style feed loading
-// Uses the `shimmer` package (add to pubspec: shimmer: ^3.0.0)
-// ─────────────────────────────────────────────────────────────────────────────
-
-// Import note: add this to your imports section at the top:
-//   import 'package:shimmer/shimmer.dart';
-
-/// Grey rounded rectangle — skeleton building block.
 class _SBox extends StatelessWidget {
   final double? width;
   final double height;
@@ -3710,7 +3563,6 @@ class _SBox extends StatelessWidget {
   }
 }
 
-/// Circle skeleton — for avatars.
 class _SCircle extends StatelessWidget {
   final double size;
   const _SCircle(this.size);
@@ -3737,7 +3589,6 @@ class _ShimmerCardTextOnly extends StatelessWidget {
   }
 }
 
-/// Single shimmer post card — with-media variant (post with image).
 class _ShimmerCardWithMedia extends StatelessWidget {
   const _ShimmerCardWithMedia();
 
@@ -3747,7 +3598,6 @@ class _ShimmerCardWithMedia extends StatelessWidget {
   }
 }
 
-/// Wraps a skeleton child in the shimmer sweep effect.
 class _ShimmerWrapper extends StatelessWidget {
   final Widget child;
   const _ShimmerWrapper({required this.child});
@@ -3763,7 +3613,6 @@ class _ShimmerWrapper extends StatelessWidget {
   }
 }
 
-/// The actual skeleton layout — matches FeedItem pixel-for-pixel.
 class _PostSkeleton extends StatelessWidget {
   final bool showMedia;
   const _PostSkeleton({required this.showMedia});
@@ -3801,10 +3650,8 @@ class _PostSkeleton extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ── Header row: avatar · name + timestamp · follow pill ──────
             Row(
               children: [
-                // Avatar with orange ring (matches real card)
                 Container(
                   padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
@@ -3817,7 +3664,6 @@ class _PostSkeleton extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
 
-                // Name + timestamp
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -3828,18 +3674,14 @@ class _PostSkeleton extends StatelessWidget {
                     ],
                   ),
                 ),
-
-                // Follow button pill
                 _SBox(width: 76, height: 26, radius: 20),
                 const SizedBox(width: 8),
-                // More (⋮) button
                 const _SCircle(20),
               ],
             ),
 
             const SizedBox(height: 12),
 
-            // ── Text content lines ────────────────────────────────────────
             _SBox(width: w * 0.85, height: 12, radius: 4),
             const SizedBox(height: 7),
             _SBox(width: w * 0.72, height: 12, radius: 4),
@@ -3848,12 +3690,10 @@ class _PostSkeleton extends StatelessWidget {
 
             if (showMedia) ...[
               const SizedBox(height: 12),
-              // ── Media block — proportional to screen, like a real image ─
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
                 child: _SBox(
                   width: double.infinity,
-                  // Aspect ratio ~4:3 matches typical portrait photos
                   height: (w - 16) * 0.72,
                   radius: 4,
                 ),
@@ -3862,7 +3702,6 @@ class _PostSkeleton extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // ── Divider ───────────────────────────────────────────────────
             Container(
               height: 1,
               color: Colors.grey.shade200,
@@ -3871,24 +3710,20 @@ class _PostSkeleton extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // ── Action bar: like · comment · share ────────────────────────
             Row(
               children: [
-                // Like icon + count
                 const _SCircle(18),
                 const SizedBox(width: 6),
                 _SBox(width: 48, height: 11, radius: 4),
 
                 const SizedBox(width: 20),
 
-                // Comment icon + count
                 const _SCircle(18),
                 const SizedBox(width: 6),
                 _SBox(width: 62, height: 11, radius: 4),
 
                 const Spacer(),
 
-                // Share icon
                 const _SCircle(18),
               ],
             ),
@@ -3899,15 +3734,11 @@ class _PostSkeleton extends StatelessWidget {
   }
 }
 
-/// Full shimmer feed list — alternates text-only and with-media cards
-/// to match the real feed's mixed content, just like Facebook does.
 class _ShimmerFeedList extends StatelessWidget {
   const _ShimmerFeedList();
 
   @override
   Widget build(BuildContext context) {
-    // Pattern: media, text-only, media, text-only, media
-    // This matches the typical feed density without making all cards huge
     const pattern = [true, false, true, false, true];
     return ListView.builder(
       physics: const NeverScrollableScrollPhysics(),
@@ -3919,13 +3750,10 @@ class _ShimmerFeedList extends StatelessWidget {
   }
 }
 
-/// Convenience aliases used in Inner_HomePage
 typedef _ShimmerFeedCard = _ShimmerCardTextOnly;
 
 typedef _ShimmerFeedCardWithMedia = _ShimmerCardWithMedia;
 
-/// Thin orange progress bar pinned to screen top during refresh
-/// when the list already has content (no skeleton overlay needed).
 class _FeedRefreshBar extends StatelessWidget {
   const _FeedRefreshBar();
 
@@ -3944,10 +3772,6 @@ class _FeedRefreshBar extends StatelessWidget {
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Loading dialogs — native Flutter (no GetX) to avoid snackbar state crashes
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _DeleteLoadingDialog extends StatelessWidget {
   const _DeleteLoadingDialog();
@@ -4056,10 +3880,6 @@ class _SaveLoadingDialog extends StatelessWidget {
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// _LinkifyText
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _LinkifyText extends StatelessWidget {
   final String text;

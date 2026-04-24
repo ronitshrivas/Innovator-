@@ -59,7 +59,6 @@ class UserProfileData {
 
   factory UserProfileData.fromJson(Map<String, dynamic> json) {
     final profile = json['profile'] as Map<String, dynamic>? ?? {};
-
     final rawPosts = json['posts'] as List<dynamic>? ?? [];
     final posts =
         rawPosts
@@ -157,13 +156,13 @@ class UserProfileService {
     if (token == null || token.isEmpty) {
       throw AuthException('No authentication token found');
     }
-
     final url = Uri.parse(ApiConstants.fetchuserprofile);
     final response = await http.get(url, headers: _authHeaders(token));
 
     if (response.statusCode == 200) {
-      final data = json.decode(response.body) as Map<String, dynamic>;
-      return UserProfileData.fromJson(data);
+      return UserProfileData.fromJson(
+        json.decode(response.body) as Map<String, dynamic>,
+      );
     } else if (response.statusCode == 401) {
       await AppData().clearAuthToken();
       throw AuthException('Authentication token expired or invalid');
@@ -177,7 +176,6 @@ class UserProfileService {
     if (token == null || token.isEmpty) {
       throw AuthException('No authentication token found');
     }
-
     final filename = path.basename(imageFile.path);
     final url = Uri.parse(ApiConstants.updateuserprofilepicture);
     final mimeType =
@@ -198,7 +196,6 @@ class UserProfileService {
 
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
-
     log('Avatar upload response [${response.statusCode}]: ${response.body}');
 
     if (response.statusCode == 200 || response.statusCode == 201) {
@@ -221,14 +218,11 @@ class UserProfileService {
   static Future<List<FollowerFollowing>> getFollowers() async {
     final token = AppData().accessToken;
     if (token == null || token.isEmpty) throw AuthException('No token');
-
     final response = await http.get(
       Uri.parse(ApiConstants.getfollowers),
       headers: _authHeaders(token),
     );
-
     log('Followers API [${response.statusCode}]: ${response.body}');
-
     if (response.statusCode == 200) {
       final data = json.decode(response.body) as Map<String, dynamic>;
       final list = data['followers'] as List<dynamic>? ?? [];
@@ -247,14 +241,11 @@ class UserProfileService {
   static Future<List<FollowerFollowing>> getFollowing() async {
     final token = AppData().accessToken;
     if (token == null || token.isEmpty) throw AuthException('No token');
-
     final response = await http.get(
       Uri.parse(ApiConstants.getfollowing),
       headers: _authHeaders(token),
     );
-
     log('Following API [${response.statusCode}]: ${response.body}');
-
     if (response.statusCode == 200) {
       final data = json.decode(response.body) as Map<String, dynamic>;
       final list = data['following'] as List<dynamic>? ?? [];
@@ -349,7 +340,6 @@ class _ProfileSkeleton extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Avatar + name row
               Row(
                 children: [
                   const _SkeletonBox(
@@ -376,7 +366,6 @@ class _ProfileSkeleton extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Divider(thickness: 0.8, color: Colors.grey[300]),
-              // Followers / Following / More row
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
@@ -413,7 +402,6 @@ class _ProfileSkeleton extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
-        // Posts header skeleton
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
           child: Row(
@@ -430,7 +418,6 @@ class _ProfileSkeleton extends StatelessWidget {
         ),
         Divider(thickness: 0.8, color: Colors.grey[300]),
         const SizedBox(height: 12),
-        // Post card skeletons
         ...List.generate(3, (_) => const _PostCardSkeleton()),
       ],
     );
@@ -484,7 +471,6 @@ class _PostCardSkeleton extends StatelessWidget {
 
 class UserProfileScreen extends ConsumerStatefulWidget {
   final String userId;
-
   const UserProfileScreen({Key? key, required this.userId}) : super(key: key);
 
   @override
@@ -498,17 +484,20 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
   bool _isPickingImage = false;
   String? _errorMessage;
   bool _postsLoaded = false;
+  bool _isLoading = false;
 
   late TabController _tabController;
   final UserController _userController = Get.put(UserController());
-
   final List<FeedContent> _contents = [];
   final ScrollController _scrollController = ScrollController();
+
+  late ValueNotifier<({int followers, int following})> _countsNotifier;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _countsNotifier = ValueNotifier((followers: 0, following: 0));
     _loadProfile();
   }
 
@@ -516,6 +505,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
   void dispose() {
     _tabController.dispose();
     _scrollController.dispose();
+    _countsNotifier.dispose();
     super.dispose();
   }
 
@@ -528,20 +518,23 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     _profileFuture = UserProfileService.getUserProfile();
   }
 
-  bool _isLoading = false;
-
   Future<void> _refresh() async {
     setState(() {
       _contents.clear();
       _postsLoaded = false;
     });
-
     final newFuture = UserProfileService.getUserProfile();
-    setState(() => _profileFuture = newFuture);
-
+    setState(() {
+      _profileFuture = newFuture;
+    });
     try {
       final freshProfile = await newFuture;
+      if (!mounted) return;
       _populatePostsFromProfile(freshProfile);
+      _countsNotifier.value = (
+        followers: freshProfile.followersCount,
+        following: freshProfile.followingCount,
+      );
     } catch (_) {}
   }
 
@@ -560,7 +553,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
 
   Future<void> _pickAndUploadImage() async {
     if (_isPickingImage || _isUploading) return;
-
     setState(() => _isPickingImage = true);
     try {
       final XFile? image = await ImagePicker().pickImage(
@@ -569,7 +561,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
         maxHeight: 800,
         imageQuality: 100,
       );
-
       setState(() => _isPickingImage = false);
       if (image == null) return;
 
@@ -591,19 +582,19 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       final newAvatarPath = await UserProfileService.uploadProfilePicture(
         File(image.path),
       );
-
       _userController.updateProfilePicture(newAvatarPath);
       await AppData().updateProfilePicture(newAvatarPath);
-
       InstantCache.invalidate();
-
       imageCache.evict(NetworkImage(newAvatarPath));
       _userController.profilePictureVersion.value++;
 
-      setState(() {
-        _isUploading = false;
-        _loadProfile();
-      });
+      // setState(() {
+      //   _isUploading = false;
+      //   _loadProfile();
+      // });
+
+      setState(() => _isUploading = false);
+      _loadProfile();
     } catch (e) {
       setState(() {
         _isPickingImage = false;
@@ -613,146 +604,26 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     }
   }
 
-  void _showFollowersFollowingDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder:
-          (_) => Dialog(
-            backgroundColor: AppColors.whitecolor,
-            insetPadding: const EdgeInsets.all(16),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.7,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TabBar(
-                    controller: _tabController,
-                    labelColor: const Color.fromRGBO(244, 135, 6, 1),
-                    unselectedLabelColor: Colors.grey,
-                    indicatorColor: const Color.fromRGBO(244, 135, 6, 1),
-                    tabs: const [
-                      Tab(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.people_outline, size: 16),
-                            SizedBox(width: 4),
-                            Text('Followers'),
-                          ],
-                        ),
-                      ),
-                      Tab(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.person_add_outlined, size: 16),
-                            SizedBox(width: 4),
-                            Text('Following'),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  Expanded(
-                    child: TabBarView(
-                      controller: _tabController,
-                      children: [_buildFollowersList(), _buildFollowingList()],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-    );
-  }
-
-  Widget _buildFollowersList() => _buildFollowList(
-    future: UserProfileService.getFollowers(),
-    emptyText: 'No followers found',
-    onRefresh: () => setState(() {}),
-    initialFollowStatus: false,
-  );
-
-  Widget _buildFollowingList() => _buildFollowList(
-    future: UserProfileService.getFollowing(),
-    emptyText: 'Not following anyone yet',
-    onRefresh: () => setState(() {}),
-    initialFollowStatus: true,
-  );
-
-  Widget _buildFollowList({
-    required Future<List<FollowerFollowing>> future,
-    required String emptyText,
-    required VoidCallback onRefresh,
-    required bool initialFollowStatus,
+  void _showFollowersFollowingSheet(
+    BuildContext context, {
+    int initialTab = 0,
   }) {
-    return FutureBuilder<List<FollowerFollowing>>(
-      future: future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        }
-        final list = snapshot.data ?? [];
-        if (list.isEmpty) return Center(child: Text(emptyText));
+    _tabController.index = initialTab;
 
-        return ListView.builder(
-          itemCount: list.length,
-          itemBuilder: (context, index) {
-            final person = list[index];
-            final pictureUrl = person.fullPictureUrl;
-            final displayName =
-                person.name.isNotEmpty
-                    ? person.name
-                    : '@${person.username ?? ''}';
-
-            return ListTile(
-              leading: CircleAvatar(
-                radius: 24,
-                backgroundColor: const Color.fromRGBO(235, 111, 70, 0.2),
-                backgroundImage:
-                    pictureUrl != null ? NetworkImage(pictureUrl) : null,
-                child:
-                    pictureUrl == null
-                        ? const Icon(
-                          Icons.person,
-                          color: Color.fromRGBO(244, 135, 6, 1),
-                        )
-                        : null,
-              ),
-              title: GestureDetector(
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (_) => SpecificUserProfilePage(userId: person.id),
-                    ),
-                  );
-                },
-                child: Text(displayName),
-              ),
-              subtitle: Text(
-                person.username != null ? '@${person.username}' : person.email,
-              ),
-              trailing: FollowButton(
-                targetUserEmail: person.email,
-                initialFollowStatus: initialFollowStatus,
-                onFollowSuccess: onRefresh,
-                onUnfollowSuccess: onRefresh,
-                size: 36,
-                targetUserId: person.id,
-              ),
-            );
-          },
-        );
-      },
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder:
+          (_) => _FollowersFollowingSheet(
+            tabController: _tabController,
+            onCountsChanged: (followersDelta, followingDelta) {
+              _countsNotifier.value = (
+                followers: _countsNotifier.value.followers + followersDelta,
+                following: _countsNotifier.value.following + followingDelta,
+              );
+            },
+          ),
     );
   }
 
@@ -894,55 +765,64 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        GestureDetector(
-                          onTap: () => _showFollowersFollowingDialog(context),
-                          child: Column(
+                    ValueListenableBuilder<({int followers, int following})>(
+                      valueListenable: _countsNotifier,
+                      builder:
+                          (context, counts, _) => Row(
                             children: [
-                              Text(
-                                '${profile.followersCount}',
-                                style: const TextStyle(
-                                  color: Color.fromRGBO(244, 135, 6, 1),
-                                  fontWeight: FontWeight.bold,
+                              GestureDetector(
+                                onTap:
+                                    () => _showFollowersFollowingSheet(
+                                      context,
+                                      initialTab: 0,
+                                    ),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      '${counts.followers}',
+                                      style: const TextStyle(
+                                        color: Color.fromRGBO(244, 135, 6, 1),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Followers',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              Text(
-                                'Followers',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 12,
+                              const SizedBox(width: 40),
+                              GestureDetector(
+                                onTap:
+                                    () => _showFollowersFollowingSheet(
+                                      context,
+                                      initialTab: 1,
+                                    ),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      '${counts.following}',
+                                      style: const TextStyle(
+                                        color: Color.fromRGBO(244, 135, 6, 1),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Following',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                        const SizedBox(width: 40),
-                        GestureDetector(
-                          onTap: () {
-                            _tabController.index = 1;
-                            _showFollowersFollowingDialog(context);
-                          },
-                          child: Column(
-                            children: [
-                              Text(
-                                '${profile.followingCount}',
-                                style: const TextStyle(
-                                  color: Color.fromRGBO(244, 135, 6, 1),
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                'Following',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
                     ),
                     SizedBox(
                       height: 35,
@@ -971,7 +851,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
 
         const SizedBox(height: 30),
 
-        // Posts header
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
           child: Row(
@@ -1028,10 +907,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
 
   bool _shouldShowPlaceholder(UserProfileData profile) {
     final controllerPath = _userController.getFullProfilePicturePath();
-    final hasController = controllerPath != null && controllerPath.isNotEmpty;
-    final hasApiAvatar =
-        profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty;
-    return !hasController && !hasApiAvatar;
+    return (controllerPath == null || controllerPath.isEmpty) &&
+        (profile.avatarUrl == null || profile.avatarUrl!.isEmpty);
   }
 
   void _showMoreOptions(BuildContext context, UserProfileData profile) {
@@ -1151,13 +1028,21 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       key: ValueKey(content.id),
       child: FeedItem(
         content: content,
-        onLikeToggled:
-            (isLiked) => setState(() {
-              content.isLiked = isLiked;
-              content.likes += isLiked ? 1 : -1;
-            }),
-        onFollowToggled:
-            (isFollowed) => setState(() => content.isFollowed = isFollowed),
+        onLikeToggled: (hasReaction) {
+          final wasAlreadyLiked = content.isLiked;
+
+          content.isLiked = hasReaction;
+
+          if (hasReaction && !wasAlreadyLiked) {
+            content.likes = content.likes + 1;
+          } else if (!hasReaction && wasAlreadyLiked) {
+            content.likes = (content.likes - 1).clamp(0, 999999);
+          }
+        },
+        onFollowToggled: (isFollowed) {
+          if (!mounted) return;
+          setState(() => content.isFollowed = isFollowed);
+        },
       ),
     );
   }
@@ -1183,7 +1068,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                   alignment: Alignment.centerLeft,
                 ),
               ),
-
               SliverToBoxAdapter(
                 child: FutureBuilder<UserProfileData>(
                   future: _profileFuture,
@@ -1191,7 +1075,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const _ProfileSkeleton();
                     }
-
                     if (snapshot.hasError) {
                       return Center(
                         child: Column(
@@ -1230,19 +1113,23 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                         ),
                       );
                     }
-
                     if (snapshot.hasData) {
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         _populatePostsFromProfile(snapshot.data!);
+                        if (_countsNotifier.value.followers == 0 &&
+                            _countsNotifier.value.following == 0) {
+                          _countsNotifier.value = (
+                            followers: snapshot.data!.followersCount,
+                            following: snapshot.data!.followingCount,
+                          );
+                        }
                       });
                       return _buildProfileSection(snapshot.data!);
                     }
-
                     return const SizedBox.shrink();
                   },
                 ),
               ),
-
               if (!_postsLoaded)
                 SliverList(
                   delegate: SliverChildBuilderDelegate(
@@ -1299,6 +1186,278 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
             ref.invalidate(mutualFriendsProvider);
           });
         },
+      ),
+    );
+  }
+}
+
+class _FollowersFollowingSheet extends StatefulWidget {
+  final TabController tabController;
+  final void Function(int followersDelta, int followingDelta) onCountsChanged;
+
+  const _FollowersFollowingSheet({
+    required this.tabController,
+    required this.onCountsChanged,
+  });
+
+  @override
+  State<_FollowersFollowingSheet> createState() =>
+      _FollowersFollowingSheetState();
+}
+
+class _FollowersFollowingSheetState extends State<_FollowersFollowingSheet> {
+  List<FollowerFollowing>? _followers;
+  List<FollowerFollowing>? _following;
+  final Set<String> _followingIds = {};
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBoth();
+  }
+
+  Future<void> _loadBoth() async {
+    try {
+      final results = await Future.wait([
+        UserProfileService.getFollowers(),
+        UserProfileService.getFollowing(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _followers = results[0];
+        _following = results[1];
+        _followingIds
+          ..clear()
+          ..addAll(_following!.map((f) => f.id));
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _onFollowFromFollowersList(FollowerFollowing person) {
+    setState(() {
+      _followingIds.add(person.id);
+      if (_following != null && !_following!.any((f) => f.id == person.id)) {
+        _following!.add(person);
+      }
+    });
+    widget.onCountsChanged(0, 1);
+  }
+
+  void _onUnfollowFromFollowersList(FollowerFollowing person) {
+    setState(() {
+      _followingIds.remove(person.id);
+      _following?.removeWhere((f) => f.id == person.id);
+    });
+    widget.onCountsChanged(0, -1);
+  }
+
+  void _onFollowFromFollowingList(FollowerFollowing person) {
+    setState(() => _followingIds.add(person.id));
+    widget.onCountsChanged(0, 1);
+  }
+
+  void _onUnfollowFromFollowingList(FollowerFollowing person) {
+    setState(() {
+      _following?.removeWhere((f) => f.id == person.id);
+      _followingIds.remove(person.id);
+    });
+    widget.onCountsChanged(0, -1);
+  }
+
+  Widget _buildFollowersList() {
+    if (_followers == null || _followers!.isEmpty) {
+      return const Center(child: Text('No followers yet'));
+    }
+    return ListView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      itemCount: _followers!.length,
+      itemBuilder: (context, index) {
+        final person = _followers![index];
+        final isFollowedByMe = _followingIds.contains(person.id);
+        return _PersonTile(
+          person: person,
+          isFollowing: isFollowedByMe,
+          onFollow: () => _onFollowFromFollowersList(person),
+          onUnfollow: () => _onUnfollowFromFollowersList(person),
+        );
+      },
+    );
+  }
+
+  Widget _buildFollowingList() {
+    if (_following == null || _following!.isEmpty) {
+      return const Center(child: Text('Not following anyone yet'));
+    }
+    return ListView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      itemCount: _following!.length,
+      itemBuilder: (context, index) {
+        final person = _following![index];
+        return _PersonTile(
+          person: person,
+          isFollowing: true,
+          onFollow: () => _onFollowFromFollowingList(person),
+          onUnfollow: () => _onUnfollowFromFollowingList(person),
+        );
+      },
+    );
+  }
+
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.55,
+      minChildSize: 0.35,
+      maxChildSize: 1.0,
+      expand: false,
+      snap: true,
+      snapSizes: const [0.55, 1.0],
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 12, bottom: 4),
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+
+              TabBar(
+                controller: widget.tabController,
+                labelColor: const Color.fromRGBO(244, 135, 6, 1),
+                unselectedLabelColor: Colors.grey,
+                indicatorColor: const Color.fromRGBO(244, 135, 6, 1),
+                tabs: const [
+                  Tab(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.people_outline, size: 16),
+                        SizedBox(width: 4),
+                        Text('Followers'),
+                      ],
+                    ),
+                  ),
+                  Tab(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.person_add_outlined, size: 16),
+                        SizedBox(width: 4),
+                        Text('Following'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              Expanded(
+                child:
+                    _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _error != null
+                        ? Center(child: Text('Error: $_error'))
+                        : TabBarView(
+                          controller: widget.tabController,
+                          physics: const ClampingScrollPhysics(),
+                          children: [
+                            SingleChildScrollView(
+                              controller: scrollController,
+                              child: _buildFollowersList(),
+                            ),
+                            SingleChildScrollView(
+                              controller: scrollController,
+                              child: _buildFollowingList(),
+                            ),
+                          ],
+                        ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PersonTile extends StatelessWidget {
+  final FollowerFollowing person;
+  final bool isFollowing;
+  final VoidCallback onFollow;
+  final VoidCallback onUnfollow;
+
+  const _PersonTile({
+    required this.person,
+    required this.isFollowing,
+    required this.onFollow,
+    required this.onUnfollow,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final pictureUrl = person.fullPictureUrl;
+    final displayName =
+        person.name.isNotEmpty ? person.name : '@${person.username ?? ''}';
+
+    return ListTile(
+      leading: CircleAvatar(
+        radius: 24,
+        backgroundColor: const Color.fromRGBO(235, 111, 70, 0.2),
+        backgroundImage: pictureUrl != null ? NetworkImage(pictureUrl) : null,
+        child:
+            pictureUrl == null
+                ? const Icon(
+                  Icons.person,
+                  color: Color.fromRGBO(244, 135, 6, 1),
+                )
+                : null,
+      ),
+      title: GestureDetector(
+        onTap: () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => SpecificUserProfilePage(userId: person.id),
+            ),
+          );
+        },
+        child: Text(
+          displayName,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ),
+      subtitle: Text(
+        person.username != null ? '@${person.username}' : person.email,
+        style: TextStyle(color: Colors.grey[500], fontSize: 12),
+      ),
+      trailing: FollowButton(
+        targetUserId: person.id,
+        targetUserEmail: person.email,
+        initialFollowStatus: isFollowing,
+        onFollowSuccess: onFollow,
+        onUnfollowSuccess: onUnfollow,
+        size: 36,
       ),
     );
   }

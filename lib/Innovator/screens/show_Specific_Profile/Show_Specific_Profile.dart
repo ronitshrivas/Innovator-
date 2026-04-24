@@ -645,7 +645,7 @@ class _SpecificUserProfilePageState
                     name,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 28,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: isDarkMode ? AppColors.whitecolor : Colors.black,
                     ),
@@ -679,28 +679,27 @@ class _SpecificUserProfilePageState
             const SizedBox(height: 8),
 
             // Role badge
-            if ((profileData['role']?.toString().trim() ?? '').isNotEmpty)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [primaryColor, primaryColor.withAlpha(80)],
-                  ),
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                child: Text(
-                  profileData['role'].toString().toUpperCase(),
-                  style: const TextStyle(
-                    color: AppColors.whitecolor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-
+            // if ((profileData['role']?.toString().trim() ?? '').isNotEmpty)
+            //   Container(
+            //     padding: const EdgeInsets.symmetric(
+            //       horizontal: 16,
+            //       vertical: 6,
+            //     ),
+            //     decoration: BoxDecoration(
+            //       gradient: LinearGradient(
+            //         colors: [primaryColor, primaryColor.withAlpha(80)],
+            //       ),
+            //       borderRadius: BorderRadius.circular(25),
+            //     ),
+            //     child: Text(
+            //       profileData['role'].toString().toUpperCase(),
+            //       style: const TextStyle(
+            //         color: AppColors.whitecolor,
+            //         fontWeight: FontWeight.bold,
+            //         fontSize: 12,
+            //       ),
+            //     ),
+            //   ),
             if (bio != null) ...[
               const SizedBox(height: 8),
               Padding(

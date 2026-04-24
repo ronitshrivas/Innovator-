@@ -71,8 +71,20 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen>
     return list;
   }
 
+  // List<String> _categories(List<CourseListModel> all) {
+  //   final cats = all.map((c) => c.categoryName).toSet().toList()..sort();
+  //   return ['All', ...cats];
+  // }
+
   List<String> _categories(List<CourseListModel> all) {
-    final cats = all.map((c) => c.categoryName).toSet().toList()..sort();
+    final cats =
+        all
+            .map((c) => c.categoryName)
+            .where((name) => name != null && name.isNotEmpty)
+            .cast<String>()
+            .toSet()
+            .toList()
+          ..sort();
     return ['All', ...cats];
   }
 
@@ -548,13 +560,15 @@ class _CourseCard extends StatelessWidget {
                         color: Color(0xFF1E293B),
                       ),
                     ),
-                    Text(
-                      course.categoryName,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade500,
+                    if (course.categoryName != null &&
+                        course.categoryName!.isNotEmpty)
+                      Text(
+                        course.categoryName!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade500,
+                        ),
                       ),
-                    ),
                     const Spacer(),
                     Row(
                       children: [

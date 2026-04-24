@@ -4,7 +4,6 @@ import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
 
-// ── Reaction types matching backend REACTION_CHOICES ──────────────────────────
 enum ReactionType { like, love, haha, wow, sad, angry, dislike, celebrate }
 
 extension ReactionTypeExtension on ReactionType {
@@ -80,117 +79,119 @@ extension ReactionTypeExtension on ReactionType {
   }
 }
 
-// ── API response model ─────────────────────────────────────────────────────────
+class NonRetryableException implements Exception {
+  final int statusCode;
+  final String message;
+
+  const NonRetryableException(this.statusCode, this.message);
+
+  @override
+  String toString() => 'NonRetryableException($statusCode): $message';
+}
+
 class ReactionResult {
   final bool success;
-
-  /// null means the reaction was removed (un-reacted)
   final ReactionType? reactionType;
-
-  /// The reaction record id returned by the server (useful for DELETE)
   final String? reactionId;
+
+  final bool shouldDiscard;
 
   const ReactionResult({
     required this.success,
     this.reactionType,
     this.reactionId,
+    this.shouldDiscard = false,
   });
 }
 
 class ContentLikeService {
   final AppData _appData = AppData();
 
-  // Keep baseUrl param for backward-compat but always use _baseUrl internally
   ContentLikeService({String? baseUrl});
 
-  // ── React to a post ──────────────────────────────────────────────────────────
-  /// POST /api/reactions/  { "post": postId, "type": reactionType }
-  /// If the user already has the same reaction the backend may toggle it off —
-  /// handle both 200/201 (created) and 204 (removed) gracefully.
   Future<ReactionResult> reactPost(String postId, ReactionType type) async {
     final token = _appData.accessToken;
     if (token == null || token.isEmpty) {
       log('[Reaction] No auth token');
-      return const ReactionResult(success: false);
+      throw const NonRetryableException(401, 'No auth token');
     }
 
-    try {
-      final response = await http.post(
-        Uri.parse(ApiConstants.sendreaction),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: json.encode({'post': postId, 'type': type.value}),
-      );
+    final response = await http.post(
+      Uri.parse(ApiConstants.sendreaction),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: json.encode({'post': postId, 'type': type.value}),
+    );
 
-      log(
-        '[Reaction] POST /api/reactions/ → ${response.statusCode}: ${response.body}',
-      );
+    log(
+      '[Reaction] POST /api/reactions/ → ${response.statusCode}: ${response.body}',
+    );
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = json.decode(response.body) as Map<String, dynamic>;
-        return ReactionResult(
-          success: true,
-          reactionType: ReactionTypeExtension.fromValue(
-            data['type']?.toString(),
-          ),
-          reactionId: data['id']?.toString(),
-        );
-      } else if (response.statusCode == 204) {
-        // Reaction removed (same type tapped again = toggle off)
-        return const ReactionResult(success: true, reactionType: null);
-      } else {
-        log('[Reaction] Unexpected status ${response.statusCode}');
-        return const ReactionResult(success: false);
-      }
-    } catch (e) {
-      log('[Reaction] Error: $e');
-      return const ReactionResult(success: false);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      return ReactionResult(
+        success: true,
+        reactionType: ReactionTypeExtension.fromValue(
+          data['type']?.toString(),
+        ),
+        reactionId: data['id']?.toString(),
+      );
+    } else if (response.statusCode == 204) {
+      return const ReactionResult(success: true, reactionType: null);
+    } else if (response.statusCode >= 400 && response.statusCode < 500) {
+      throw NonRetryableException(
+        response.statusCode,
+        response.body.isNotEmpty ? response.body : 'HTTP ${response.statusCode}',
+      );
+    } else {
+      log('[Reaction] Server error ${response.statusCode} — will retry later');
+      return const ReactionResult(success: false, shouldDiscard: false);
     }
   }
-  Future<ReactionResult> reactReel(String postId, ReactionType type) async {
+
+  Future<ReactionResult> reactReel(String reelId, ReactionType type) async {
     final token = _appData.accessToken;
     if (token == null || token.isEmpty) {
       log('[Reaction] No auth token');
-      return const ReactionResult(success: false);
+      throw const NonRetryableException(401, 'No auth token');
     }
 
-    try {
-      final response = await http.post(
-        Uri.parse(ApiConstants.sendreaction),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: json.encode({'reel': postId, 'type': type.value}),
-      );
+    final response = await http.post(
+      Uri.parse(ApiConstants.sendreaction),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: json.encode({'reel': reelId, 'type': type.value}),
+    );
 
-      log(
-        '[Reaction] POST /api/reactions/ → ${response.statusCode}: ${response.body}',
-      );
+    log(
+      '[Reaction] POST /api/reactions/ (reel) → ${response.statusCode}: ${response.body}',
+    );
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = json.decode(response.body) as Map<String, dynamic>;
-        return ReactionResult(
-          success: true,
-          reactionType: ReactionTypeExtension.fromValue(
-            data['type']?.toString(),
-          ),
-          reactionId: data['id']?.toString(),
-        );
-      } else if (response.statusCode == 204) {
-        // Reaction removed (same type tapped again = toggle off)
-        return const ReactionResult(success: true, reactionType: null);
-      } else {
-        log('[Reaction] Unexpected status ${response.statusCode}');
-        return const ReactionResult(success: false);
-      }
-    } catch (e) {
-      log('[Reaction] Error: $e');
-      return const ReactionResult(success: false);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      return ReactionResult(
+        success: true,
+        reactionType: ReactionTypeExtension.fromValue(
+          data['type']?.toString(),
+        ),
+        reactionId: data['id']?.toString(),
+      );
+    } else if (response.statusCode == 204) {
+      return const ReactionResult(success: true, reactionType: null);
+    } else if (response.statusCode >= 400 && response.statusCode < 500) {
+      throw NonRetryableException(
+        response.statusCode,
+        response.body.isNotEmpty ? response.body : 'HTTP ${response.statusCode}',
+      );
+    } else {
+      log('[Reaction] Server error ${response.statusCode} — will retry later');
+      return const ReactionResult(success: false, shouldDiscard: false);
     }
   }
   // ── Remove reaction ──────────────────────────────────────────────────────────
@@ -217,17 +218,20 @@ class ContentLikeService {
   //   }
   // }
 
-  // ── Legacy compat wrappers ────────────────────────────────────────────────────
   Future<bool> toggleLike(String postId, bool isLiking) async {
-    if (!isLiking) {
-      // Best-effort: no reactionId at this point, just re-post same type to toggle off
+    try {
       final r = await reactPost(postId, ReactionType.like);
       return r.success;
+    } on NonRetryableException {
+      return false;
+    } catch (_) {
+      return false;
     }
-    final r = await reactPost(postId, ReactionType.like);
-    return r.success;
   }
 
   Future<bool> likeContent(String postId) => toggleLike(postId, true);
   Future<bool> unlikeContent(String postId) => toggleLike(postId, false);
 }
+
+
+
