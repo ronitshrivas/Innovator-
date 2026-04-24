@@ -1464,6 +1464,7 @@ class _FeedItemState extends State<FeedItem>
                       contentId: widget.content.id,
                       initialLikeStatus: widget.content.isLiked,
                       likeService: likeService,
+                      isReel: true,
                       initialReactionType: widget.content.currentUserReaction,
                       onLikeToggled: (isLiked) {
                         widget.onLikeToggled(isLiked);
@@ -1571,7 +1572,7 @@ class _FeedItemState extends State<FeedItem>
                       padding: const EdgeInsets.all(16.0),
                       child: CommentSection(
                         contentId: widget.content.id,
-
+                        isReel: widget.content.isReel,
                         // onCommentAdded: () {
                         //   setState(() => widget.content.comments++);
                         //   widget.onCommentAdded?.call();

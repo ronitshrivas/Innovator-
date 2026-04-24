@@ -24,6 +24,7 @@ import 'package:http_parser/http_parser.dart';
 import 'package:get/get.dart';
 import 'package:innovator/Innovator/controllers/user_controller.dart';
 
+import '../Feed/Optimize Media/full_screen_image_viewer.dart';
 
 class UserProfileData {
   final String id;
@@ -61,17 +62,18 @@ class UserProfileData {
   factory UserProfileData.fromJson(Map<String, dynamic> json) {
     final profile = json['profile'] as Map<String, dynamic>? ?? {};
     final rawPosts = json['posts'] as List<dynamic>? ?? [];
-    final posts = rawPosts
-        .whereType<Map<String, dynamic>>()
-        .map((p) {
-          try {
-            return FeedContent.fromNewApiPost(p);
-          } catch (_) {
-            return null;
-          }
-        })
-        .whereType<FeedContent>()
-        .toList();
+    final posts =
+        rawPosts
+            .whereType<Map<String, dynamic>>()
+            .map((p) {
+              try {
+                return FeedContent.fromNewApiPost(p);
+              } catch (_) {
+                return null;
+              }
+            })
+            .whereType<FeedContent>()
+            .toList();
 
     return UserProfileData(
       id: json['id']?.toString() ?? '',
@@ -86,9 +88,10 @@ class UserProfileData {
       followingCount: (json['following_count'] as num?)?.toInt() ?? 0,
       followerUsernames: List<String>.from(json['follower_usernames'] ?? []),
       followingUsernames: List<String>.from(json['following_usernames'] ?? []),
-      createdAt: profile['created_at'] != null
-          ? DateTime.parse(profile['created_at'])
-          : DateTime.now(),
+      createdAt:
+          profile['created_at'] != null
+              ? DateTime.parse(profile['created_at'])
+              : DateTime.now(),
       posts: posts,
     );
   }
@@ -149,7 +152,6 @@ class AuthException implements Exception {
   String toString() => 'AuthException: $message';
 }
 
-
 class UserProfileService {
   static Future<UserProfileData> getUserProfile() async {
     final token = AppData().accessToken;
@@ -161,7 +163,8 @@ class UserProfileService {
 
     if (response.statusCode == 200) {
       return UserProfileData.fromJson(
-          json.decode(response.body) as Map<String, dynamic>);
+        json.decode(response.body) as Map<String, dynamic>,
+      );
     } else if (response.statusCode == 401) {
       await AppData().clearAuthToken();
       throw AuthException('Authentication token expired or invalid');
@@ -180,15 +183,18 @@ class UserProfileService {
     final mimeType =
         filename.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
 
-    var request = http.MultipartRequest('POST', url)
-      ..headers['authorization'] = 'Bearer $token'
-      ..files.add(http.MultipartFile(
-        'avatar',
-        http.ByteStream(imageFile.openRead()),
-        await imageFile.length(),
-        filename: filename,
-        contentType: MediaType.parse(mimeType),
-      ));
+    var request =
+        http.MultipartRequest('POST', url)
+          ..headers['authorization'] = 'Bearer $token'
+          ..files.add(
+            http.MultipartFile(
+              'avatar',
+              http.ByteStream(imageFile.openRead()),
+              await imageFile.length(),
+              filename: filename,
+              contentType: MediaType.parse(mimeType),
+            ),
+          );
 
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
@@ -196,7 +202,8 @@ class UserProfileService {
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       final data = json.decode(response.body) as Map<String, dynamic>;
-      final avatarPath = data['avatar']?.toString() ??
+      final avatarPath =
+          data['avatar']?.toString() ??
           data['data']?['avatar']?.toString() ??
           data['data']?['picture']?.toString() ??
           '';
@@ -257,11 +264,10 @@ class UserProfileService {
   }
 
   static Map<String, String> _authHeaders(String token) => {
-        'Content-Type': 'application/json',
-        'authorization': 'Bearer $token',
-      };
+    'Content-Type': 'application/json',
+    'authorization': 'Bearer $token',
+  };
 }
-
 
 class _SkeletonBox extends StatefulWidget {
   final double width;
@@ -290,8 +296,10 @@ class _SkeletonBoxState extends State<_SkeletonBox>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
-    _animation = Tween<double>(begin: 0.4, end: 1.0).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _animation = Tween<double>(
+      begin: 0.4,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -304,17 +312,18 @@ class _SkeletonBoxState extends State<_SkeletonBox>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _animation,
-      builder: (_, __) => Opacity(
-        opacity: _animation.value,
-        child: Container(
-          width: widget.width,
-          height: widget.height,
-          decoration: BoxDecoration(
-            color: Colors.grey[300],
-            borderRadius: widget.borderRadius,
+      builder:
+          (_, __) => Opacity(
+            opacity: _animation.value,
+            child: Container(
+              width: widget.width,
+              height: widget.height,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: widget.borderRadius,
+              ),
+            ),
           ),
-        ),
-      ),
     );
   }
 }
@@ -366,17 +375,21 @@ class _ProfileSkeleton extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Column(children: const [
-                          _SkeletonBox(width: 30, height: 18),
-                          SizedBox(height: 4),
-                          _SkeletonBox(width: 60, height: 12),
-                        ]),
+                        Column(
+                          children: const [
+                            _SkeletonBox(width: 30, height: 18),
+                            SizedBox(height: 4),
+                            _SkeletonBox(width: 60, height: 12),
+                          ],
+                        ),
                         const SizedBox(width: 40),
-                        Column(children: const [
-                          _SkeletonBox(width: 30, height: 18),
-                          SizedBox(height: 4),
-                          _SkeletonBox(width: 60, height: 12),
-                        ]),
+                        Column(
+                          children: const [
+                            _SkeletonBox(width: 30, height: 18),
+                            SizedBox(height: 4),
+                            _SkeletonBox(width: 60, height: 12),
+                          ],
+                        ),
                       ],
                     ),
                     _SkeletonBox(
@@ -398,9 +411,10 @@ class _ProfileSkeleton extends StatelessWidget {
             children: [
               const _SkeletonBox(width: 60, height: 20),
               _SkeletonBox(
-                  width: 90,
-                  height: 36,
-                  borderRadius: BorderRadius.circular(8)),
+                width: 90,
+                height: 36,
+                borderRadius: BorderRadius.circular(8),
+              ),
             ],
           ),
         ),
@@ -457,7 +471,6 @@ class _PostCardSkeleton extends StatelessWidget {
   }
 }
 
-
 class UserProfileScreen extends ConsumerStatefulWidget {
   final String userId;
   const UserProfileScreen({Key? key, required this.userId}) : super(key: key);
@@ -480,7 +493,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
   final List<FeedContent> _contents = [];
   final ScrollController _scrollController = ScrollController();
 
- 
   late ValueNotifier<({int followers, int following})> _countsNotifier;
 
   @override
@@ -559,12 +571,16 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       final oldPath = _userController.getFullProfilePicturePath();
       if (oldPath != null) {
         imageCache.evict(NetworkImage(oldPath));
-        imageCache.evict(NetworkImage(
-            '$oldPath?v=${_userController.profilePictureVersion.value}'));
+        imageCache.evict(
+          NetworkImage(
+            '$oldPath?v=${_userController.profilePictureVersion.value}',
+          ),
+        );
       }
 
-      final newAvatarPath =
-          await UserProfileService.uploadProfilePicture(File(image.path));
+      final newAvatarPath = await UserProfileService.uploadProfilePicture(
+        File(image.path),
+      );
       _userController.updateProfilePicture(newAvatarPath);
       await AppData().updateProfilePicture(newAvatarPath);
       InstantCache.invalidate();
@@ -584,26 +600,29 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     }
   }
 
-
-  void _showFollowersFollowingSheet(BuildContext context,
-      {int initialTab = 0}) {
+  void _showFollowersFollowingSheet(
+    BuildContext context, {
+    int initialTab = 0,
+  }) {
     _tabController.index = initialTab;
 
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, 
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _FollowersFollowingSheet(
-        tabController: _tabController,
-        onCountsChanged: (followersDelta, followingDelta) {
-          _countsNotifier.value = (
-            followers: _countsNotifier.value.followers + followersDelta,
-            following: _countsNotifier.value.following + followingDelta,
-          );
-        },
-      ),
+      builder:
+          (_) => _FollowersFollowingSheet(
+            tabController: _tabController,
+            onCountsChanged: (followersDelta, followingDelta) {
+              _countsNotifier.value = (
+                followers: _countsNotifier.value.followers + followersDelta,
+                following: _countsNotifier.value.following + followingDelta,
+              );
+            },
+          ),
     );
   }
+
   Widget _buildProfileSection(UserProfileData profile) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -618,44 +637,76 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                   Stack(
                     children: [
                       Obx(
-                        () => CircleAvatar(
-                          radius: 60,
-                          backgroundColor:
-                              const Color.fromRGBO(235, 111, 70, 0.2),
-                          key: ValueKey(
-                              'profile_${_userController.profilePictureVersion.value}'),
-                          backgroundImage: _resolveAvatarImage(profile),
-                          child: _shouldShowPlaceholder(profile)
-                              ? const Icon(Icons.person,
-                                  size: 60,
-                                  color: Color.fromRGBO(244, 135, 6, 1))
-                              : null,
+                        () => GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (_) => FullScreenImageViewer(
+                                      imageUrl:
+                                          _userController
+                                              .getFullProfilePicturePath() ??
+                                          profile.avatarUrl ??
+                                          '',
+                                      tag:
+                                          'profile_${_userController.profilePictureVersion.value}',
+                                    ),
+                              ),
+                            );
+                          },
+                          child: CircleAvatar(
+                            radius: 60,
+                            backgroundColor: const Color.fromRGBO(
+                              235,
+                              111,
+                              70,
+                              0.2,
+                            ),
+                            key: ValueKey(
+                              'profile_${_userController.profilePictureVersion.value}',
+                            ),
+                            backgroundImage: _resolveAvatarImage(profile),
+                            child:
+                                _shouldShowPlaceholder(profile)
+                                    ? const Icon(
+                                      Icons.person,
+                                      size: 60,
+                                      color: Color.fromRGBO(244, 135, 6, 1),
+                                    )
+                                    : null,
+                          ),
                         ),
                       ),
                       Positioned(
                         right: 0,
                         bottom: 0,
                         child: GestureDetector(
-                          onTap: (_isUploading || _isPickingImage)
-                              ? null
-                              : _pickAndUploadImage,
+                          onTap:
+                              (_isUploading || _isPickingImage)
+                                  ? null
+                                  : _pickAndUploadImage,
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: const BoxDecoration(
                               color: Color.fromRGBO(244, 135, 6, 1),
                               shape: BoxShape.circle,
                             ),
-                            child: _isUploading
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
+                            child:
+                                _isUploading
+                                    ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        color: AppColors.whitecolor,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                    : const Icon(
+                                      Icons.camera_alt,
                                       color: AppColors.whitecolor,
-                                      strokeWidth: 2,
+                                      size: 16,
                                     ),
-                                  )
-                                : const Icon(Icons.camera_alt,
-                                    color: AppColors.whitecolor, size: 16),
                           ),
                         ),
                       ),
@@ -673,18 +724,24 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                                     ? profile.fullName
                                     : profile.username),
                             style: const TextStyle(
-                                fontSize: 22, fontWeight: FontWeight.bold),
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                         Text(
                           profile.email,
                           style: TextStyle(
-                              fontSize: 12, color: Colors.grey[600]),
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
                         ),
                         if (profile.role.isNotEmpty)
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color.fromRGBO(244, 135, 6, 0.1),
                               borderRadius: BorderRadius.circular(12),
@@ -710,9 +767,10 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
               if (_errorMessage != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(_errorMessage!,
-                      style:
-                          const TextStyle(color: Colors.red, fontSize: 12)),
+                  child: Text(
+                    _errorMessage!,
+                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                  ),
                 ),
 
               Divider(thickness: 0.8, color: Colors.grey[300]),
@@ -724,49 +782,62 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                   children: [
                     ValueListenableBuilder<({int followers, int following})>(
                       valueListenable: _countsNotifier,
-                      builder: (context, counts, _) => Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () => _showFollowersFollowingSheet(context,
-                                initialTab: 0),
-                            child: Column(
-                              children: [
-                                Text(
-                                  '${counts.followers}',
-                                  style: const TextStyle(
-                                    color: Color.fromRGBO(244, 135, 6, 1),
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text('Followers',
-                                    style: TextStyle(
+                      builder:
+                          (context, counts, _) => Row(
+                            children: [
+                              GestureDetector(
+                                onTap:
+                                    () => _showFollowersFollowingSheet(
+                                      context,
+                                      initialTab: 0,
+                                    ),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      '${counts.followers}',
+                                      style: const TextStyle(
+                                        color: Color.fromRGBO(244, 135, 6, 1),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Followers',
+                                      style: TextStyle(
                                         color: Colors.grey[600],
-                                        fontSize: 12)),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 40),
-                          GestureDetector(
-                            onTap: () => _showFollowersFollowingSheet(context,
-                                initialTab: 1),
-                            child: Column(
-                              children: [
-                                Text(
-                                  '${counts.following}',
-                                  style: const TextStyle(
-                                    color: Color.fromRGBO(244, 135, 6, 1),
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                Text('Following',
-                                    style: TextStyle(
+                              ),
+                              const SizedBox(width: 40),
+                              GestureDetector(
+                                onTap:
+                                    () => _showFollowersFollowingSheet(
+                                      context,
+                                      initialTab: 1,
+                                    ),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      '${counts.following}',
+                                      style: const TextStyle(
+                                        color: Color.fromRGBO(244, 135, 6, 1),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Following',
+                                      style: TextStyle(
                                         color: Colors.grey[600],
-                                        fontSize: 12)),
-                              ],
-                            ),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
                     ),
                     SizedBox(
                       height: 35,
@@ -778,10 +849,11 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                         ),
                         child: IconButton(
                           padding: EdgeInsets.zero,
-                          icon: const Icon(Icons.more_vert_outlined,
-                              color: Colors.grey),
-                          onPressed: () =>
-                              _showMoreOptions(context, profile),
+                          icon: const Icon(
+                            Icons.more_vert_outlined,
+                            color: Colors.grey,
+                          ),
+                          onPressed: () => _showMoreOptions(context, profile),
                         ),
                       ),
                     ),
@@ -799,18 +871,29 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Posts',
-                  style: TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold)),
-              Image.asset('assets/icon/repost.png',
-                  height: 35, color: Colors.grey),
+              const Text(
+                'Posts',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              Image.asset(
+                'assets/icon/repost.png',
+                height: 35,
+                color: Colors.grey,
+              ),
               ElevatedButton.icon(
-                onPressed: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => ReelsScreen())),
-                label: const Text('Reels',
-                    style: TextStyle(color: Colors.black)),
-                icon: const Icon(Icons.video_collection,
-                    color: Color.fromRGBO(244, 135, 6, 1)),
+                onPressed:
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => ReelsScreen()),
+                    ),
+                label: const Text(
+                  'Reels',
+                  style: TextStyle(color: Colors.black),
+                ),
+                icon: const Icon(
+                  Icons.video_collection,
+                  color: Color.fromRGBO(244, 135, 6, 1),
+                ),
                 style: ElevatedButton.styleFrom(
                   elevation: 0,
                   backgroundColor: Colors.grey.shade200,
@@ -829,7 +912,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     final controllerPath = _userController.getFullProfilePicturePath();
     if (controllerPath != null && controllerPath.isNotEmpty) {
       return NetworkImage(
-          '$controllerPath?v=${_userController.profilePictureVersion.value}');
+        '$controllerPath?v=${_userController.profilePictureVersion.value}',
+      );
     }
     final url = profile.avatarUrl;
     if (url != null && url.isNotEmpty) return NetworkImage(url);
@@ -846,91 +930,110 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     showModalBottomSheet(
       backgroundColor: AppColors.whitecolor,
       context: context,
-      builder: (_) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            leading: const Icon(Icons.info_outline),
-            title: const Text('My Information'),
-            onTap: () {
-              Navigator.of(context).pop();
-              showAdaptiveDialog(
-                context: context,
-                builder: (_) => AlertDialog(
-                  backgroundColor: AppColors.whitecolor,
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const SizedBox(height: 24),
-                      const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: Text('Personal Information',
-                            style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold)),
-                      ),
-                      const SizedBox(height: 8),
-                      ProfileInfoCard(
-                          title: 'Username',
-                          value: profile.username,
-                          icon: Icons.person),
-                      ProfileInfoCard(
-                          title: 'Full Name',
-                          value: profile.fullName.isNotEmpty
-                              ? profile.fullName
-                              : '(not set)',
-                          icon: Icons.badge),
-                      ProfileInfoCard(
-                          title: 'Email',
-                          value: profile.email,
-                          icon: Icons.email),
-                      if (profile.bio != null && profile.bio!.isNotEmpty)
-                        ProfileInfoCard(
-                            title: 'Bio',
-                            value: profile.bio!,
-                            icon: Icons.description),
-                      ProfileInfoCard(
-                          title: 'Member Since',
-                          value: _formatDate(profile.createdAt),
-                          icon: Icons.access_time),
-                    ],
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () =>
-                          Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(
-                            builder: (_) => EditProfileScreen()),
-                      ),
-                      child: const Text('Edit',
-                          style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 14,
-                              color: Colors.orange)),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Close',
-                          style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 14,
-                              color: Colors.black)),
-                    ),
-                  ],
-                ),
-              );
-            },
+      builder:
+          (_) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.info_outline),
+                title: const Text('My Information'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  showAdaptiveDialog(
+                    context: context,
+                    builder:
+                        (_) => AlertDialog(
+                          backgroundColor: AppColors.whitecolor,
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const SizedBox(height: 24),
+                              const Padding(
+                                padding: EdgeInsets.all(12),
+                                child: Text(
+                                  'Personal Information',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              ProfileInfoCard(
+                                title: 'Username',
+                                value: profile.username,
+                                icon: Icons.person,
+                              ),
+                              ProfileInfoCard(
+                                title: 'Full Name',
+                                value:
+                                    profile.fullName.isNotEmpty
+                                        ? profile.fullName
+                                        : '(not set)',
+                                icon: Icons.badge,
+                              ),
+                              ProfileInfoCard(
+                                title: 'Email',
+                                value: profile.email,
+                                icon: Icons.email,
+                              ),
+                              if (profile.bio != null &&
+                                  profile.bio!.isNotEmpty)
+                                ProfileInfoCard(
+                                  title: 'Bio',
+                                  value: profile.bio!,
+                                  icon: Icons.description,
+                                ),
+                              ProfileInfoCard(
+                                title: 'Member Since',
+                                value: _formatDate(profile.createdAt),
+                                icon: Icons.access_time,
+                              ),
+                            ],
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed:
+                                  () => Navigator.of(context).pushReplacement(
+                                    MaterialPageRoute(
+                                      builder: (_) => EditProfileScreen(),
+                                    ),
+                                  ),
+                              child: const Text(
+                                'Edit',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 14,
+                                  color: Colors.orange,
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: const Text(
+                                'Close',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 14,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.logout),
+                title: const Text('Logout'),
+                onTap: () async {
+                  await AppData().clearAuthToken();
+                  Get.offAll(() => LoginPage());
+                },
+              ),
+            ],
           ),
-          ListTile(
-            leading: const Icon(Icons.logout),
-            title: const Text('Logout'),
-            onTap: () async {
-              await AppData().clearAuthToken();
-              Get.offAll(() => LoginPage());
-            },
-          ),
-        ],
-      ),
     );
   }
 
@@ -940,12 +1043,13 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       key: ValueKey(content.id),
       child: FeedItem(
         content: content,
-        onLikeToggled: (isLiked) => setState(() {
-          content.isLiked = isLiked;
-          content.likes += isLiked ? 1 : -1;
-        }),
-        onFollowToggled: (isFollowed) =>
-            setState(() => content.isFollowed = isFollowed),
+        onLikeToggled:
+            (isLiked) => setState(() {
+              content.isLiked = isLiked;
+              content.likes += isLiked ? 1 : -1;
+            }),
+        onFollowToggled:
+            (isFollowed) => setState(() => content.isFollowed = isFollowed),
       ),
     );
   }
@@ -983,23 +1087,34 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.error_outline,
-                                size: 48, color: Colors.red),
+                            const Icon(
+                              Icons.error_outline,
+                              size: 48,
+                              color: Colors.red,
+                            ),
                             const SizedBox(height: 16),
-                            const Text('Error loading profile',
-                                style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold)),
+                            const Text(
+                              'Error loading profile',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                             const SizedBox(height: 8),
                             ElevatedButton(
-                              onPressed: () =>
-                                  setState(() => _loadProfile()),
+                              onPressed: () => setState(() => _loadProfile()),
                               style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      const Color.fromRGBO(244, 135, 6, 1)),
-                              child: const Text('Try Again',
-                                  style: TextStyle(
-                                      color: AppColors.whitecolor)),
+                                backgroundColor: const Color.fromRGBO(
+                                  244,
+                                  135,
+                                  6,
+                                  1,
+                                ),
+                              ),
+                              child: const Text(
+                                'Try Again',
+                                style: TextStyle(color: AppColors.whitecolor),
+                              ),
                             ),
                           ],
                         ),
@@ -1007,7 +1122,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                     }
                     if (snapshot.hasData) {
                       WidgetsBinding.instance.addPostFrameCallback((_) {
-                        _populatePostsFromProfile(snapshot.data!); 
+                        _populatePostsFromProfile(snapshot.data!);
                         if (_countsNotifier.value.followers == 0 &&
                             _countsNotifier.value.following == 0) {
                           _countsNotifier.value = (
@@ -1036,12 +1151,19 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                     child: Center(
                       child: Column(
                         children: [
-                          Icon(Icons.article_outlined,
-                              size: 48, color: Colors.grey[400]),
+                          Icon(
+                            Icons.article_outlined,
+                            size: 48,
+                            color: Colors.grey[400],
+                          ),
                           const SizedBox(height: 12),
-                          Text('No posts yet',
-                              style: TextStyle(
-                                  color: Colors.grey[500], fontSize: 16)),
+                          Text(
+                            'No posts yet',
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 16,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -1075,8 +1197,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     );
   }
 }
-
- 
 
 class _FollowersFollowingSheet extends StatefulWidget {
   final TabController tabController;
@@ -1128,13 +1248,11 @@ class _FollowersFollowingSheetState extends State<_FollowersFollowingSheet> {
       });
     }
   }
- 
 
   void _onFollowFromFollowersList(FollowerFollowing person) {
     setState(() {
       _followingIds.add(person.id);
-      if (_following != null &&
-          !_following!.any((f) => f.id == person.id)) {
+      if (_following != null && !_following!.any((f) => f.id == person.id)) {
         _following!.add(person);
       }
     });
@@ -1161,13 +1279,12 @@ class _FollowersFollowingSheetState extends State<_FollowersFollowingSheet> {
     });
     widget.onCountsChanged(0, -1);
   }
- 
 
   Widget _buildFollowersList() {
     if (_followers == null || _followers!.isEmpty) {
       return const Center(child: Text('No followers yet'));
     }
-    return ListView.builder( 
+    return ListView.builder(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       itemCount: _followers!.length,
@@ -1204,14 +1321,13 @@ class _FollowersFollowingSheetState extends State<_FollowersFollowingSheet> {
     );
   }
 
-   
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
-      initialChildSize: 0.55,   
-      minChildSize: 0.35,       
-      maxChildSize: 1.0,        
+      initialChildSize: 0.55,
+      minChildSize: 0.35,
+      maxChildSize: 1.0,
       expand: false,
-      snap: true,              
+      snap: true,
       snapSizes: const [0.55, 1.0],
       builder: (context, scrollController) {
         return Container(
@@ -1220,7 +1336,7 @@ class _FollowersFollowingSheetState extends State<_FollowersFollowingSheet> {
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
-            children: [ 
+            children: [
               Padding(
                 padding: const EdgeInsets.only(top: 12, bottom: 4),
                 child: Container(
@@ -1232,7 +1348,7 @@ class _FollowersFollowingSheetState extends State<_FollowersFollowingSheet> {
                   ),
                 ),
               ),
- 
+
               TabBar(
                 controller: widget.tabController,
                 labelColor: const Color.fromRGBO(244, 135, 6, 1),
@@ -1261,26 +1377,27 @@ class _FollowersFollowingSheetState extends State<_FollowersFollowingSheet> {
                   ),
                 ],
               ),
- 
+
               Expanded(
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _error != null
+                child:
+                    _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _error != null
                         ? Center(child: Text('Error: $_error'))
                         : TabBarView(
-                            controller: widget.tabController, 
-                            physics: const ClampingScrollPhysics(),
-                            children: [ 
-                              SingleChildScrollView(
-                                controller: scrollController,
-                                child: _buildFollowersList(),
-                              ),
-                              SingleChildScrollView(
-                                controller: scrollController,
-                                child: _buildFollowingList(),
-                              ),
-                            ],
-                          ),
+                          controller: widget.tabController,
+                          physics: const ClampingScrollPhysics(),
+                          children: [
+                            SingleChildScrollView(
+                              controller: scrollController,
+                              child: _buildFollowersList(),
+                            ),
+                            SingleChildScrollView(
+                              controller: scrollController,
+                              child: _buildFollowingList(),
+                            ),
+                          ],
+                        ),
               ),
             ],
           ),
@@ -1290,7 +1407,6 @@ class _FollowersFollowingSheetState extends State<_FollowersFollowingSheet> {
   }
 }
 
- 
 class _PersonTile extends StatelessWidget {
   final FollowerFollowing person;
   final bool isFollowing;
@@ -1315,9 +1431,13 @@ class _PersonTile extends StatelessWidget {
         radius: 24,
         backgroundColor: const Color.fromRGBO(235, 111, 70, 0.2),
         backgroundImage: pictureUrl != null ? NetworkImage(pictureUrl) : null,
-        child: pictureUrl == null
-            ? const Icon(Icons.person, color: Color.fromRGBO(244, 135, 6, 1))
-            : null,
+        child:
+            pictureUrl == null
+                ? const Icon(
+                  Icons.person,
+                  color: Color.fromRGBO(244, 135, 6, 1),
+                )
+                : null,
       ),
       title: GestureDetector(
         onTap: () {
@@ -1325,11 +1445,14 @@ class _PersonTile extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-                builder: (_) => SpecificUserProfilePage(userId: person.id)),
+              builder: (_) => SpecificUserProfilePage(userId: person.id),
+            ),
           );
         },
-        child: Text(displayName,
-            style: const TextStyle(fontWeight: FontWeight.w600)),
+        child: Text(
+          displayName,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
       ),
       subtitle: Text(
         person.username != null ? '@${person.username}' : person.email,
@@ -1341,13 +1464,12 @@ class _PersonTile extends StatelessWidget {
         initialFollowStatus: isFollowing,
         onFollowSuccess: onFollow,
         onUnfollowSuccess: onUnfollow,
-        size: 36, 
+        size: 36,
       ),
     );
   }
 }
 
- 
 class ProfileInfoCard extends StatelessWidget {
   final String title;
   final String value;
@@ -1376,13 +1498,18 @@ class ProfileInfoCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style:
-                          const TextStyle(fontSize: 14, color: Colors.grey)),
+                  Text(
+                    title,
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
                   const SizedBox(height: 4),
-                  Text(value,
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold)),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
             ),
