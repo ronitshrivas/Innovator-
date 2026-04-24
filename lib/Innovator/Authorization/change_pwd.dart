@@ -59,7 +59,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       final body = jsonEncode({
         'oldPassword': _oldPasswordController.text,
         'newPassword': _newPasswordController.text,
-        'confirmPassword': _confirmPasswordController.text,
+        // 'confirmPassword': _confirmPasswordController.text,
       });
 
       developer.log('Sending change password request to: $url');

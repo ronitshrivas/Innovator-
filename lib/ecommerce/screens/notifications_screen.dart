@@ -35,6 +35,7 @@ class _EcommerceNotificationScreenState
           backgroundColor: Colors.white,
           appBar: AppBar(
             elevation: 0,
+            scrolledUnderElevation: 0,
             backgroundColor: Colors.white,
             title: const Text(
               'Notifications',
@@ -172,7 +173,9 @@ class _NotificationTileState extends ConsumerState<_NotificationTile> {
           context,
           MaterialPageRoute(
             builder:
-                (_) => ProductDetailPage(productId: widget.notification.data.productId),
+                (_) => ProductDetailPage(
+                  productId: widget.notification.data.productId,
+                ),
           ),
         );
       },

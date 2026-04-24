@@ -702,16 +702,23 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Obx(
-                          () => Text(
-                            _userController.userName.value ??
-                                (profile.fullName.isNotEmpty
-                                    ? profile.fullName
-                                    : profile.username),
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        // Obx(
+                        //   () => Text(
+                        //     _userController.userName.value ??
+                        //         (profile.fullName.isNotEmpty
+                        //             ? profile.fullName
+                        //             : profile.username),
+                        //     style: const TextStyle(
+                        //       fontSize: 22,
+                        //       fontWeight: FontWeight.bold,
+                        //     ),
+                        //   ),
+                        // ),
+                        Text(
+                          profile.fullName,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                         Text(

@@ -12,9 +12,9 @@ class EcommerceNotificationData {
 
   factory EcommerceNotificationData.fromJson(Map<String, dynamic> json) {
     return EcommerceNotificationData(
-      type: json['type'] as String,
-      productId: json['product_id'] as String,
-      categroy: json['category'] as String,
+      type: json['type'] ??'',
+      productId: json['product_id'] ??'',
+      categroy: json['category'] ??'',
     );
   }
 

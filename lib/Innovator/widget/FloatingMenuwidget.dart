@@ -284,7 +284,6 @@ class _FloatingMenuWidgetState extends ConsumerState<FloatingMenuWidget>
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-
     return Material(
       type: MaterialType.transparency,
       child: Stack(
