@@ -127,7 +127,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
       }
     } catch (e) {
       if (!mounted) return; // ← ADD
-      _showErrorSnackbar('Error fetching notifications');
+      // _showErrorSnackbar('Error fetching notifications');
     } finally {
       if (!mounted) return; // ← ADD
       setState(() => isLoading = false);
@@ -170,7 +170,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
       }
     } catch (e) {
       if (!mounted) return;
-      _showErrorSnackbar('Error fetching more notifications');
+      //_showErrorSnackbar('Error fetching more notifications');
     } finally {
       if (!mounted) return;
       setState(() => isLoadingMore = false);
@@ -207,7 +207,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
         );
       }
     } catch (e) {
-      _showErrorSnackbar('Error marking notification as read');
+      //_showErrorSnackbar('Error marking notification as read');
     }
   }
 
@@ -243,7 +243,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
         throw Exception('Failed to mark all as read: ${response.statusCode}');
       }
     } catch (e) {
-      _showErrorSnackbar('Error marking all notifications as read');
+      //_showErrorSnackbar('Error marking all notifications as read');
     }
   }
 
@@ -272,7 +272,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
         );
       }
     } catch (e) {
-      _showErrorSnackbar('Error deleting notification');
+      //_showErrorSnackbar('Error deleting notification');
     }
   }
 
@@ -304,7 +304,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
         );
       }
     } catch (e) {
-      _showErrorSnackbar('Error deleting all notifications');
+      //_showErrorSnackbar('Error deleting all notifications');
     } finally {
       setState(() => isDeletingAll = false);
     }
@@ -379,7 +379,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
     debugPrint('senderUsername: ${notification.senderUsername}');
 
     if (notification.senderId == null || notification.senderId!.isEmpty) {
-      _showErrorSnackbar('Unable to open chat: sender not found');
+      // _showErrorSnackbar('Unable to open chat: sender not found');
       return;
     }
 
@@ -1214,24 +1214,6 @@ class _NotificationListScreenState extends State<NotificationListScreen>
     );
   }
 
-  void _showErrorSnackbar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.error_outline, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: Colors.red[600],
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
-      ),
-    );
-  }
-
   void _showSuccessSnackbar(String message) {
     HapticFeedback.lightImpact();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1247,6 +1229,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
+        duration: const Duration(milliseconds: 800),
       ),
     );
   }
