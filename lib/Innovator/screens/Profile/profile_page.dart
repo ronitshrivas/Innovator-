@@ -856,7 +856,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Posts',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),

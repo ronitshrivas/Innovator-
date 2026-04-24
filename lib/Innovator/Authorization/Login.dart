@@ -152,6 +152,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         if (!mounted) return;
         _navigateAfterLogin(user);
 
+        final elearningNotif = ref.read(elearningNotificationServiceProvider);
+        final ecommerceNotif = ref.read(ecommerceNotificationServiceProvider);
+
+        if (!mounted) return;
+        _navigateAfterLogin(user);
+
         WidgetsBinding.instance.addPostFrameCallback((_) async {
           if (!mounted) return;
           final fcmToken = await FirebaseMessaging.instance.getToken();

@@ -14,6 +14,8 @@ import 'package:innovator/Innovator/utils/triangle_tool_tip.dart';
 
 class CommentSection extends StatefulWidget {
   final String contentId; // = postId in new API
+  final VoidCallback? onCommentAdded;
+  final bool isReel;
   // final VoidCallback? onCommentAdded;
   final bool isReel;
   final void Function(int delta)? onCommentCountChanged;
@@ -25,6 +27,7 @@ class CommentSection extends StatefulWidget {
     Key? key,
     required this.contentId,
     this.onCommentCountChanged,
+    this.onCommentAdded,
     this.isReel = false,
   }) : super(key: key);
 
@@ -178,6 +181,7 @@ class _CommentSectionState extends State<CommentSection> {
         final reply = await _service.addReply(
           parentCommentId: _replyToCommentId!,
           content: text,
+          isReel: widget.isReel,
         );
         setState(() {
           _replies[_replyToCommentId!] = [

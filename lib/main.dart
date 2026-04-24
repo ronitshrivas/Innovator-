@@ -88,7 +88,7 @@ class _InnovatorHomePageState extends ConsumerState<InnovatorHomePage>
     developer.log('InnovatorHomePage initialized');
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       _setupFCM();
-      ref.read(notificationProvider.notifier).startPolling();
+      // ref.read(notificationProvider.notifier).startPolling();
       final fcmToken = await FirebaseMessaging.instance.getToken();
       ref
           .read(elearningNotificationServiceProvider)
