@@ -1,10 +1,9 @@
 import 'dart:developer';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // ← NEW
+import 'package:flutter_riverpod/flutter_riverpod.dart';  
 import 'package:in_app_update/in_app_update.dart';
 import 'package:innovator/Innovator/provider/notification_provider.dart';
-import 'package:innovator/Innovator/provider/upload_provider.dart';
-import 'package:innovator/Innovator/screens/CreatePost/createpost.dart';
+import 'package:innovator/Innovator/provider/upload_provider.dart'; 
 import 'package:innovator/Innovator/screens/Feed/Inner_Homepage.dart';
 import 'package:innovator/Innovator/screens/Feed/Video_Feed.dart';
 import 'package:innovator/Innovator/widget/FloatingMenuwidget.dart';
@@ -77,7 +76,7 @@ class _HomepageState extends ConsumerState<Homepage>
         log('Update available!');
         if (info.immediateUpdateAllowed) {
           _performImmediateUpdate();
-        } else if (info.flexibleUpdateAllowed) {
+        } else if (info.flexibleUpdateAllowed) { 
           _performFlexibleUpdate();
         }
       } else {
