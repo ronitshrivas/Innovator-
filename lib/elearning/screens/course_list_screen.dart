@@ -453,7 +453,7 @@ class _CourseCard extends StatelessWidget {
                         course.thumbnail != null
                             ? Image.network(
                               course.thumbnail!,
-                              fit: BoxFit.cover,
+                              fit: BoxFit.fill,
                               errorBuilder:
                                   (_, __, ___) => _ThumbnailPlaceholder(),
                             )

@@ -127,7 +127,7 @@ class ReelsApiService {
     };
   }
 
-  static Future<List<ReelModel>> fetchReels({String? cursor}) async {
+  static Future<Map<String, dynamic>> fetchReels({String? cursor}) async {
     final uri =
         (cursor != null && cursor.isNotEmpty)
             ? Uri.parse(cursor)
@@ -135,13 +135,23 @@ class ReelsApiService {
     final res = await http
         .get(uri, headers: _headers())
         .timeout(const Duration(seconds: 20));
+    // if (res.statusCode == 200) {
+    //   final data = json.decode(res.body) as Map<String, dynamic>;
+    //   return (data['results'] as List<dynamic>? ?? [])
+    //       .whereType<Map<String, dynamic>>()
+    //       .map(ReelModel.fromJson)
+    //       .where((r) => r.hasVideo)
+    //       .toList();
+    // }
     if (res.statusCode == 200) {
       final data = json.decode(res.body) as Map<String, dynamic>;
-      return (data['results'] as List<dynamic>? ?? [])
-          .whereType<Map<String, dynamic>>()
-          .map(ReelModel.fromJson)
-          .where((r) => r.hasVideo)
-          .toList();
+      final reels =
+          (data['results'] as List<dynamic>? ?? [])
+              .whereType<Map<String, dynamic>>()
+              .map(ReelModel.fromJson)
+              .where((r) => r.hasVideo)
+              .toList();
+      return {'reels': reels, 'next': data['next']}; // ADD next
     }
     throw Exception('Fetch failed: ${res.statusCode}');
   }
@@ -258,9 +268,20 @@ class ReelsFeedNotifier extends StateNotifier<AsyncValue<List<ReelModel>>> {
   bool _hasMore = true;
   bool _busy = false;
 
+  // Future<void> _load() async {
+  //   try {
+  //     state = AsyncValue.data(await ReelsApiService.fetchReels());
+  //   } catch (e, st) {
+  //     state = AsyncValue.error(e, st);
+  //   }
+  // }
+
   Future<void> _load() async {
     try {
-      state = AsyncValue.data(await ReelsApiService.fetchReels());
+      final result = await ReelsApiService.fetchReels();
+      _next = result['next'] as String?; // ADD THIS
+      _hasMore = _next != null; // ADD THIS
+      state = AsyncValue.data(result['reels'] as List<ReelModel>);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
@@ -273,11 +294,26 @@ class ReelsFeedNotifier extends StateNotifier<AsyncValue<List<ReelModel>>> {
     await _load();
   }
 
+  // Future<void> loadMore() async {
+  //   if (_busy || !_hasMore || _next == null) return;
+  //   _busy = true;
+  //   try {
+  //     final more = await ReelsApiService.fetchReels(cursor: _next);
+  //     state = AsyncValue.data([...(state.value ?? []), ...more]);
+  //   } catch (_) {
+  //   } finally {
+  //     _busy = false;
+  //   }
+  // }
+
   Future<void> loadMore() async {
     if (_busy || !_hasMore || _next == null) return;
     _busy = true;
     try {
-      final more = await ReelsApiService.fetchReels(cursor: _next);
+      final result = await ReelsApiService.fetchReels(cursor: _next);
+      _next = result['next'] as String?; // ADD THIS
+      _hasMore = _next != null; // ADD THIS
+      final more = result['reels'] as List<ReelModel>;
       state = AsyncValue.data([...(state.value ?? []), ...more]);
     } catch (_) {
     } finally {
@@ -743,10 +779,27 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
     super.dispose();
   }
 
+  // void _scheduleVideoReveal() {
+  //   _loadingTimer?.cancel();
+  //   _isPlaying = true;
+  //   _loadingTimer = Timer(const Duration(milliseconds: 600), () {
+  //     if (mounted && widget.isActive) {
+  //       setState(() => _isLoading = false);
+  //     }
+  //   });
+  // }
+
   void _scheduleVideoReveal() {
     _loadingTimer?.cancel();
     _isPlaying = true;
-    _loadingTimer = Timer(const Duration(milliseconds: 600), () {
+    // Fallback timeout in case first frame never fires
+    _loadingTimer = Timer(const Duration(milliseconds: 2000), () {
+      if (mounted && widget.isActive) {
+        setState(() => _isLoading = false);
+      }
+    });
+    ReelsPlayer.listenFirstFrame(widget.activeSlot, () {
+      _loadingTimer?.cancel();
       if (mounted && widget.isActive) {
         setState(() => _isLoading = false);
       }
@@ -1050,7 +1103,6 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
     if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
     return n > 0 ? '$n' : '';
   }
-  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -1100,34 +1152,51 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
     );
   }
 
+  // Widget _buildLoadingOverlay() => Stack(
+  //   fit: StackFit.expand,
+  //   children: [
+  //     Container(
+  //       decoration: const BoxDecoration(
+  //         gradient: LinearGradient(
+  //           begin: Alignment.topCenter,
+  //           end: Alignment.bottomCenter,
+  //           colors: [Color(0xFF0D0D0D), Color(0xFF1A1A1A), Color(0xFF0D0D0D)],
+  //         ),
+  //       ),
+  //     ),
+  //     Shimmer.fromColors(
+  //       baseColor: Colors.white.withOpacity(0.03),
+  //       highlightColor: Colors.white.withOpacity(0.08),
+  //       period: const Duration(milliseconds: 1200),
+  //       child: Container(color: Colors.white.withOpacity(0.03)),
+  //     ),
+  //     const Center(
+  //       child: SizedBox(
+  //         width: 36,
+  //         height: 36,
+  //         child: CircularProgressIndicator(
+  //           color: Colors.white54,
+  //           strokeWidth: 2.5,
+  //         ),
+  //       ),
+  //     ),
+  //   ],
+  // );
+
   Widget _buildLoadingOverlay() => Stack(
     fit: StackFit.expand,
     children: [
-      Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF0D0D0D), Color(0xFF1A1A1A), Color(0xFF0D0D0D)],
-          ),
-        ),
-      ),
-      Shimmer.fromColors(
-        baseColor: Colors.white.withOpacity(0.03),
-        highlightColor: Colors.white.withOpacity(0.08),
-        period: const Duration(milliseconds: 1200),
-        child: Container(color: Colors.white.withOpacity(0.03)),
-      ),
-      const Center(
-        child: SizedBox(
-          width: 36,
-          height: 36,
-          child: CircularProgressIndicator(
-            color: Colors.white54,
-            strokeWidth: 2.5,
-          ),
-        ),
-      ),
+      // REPLACE the gradient container + shimmer + spinner with this:
+      if (widget.reel.thumbnail != null && widget.reel.thumbnail!.isNotEmpty)
+        Image.network(
+          widget.reel.thumbnail!,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(color: Colors.black),
+        )
+      else
+        Container(color: Colors.black),
+      // Keep a subtle dark overlay so UI elements are readable
+      Container(color: Colors.black.withOpacity(0.25)),
     ],
   );
 

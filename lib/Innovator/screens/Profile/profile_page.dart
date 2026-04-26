@@ -977,13 +977,13 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                                 value: profile.email,
                                 icon: Icons.email,
                               ),
-                              if (profile.bio != null &&
-                                  profile.bio!.isNotEmpty)
-                                ProfileInfoCard(
-                                  title: 'Bio',
-                                  value: profile.bio!,
-                                  icon: Icons.description,
-                                ),
+                              // if (profile.bio != null &&
+                              //     profile.bio!.isNotEmpty)
+                              //   ProfileInfoCard(
+                              //     title: 'Bio',
+                              //     value: profile.bio!,
+                              //     icon: Icons.description,
+                              //   ),
                               ProfileInfoCard(
                                 title: 'Member Since',
                                 value: _formatDate(profile.createdAt),

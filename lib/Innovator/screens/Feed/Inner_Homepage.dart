@@ -1464,7 +1464,7 @@ class _FeedItemState extends State<FeedItem>
                       contentId: widget.content.id,
                       initialLikeStatus: widget.content.isLiked,
                       likeService: likeService,
-                      isReel: true,
+                      isReel: widget.content.isReel,
                       initialReactionType: widget.content.currentUserReaction,
                       onLikeToggled: (isLiked) {
                         widget.onLikeToggled(isLiked);

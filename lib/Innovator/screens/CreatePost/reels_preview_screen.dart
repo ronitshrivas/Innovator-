@@ -213,7 +213,7 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
-        fit: StackFit.expand,
+        fit: StackFit.loose,
         children: [
           // ── FIX: Correct video preview (no squish) ────────────────────────
           if (_videoReady && _videoCtrl != null)
