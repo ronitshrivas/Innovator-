@@ -1,3 +1,4313 @@
+// import 'dart:async';
+// import 'dart:convert';
+// import 'dart:developer' as developer;
+
+// import 'package:better_native_video_player/better_native_video_player.dart';
+// import 'package:cached_network_image/cached_network_image.dart';
+// import 'package:flutter/gestures.dart';
+// import 'package:flutter/material.dart';
+// import 'package:flutter/services.dart';
+// import 'package:flutter_riverpod/flutter_riverpod.dart';
+// import 'package:http/http.dart' as http;
+// import 'package:share_plus/share_plus.dart';
+// import 'package:shimmer/shimmer.dart';
+// import 'package:innovator/Innovator/App_data/App_data.dart';
+// import 'package:innovator/Innovator/screens/comment/comment_section.dart';
+// import 'package:innovator/Innovator/screens/Follow/follow_Button.dart';
+// import 'package:innovator/Innovator/screens/Likes/Content-Like-Service.dart';
+// import 'package:innovator/Innovator/screens/SHow_Specific_Profile/Show_Specific_Profile.dart';
+
+// // ════════════════════════════════════════════════════════════════════════════
+// // MODELS
+// // ════════════════════════════════════════════════════════════════════════════
+
+// class ReelModel {
+//   final String id;
+//   final String userId;
+//   final String username;
+//   final String avatar;
+//   String caption;
+//   final String? videoUrl;
+//   final String? hlsUrl;
+//   final String? thumbnail;
+//   int viewsCount;
+//   int reactionsCount;
+//   String? currentUserReaction;
+//   bool isFollowed;
+//   int commentsCount;
+//   final DateTime createdAt;
+//   final String? sharedReelId;
+//   final ReelModel? sharedReelDetails;
+
+//   ReelModel({
+//     required this.id,
+//     required this.userId,
+//     required this.username,
+//     required this.avatar,
+//     required this.caption,
+//     this.videoUrl,
+//     this.hlsUrl,
+//     this.thumbnail,
+//     required this.viewsCount,
+//     required this.reactionsCount,
+//     this.currentUserReaction,
+//     required this.isFollowed,
+//     required this.commentsCount,
+//     required this.createdAt,
+//     this.sharedReelId,
+//     this.sharedReelDetails,
+//   });
+
+//   bool get hasVideo =>
+//       (hlsUrl != null && hlsUrl!.isNotEmpty) ||
+//       (videoUrl != null && videoUrl!.isNotEmpty);
+
+//   String? get bestVideoUrl =>
+//       (hlsUrl != null && hlsUrl!.isNotEmpty) ? hlsUrl : videoUrl;
+
+//   bool get isLiked => currentUserReaction != null;
+//   bool get isRepost => sharedReelId != null;
+//   ReactionType? get currentReactionType =>
+//       ReactionTypeExtension.fromValue(currentUserReaction);
+
+//   factory ReelModel.fromJson(Map<String, dynamic> j) => ReelModel(
+//     id: j['id']?.toString() ?? '',
+//     userId: j['user_id']?.toString() ?? '',
+//     username: j['username']?.toString() ?? '',
+//     avatar: j['avatar']?.toString() ?? '',
+//     caption: j['caption']?.toString() ?? '',
+//     videoUrl: j['video']?.toString(),
+//     hlsUrl: j['hls_playlist_url']?.toString(),
+//     thumbnail: j['thumbnail']?.toString(),
+//     viewsCount: (j['views_count'] as num?)?.toInt() ?? 0,
+//     reactionsCount:
+//         (j['reactions_count'] as num?)?.toInt() ??
+//         (j['like_count'] as num?)?.toInt() ??
+//         0,
+//     currentUserReaction: j['current_user_reaction']?.toString(),
+//     isFollowed: j['is_followed'] == true,
+//     commentsCount: (j['comments_count'] as num?)?.toInt() ?? 0,
+//     createdAt:
+//         DateTime.tryParse(j['created_at']?.toString() ?? '') ?? DateTime.now(),
+//     sharedReelId: j['shared_reel']?.toString(),
+//     sharedReelDetails:
+//         j['shared_reel_details'] != null
+//             ? ReelModel.fromJson(
+//               j['shared_reel_details'] as Map<String, dynamic>,
+//             )
+//             : null,
+//   );
+// }
+
+// class ReelOperationResult {
+//   final bool success;
+//   final String? errorMessage;
+//   final ReelModel? data;
+//   const ReelOperationResult({
+//     required this.success,
+//     this.errorMessage,
+//     this.data,
+//   });
+// }
+
+// class ReelsFeed {
+//   final List<ReelModel> reels;
+//   final String? nextCursor;
+//   final bool hasMore;
+//   const ReelsFeed({
+//     required this.reels,
+//     this.nextCursor,
+//     required this.hasMore,
+//   });
+// }
+
+// // ════════════════════════════════════════════════════════════════════════════
+// // API SERVICE
+// // ════════════════════════════════════════════════════════════════════════════
+
+// class ReelsApiService {
+//   static const _base = 'http://36.253.137.34:8005';
+//   static const _reelsUrl = '$_base/api/reels/';
+
+//   static Map<String, String> _headers() {
+//     final token = AppData().accessToken ?? '';
+//     return {
+//       'Content-Type': 'application/json',
+//       'Accept': 'application/json',
+//       if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+//     };
+//   }
+
+//   static Future<ReelsFeed> fetchReels({String? cursor}) async {
+//     final uri =
+//         (cursor != null && cursor.isNotEmpty)
+//             ? Uri.parse(cursor)
+//             : Uri.parse(_reelsUrl);
+//     final res = await http
+//         .get(uri, headers: _headers())
+//         .timeout(const Duration(seconds: 20));
+//     if (res.statusCode == 200) {
+//       final data = json.decode(res.body) as Map<String, dynamic>;
+//       final results =
+//           (data['results'] as List<dynamic>? ?? [])
+//               .whereType<Map<String, dynamic>>()
+//               .map(ReelModel.fromJson)
+//               .where((r) => r.hasVideo)
+//               .toList();
+//       return ReelsFeed(
+//         reels: results,
+//         nextCursor: data['next']?.toString(),
+//         hasMore: data['next'] != null,
+//       );
+//     }
+//     throw Exception('Reels fetch failed: ${res.statusCode}');
+//   }
+
+//   static Future<void> recordView(String reelId) async {
+//     try {
+//       await http
+//           .post(Uri.parse('$_reelsUrl$reelId/view/'), headers: _headers())
+//           .timeout(const Duration(seconds: 5));
+//     } catch (_) {}
+//   }
+
+//   static Future<ReelOperationResult> editReel({
+//     required String reelId,
+//     required String caption,
+//   }) async {
+//     try {
+//       final res = await http
+//           .patch(
+//             Uri.parse('$_reelsUrl$reelId/'),
+//             headers: _headers(),
+//             body: json.encode({'caption': caption}),
+//           )
+//           .timeout(const Duration(seconds: 15));
+//       if (res.statusCode == 200) {
+//         return ReelOperationResult(
+//           success: true,
+//           data: ReelModel.fromJson(
+//             json.decode(res.body) as Map<String, dynamic>,
+//           ),
+//         );
+//       }
+//       return ReelOperationResult(
+//         success: false,
+//         errorMessage: _parseError(res.body, res.statusCode),
+//       );
+//     } catch (_) {
+//       return const ReelOperationResult(
+//         success: false,
+//         errorMessage: 'Network error.',
+//       );
+//     }
+//   }
+
+//   static Future<ReelOperationResult> deleteReel(String reelId) async {
+//     try {
+//       final res = await http
+//           .delete(Uri.parse('$_reelsUrl$reelId/'), headers: _headers())
+//           .timeout(const Duration(seconds: 15));
+//       if (res.statusCode == 204 || res.statusCode == 200) {
+//         return const ReelOperationResult(success: true);
+//       }
+//       return ReelOperationResult(
+//         success: false,
+//         errorMessage: _parseError(res.body, res.statusCode),
+//       );
+//     } catch (_) {
+//       return const ReelOperationResult(
+//         success: false,
+//         errorMessage: 'Network error.',
+//       );
+//     }
+//   }
+
+//   static Future<ReelOperationResult> repostReel(String reelId) async {
+//     try {
+//       final res = await http
+//           .post(Uri.parse('$_reelsUrl$reelId/repost/'), headers: _headers())
+//           .timeout(const Duration(seconds: 15));
+//       if (res.statusCode == 200 || res.statusCode == 201) {
+//         return ReelOperationResult(
+//           success: true,
+//           data: ReelModel.fromJson(
+//             json.decode(res.body) as Map<String, dynamic>,
+//           ),
+//         );
+//       }
+//       return ReelOperationResult(
+//         success: false,
+//         errorMessage: _parseError(res.body, res.statusCode),
+//       );
+//     } catch (_) {
+//       return const ReelOperationResult(
+//         success: false,
+//         errorMessage: 'Network error.',
+//       );
+//     }
+//   }
+
+//   static String _parseError(String body, int code) {
+//     try {
+//       final d = json.decode(body);
+//       if (d is Map) {
+//         final v = d['detail'] ?? d['message'] ?? d['error'];
+//         if (v != null) return v.toString();
+//       }
+//     } catch (_) {}
+//     return 'Something went wrong ($code)';
+//   }
+// }
+
+// // ════════════════════════════════════════════════════════════════════════════
+// // RIVERPOD STATE
+// // ════════════════════════════════════════════════════════════════════════════
+
+// final activeReelIndexProvider = StateProvider<int>((ref) => 0);
+
+// class ReelsFeedNotifier extends StateNotifier<AsyncValue<List<ReelModel>>> {
+//   ReelsFeedNotifier() : super(const AsyncValue.loading()) {
+//     _load();
+//   }
+
+//   String? _nextCursor;
+//   bool _hasMore = true;
+//   bool _isLoadingMore = false;
+
+//   Future<void> _load() async {
+//     try {
+//       final feed = await ReelsApiService.fetchReels();
+//       _nextCursor = feed.nextCursor;
+//       _hasMore = feed.hasMore;
+//       state = AsyncValue.data(feed.reels);
+//     } catch (e, st) {
+//       state = AsyncValue.error(e, st);
+//     }
+//   }
+
+//   Future<void> refresh() async {
+//     _nextCursor = null;
+//     _hasMore = true;
+//     state = const AsyncValue.loading();
+//     await _load();
+//   }
+
+//   Future<void> loadMore() async {
+//     if (_isLoadingMore || !_hasMore || _nextCursor == null) return;
+//     _isLoadingMore = true;
+//     try {
+//       final current = state.value ?? [];
+//       final feed = await ReelsApiService.fetchReels(cursor: _nextCursor);
+//       _nextCursor = feed.nextCursor;
+//       _hasMore = feed.hasMore;
+//       state = AsyncValue.data([...current, ...feed.reels]);
+//     } catch (_) {
+//     } finally {
+//       _isLoadingMore = false;
+//     }
+//   }
+
+//   void applyReaction(String reelId, String? newReaction) {
+//     final list = state.value;
+//     if (list == null) return;
+//     final idx = list.indexWhere((r) => r.id == reelId);
+//     if (idx == -1) return;
+//     final reel = list[idx];
+//     final had = reel.currentUserReaction != null;
+//     final will = newReaction != null;
+//     reel.currentUserReaction = newReaction;
+//     if (!had && will) reel.reactionsCount++;
+//     if (had && !will)
+//       reel.reactionsCount = (reel.reactionsCount - 1).clamp(0, 999999);
+//     state = AsyncValue.data(List.from(list));
+//   }
+
+//   void updateFollow(String userId, bool isFollowed) {
+//     final list = state.value;
+//     if (list == null) return;
+//     for (final r in list) {
+//       if (r.userId == userId) r.isFollowed = isFollowed;
+//     }
+//     state = AsyncValue.data(List.from(list));
+//   }
+
+//   void incrementComments(String reelId) {
+//     final list = state.value;
+//     if (list == null) return;
+//     final idx = list.indexWhere((r) => r.id == reelId);
+//     if (idx != -1) list[idx].commentsCount++;
+//     state = AsyncValue.data(List.from(list));
+//   }
+
+//   Future<String?> editReel(String reelId, String newCaption) async {
+//     final list = state.value;
+//     if (list == null) return 'No data';
+//     final idx = list.indexWhere((r) => r.id == reelId);
+//     if (idx == -1) return 'Not found';
+//     final old = list[idx].caption;
+//     list[idx].caption = newCaption;
+//     state = AsyncValue.data(List.from(list));
+//     final result = await ReelsApiService.editReel(
+//       reelId: reelId,
+//       caption: newCaption,
+//     );
+//     if (result.success) {
+//       if (result.data != null) list[idx].caption = result.data!.caption;
+//       state = AsyncValue.data(List.from(list));
+//       return null;
+//     }
+//     list[idx].caption = old;
+//     state = AsyncValue.data(List.from(list));
+//     return result.errorMessage;
+//   }
+
+//   Future<String?> deleteReel(String reelId) async {
+//     final result = await ReelsApiService.deleteReel(reelId);
+//     if (result.success) {
+//       state = AsyncValue.data(
+//         (state.value ?? []).where((r) => r.id != reelId).toList(),
+//       );
+//       return null;
+//     }
+//     return result.errorMessage;
+//   }
+
+//   Future<String?> repostReel(String reelId) async {
+//     final result = await ReelsApiService.repostReel(reelId);
+//     if (result.success && result.data != null) {
+//       state = AsyncValue.data([result.data!, ...(state.value ?? [])]);
+//       return null;
+//     }
+//     return result.errorMessage;
+//   }
+// }
+
+// final reelsFeedProvider =
+//     StateNotifierProvider<ReelsFeedNotifier, AsyncValue<List<ReelModel>>>(
+//       (ref) => ReelsFeedNotifier(),
+//     );
+
+// // ════════════════════════════════════════════════════════════════════════════
+// // SINGLE CONTROLLER MANAGER
+// //
+// // ROOT CAUSE OF ALL CRASHES IN YOUR LOGS:
+// // ─────────────────────────────────────────
+// // c2.qti.avc.decoder (Qualcomm) only supports ~2 simultaneous hardware
+// // decode sessions. The old pool kept 3-5 ExoPlayer instances alive at once.
+// // When the device ran out of decoder slots:
+// //   → "Component returned error: 0xffffffff"
+// //   → ExoPlayer released the codec mid-stream
+// //   → Pool tried to swap surfaces on the released codec
+// //   → "setSurface() only valid at Executing states; currently at Released"
+// //   → 2500ms UI freeze (the Davey! frames in your log)
+// //
+// // FIX: Enforce exactly ONE live ExoPlayer at all times.
+// // Off-screen reels are pure Flutter thumbnails (zero native cost).
+// // ════════════════════════════════════════════════════════════════════════════
+
+// class _SingleControllerManager {
+//   static int _seed = 700;
+
+//   NativeVideoPlayerController? _ctrl;
+//   String? _reelId;
+
+//   NativeVideoPlayerController? get controller => _ctrl;
+//   String? get reelId => _reelId;
+
+//   /// Returns existing controller if already created for this reel,
+//   /// otherwise disposes old and creates fresh.
+//   NativeVideoPlayerController acquire(String reelId) {
+//     if (_reelId == reelId && _ctrl != null) return _ctrl!;
+//     _release();
+//     final c = NativeVideoPlayerController(
+//       id: _seed++,
+//       autoPlay: false,
+//       enableLooping: true,
+//       showNativeControls: false,
+//     );
+//     _ctrl = c;
+//     _reelId = reelId;
+//     developer.log('[SCM] ✅ ctrl id=${c.id} for reel $reelId');
+//     return c;
+//   }
+
+//   void pause() {
+//     try {
+//       _ctrl?.pause();
+//     } catch (_) {}
+//   }
+
+//   void _release() {
+//     if (_ctrl == null) return;
+//     developer.log('[SCM] 🗑 Releasing ctrl id=${_ctrl!.id}');
+//     try {
+//       _ctrl!.dispose();
+//     } catch (_) {}
+//     _ctrl = null;
+//     _reelId = null;
+//   }
+
+//   void disposeAll() => _release();
+// }
+
+// // ════════════════════════════════════════════════════════════════════════════
+// // REELS SCREEN
+// // ════════════════════════════════════════════════════════════════════════════
+
+// class ReelsScreen extends ConsumerStatefulWidget {
+//   const ReelsScreen({Key? key}) : super(key: key);
+
+//   @override
+//   ConsumerState<ReelsScreen> createState() => _ReelsScreenState();
+// }
+
+// class _ReelsScreenState extends ConsumerState<ReelsScreen>
+//     with WidgetsBindingObserver {
+//   late final PageController _pageCtrl;
+//   final _scm = _SingleControllerManager();
+//   int _currentPage = 0;
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     WidgetsBinding.instance.addObserver(this);
+//     _pageCtrl = PageController();
+//     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+//     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+//   }
+
+//   @override
+//   void dispose() {
+//     WidgetsBinding.instance.removeObserver(this);
+//     _scm.disposeAll();
+//     _pageCtrl.dispose();
+//     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+//     SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+//     super.dispose();
+//   }
+
+//   @override
+//   void didChangeAppLifecycleState(AppLifecycleState state) {
+//     if (state == AppLifecycleState.paused ||
+//         state == AppLifecycleState.inactive) {
+//       _scm.pause();
+//     }
+//   }
+
+//   void _onPageChanged(int index) {
+//     // Pause immediately on every page change
+//     _scm.pause();
+//     setState(() => _currentPage = index);
+//     ref.read(activeReelIndexProvider.notifier).state = index;
+//     final reels = ref.read(reelsFeedProvider).value ?? [];
+//     if (index >= reels.length - 3) {
+//       ref.read(reelsFeedProvider.notifier).loadMore();
+//     }
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final feedState = ref.watch(reelsFeedProvider);
+//     return PopScope(
+//       onPopInvoked: (_) => _scm.disposeAll(),
+//       child: Scaffold(
+//         backgroundColor: Colors.black,
+//         body: feedState.when(
+//           loading: () => const _ReelsShimmer(),
+//           error:
+//               (e, _) => _ReelsError(
+//                 onRetry: () => ref.read(reelsFeedProvider.notifier).refresh(),
+//               ),
+//           data: (reels) {
+//             if (reels.isEmpty) {
+//               return Center(
+//                 child: Column(
+//                   mainAxisAlignment: MainAxisAlignment.center,
+//                   children: [
+//                     const Icon(
+//                       Icons.video_library_outlined,
+//                       color: Colors.white54,
+//                       size: 64,
+//                     ),
+//                     const SizedBox(height: 16),
+//                     const Text(
+//                       'No reels yet',
+//                       style: TextStyle(color: Colors.white70, fontSize: 18),
+//                     ),
+//                     const SizedBox(height: 20),
+//                     TextButton(
+//                       onPressed:
+//                           () => ref.read(reelsFeedProvider.notifier).refresh(),
+//                       child: const Text(
+//                         'Refresh',
+//                         style: TextStyle(color: Colors.orange),
+//                       ),
+//                     ),
+//                   ],
+//                 ),
+//               );
+//             }
+//             return PageView.builder(
+//               controller: _pageCtrl,
+//               scrollDirection: Axis.vertical,
+//               onPageChanged: _onPageChanged,
+//               itemCount: reels.length,
+//               itemBuilder:
+//                   (ctx, i) => _ReelItem(
+//                     key: ValueKey(reels[i].id),
+//                     reel: reels[i],
+//                     isActive: i == _currentPage,
+//                     scm: _scm,
+//                   ),
+//             );
+//           },
+//         ),
+//       ),
+//     );
+//   }
+// }
+
+// // ════════════════════════════════════════════════════════════════════════════
+// // SINGLE REEL ITEM
+// // ════════════════════════════════════════════════════════════════════════════
+
+// class _ReelItem extends ConsumerStatefulWidget {
+//   final ReelModel reel;
+//   final bool isActive;
+//   final _SingleControllerManager scm;
+
+//   const _ReelItem({
+//     Key? key,
+//     required this.reel,
+//     required this.isActive,
+//     required this.scm,
+//   }) : super(key: key);
+
+//   @override
+//   ConsumerState<_ReelItem> createState() => _ReelItemState();
+// }
+
+// class _ReelItemState extends ConsumerState<_ReelItem>
+//     with SingleTickerProviderStateMixin {
+//   NativeVideoPlayerController? _ctrl;
+//   bool _isInit = false;
+//   bool _initRunning = false;
+//   bool _hasError = false;
+
+//   bool _isPlaying = false;
+//   bool _isMuted = false;
+//   bool _isSeeking = false;
+//   Duration _pos = Duration.zero;
+//   Duration _dur = Duration.zero;
+
+//   StreamSubscription<Duration>? _posSub;
+//   StreamSubscription<Duration>? _durSub;
+//   StreamSubscription<PlayerActivityState>? _stateSub;
+
+//   bool _showControls = false;
+//   bool _showComments = false;
+//   bool _viewRecorded = false;
+
+//   late AnimationController _heartCtrl;
+//   late Animation<double> _heartScale;
+//   late Animation<double> _heartOpacity;
+//   bool _showHeart = false;
+//   Offset _heartPos = Offset.zero;
+
+//   OverlayEntry? _reactionOverlay;
+//   final LayerLink _reactionLink = LayerLink();
+//   final ContentLikeService _likeService = ContentLikeService(
+//     baseUrl: 'http://36.253.137.34:8005',
+//   );
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     _initHeart();
+//     if (widget.isActive) {
+//       WidgetsBinding.instance.addPostFrameCallback((_) {
+//         if (mounted) _start();
+//       });
+//     }
+//   }
+
+//   @override
+//   void didUpdateWidget(_ReelItem old) {
+//     super.didUpdateWidget(old);
+//     if (widget.isActive && !old.isActive) {
+//       if (_isInit && _ctrl != null) {
+//         try {
+//           _ctrl!.play();
+//         } catch (_) {}
+//       } else if (!_initRunning) {
+//         WidgetsBinding.instance.addPostFrameCallback((_) {
+//           if (mounted) _start();
+//         });
+//       }
+//       if (!_viewRecorded) {
+//         _viewRecorded = true;
+//         ReelsApiService.recordView(widget.reel.id);
+//       }
+//     } else if (!widget.isActive && old.isActive) {
+//       _stop();
+//     }
+//   }
+
+//   @override
+//   void dispose() {
+//     _detach();
+//     _heartCtrl.dispose();
+//     _removeOverlay();
+//     try {
+//       _ctrl?.pause();
+//     } catch (_) {}
+//     _ctrl = null;
+//     super.dispose();
+//   }
+
+//   // ── init sequence ─────────────────────────────────────────────────────────
+
+//   void _start() {
+//     if (!widget.isActive || !mounted || _initRunning) return;
+//     _detach();
+//     _isInit = false;
+//     _hasError = false;
+//     final ctrl = widget.scm.acquire(widget.reel.id);
+//     _ctrl = ctrl;
+//     _initRunning = true;
+//     _run(ctrl, attempt: 0);
+//   }
+
+//   Future<void> _run(
+//     NativeVideoPlayerController ctrl, {
+//     required int attempt,
+//   }) async {
+//     if (!mounted || !widget.isActive) {
+//       _initRunning = false;
+//       return;
+//     }
+
+//     try {
+//       developer.log(
+//         '[Reel] 🚀 init reel=${widget.reel.id} id=${ctrl.id} attempt=$attempt',
+//       );
+
+//       // Wait for platform view to register its channel.
+//       // 150ms covers even the slowest Xiaomi/Samsung hybrid-composition views.
+//       await Future.delayed(const Duration(milliseconds: 150));
+//       if (!mounted || !widget.isActive) {
+//         _initRunning = false;
+//         return;
+//       }
+
+//       await ctrl.initialize();
+//       if (!mounted || !widget.isActive) {
+//         _initRunning = false;
+//         return;
+//       }
+
+//       final url = widget.reel.bestVideoUrl!;
+//       final token = AppData().accessToken ?? '';
+//       final hdrs =
+//           token.isNotEmpty
+//               ? <String, String>{'Authorization': 'Bearer $token'}
+//               : null;
+
+//       await ctrl.loadUrl(url: url, headers: hdrs);
+//       if (!mounted || !widget.isActive) {
+//         _initRunning = false;
+//         return;
+//       }
+
+//       _isInit = true;
+//       _hasError = false;
+//       _attach(ctrl);
+//       if (_isMuted) {
+//         try {
+//           ctrl.setVolume(0);
+//         } catch (_) {}
+//       }
+//       try {
+//         ctrl.play();
+//       } catch (_) {}
+
+//       if (!_viewRecorded) {
+//         _viewRecorded = true;
+//         ReelsApiService.recordView(widget.reel.id);
+//       }
+//       if (mounted) setState(() {});
+//     } catch (e) {
+//       developer.log('[Reel] ❌ error attempt=$attempt: $e');
+//       _initRunning = false;
+
+//       if (attempt == 0 && mounted && widget.isActive) {
+//         // Re-create controller then retry — clears stale native state
+//         await Future.delayed(const Duration(milliseconds: 700));
+//         if (!mounted || !widget.isActive) return;
+//         final fresh = widget.scm.acquire(widget.reel.id);
+//         _ctrl = fresh;
+//         _initRunning = true;
+//         await _run(fresh, attempt: 1);
+//         return;
+//       }
+
+//       if (mounted) setState(() => _hasError = true);
+//     } finally {
+//       if (_initRunning) _initRunning = false;
+//     }
+//   }
+
+//   void _stop() {
+//     _detach();
+//     try {
+//       _ctrl?.pause();
+//     } catch (_) {}
+//     _isInit = false;
+//     _initRunning = false;
+//     _ctrl = null;
+//     if (mounted) setState(() {});
+//   }
+
+//   // ── streams ───────────────────────────────────────────────────────────────
+
+//   void _attach(NativeVideoPlayerController c) {
+//     _detach();
+//     _posSub = c.positionStream.listen((p) {
+//       if (mounted && !_isSeeking) setState(() => _pos = p);
+//     });
+//     _durSub = c.durationStream.listen((d) {
+//       if (mounted) setState(() => _dur = d);
+//     });
+//     _stateSub = c.playerStateStream.listen((s) {
+//       if (mounted)
+//         setState(() => _isPlaying = s == PlayerActivityState.playing);
+//     });
+//   }
+
+//   void _detach() {
+//     _posSub?.cancel();
+//     _durSub?.cancel();
+//     _stateSub?.cancel();
+//     _posSub = _durSub = _stateSub = null;
+//   }
+
+//   // ── heart ─────────────────────────────────────────────────────────────────
+
+//   void _initHeart() {
+//     _heartCtrl = AnimationController(
+//       vsync: this,
+//       duration: const Duration(milliseconds: 700),
+//     );
+//     _heartScale = TweenSequence([
+//       TweenSequenceItem(
+//         tween: Tween<double>(
+//           begin: 0,
+//           end: 1.6,
+//         ).chain(CurveTween(curve: Curves.easeOut)),
+//         weight: 40,
+//       ),
+//       TweenSequenceItem(
+//         tween: Tween<double>(
+//           begin: 1.6,
+//           end: 1.0,
+//         ).chain(CurveTween(curve: Curves.elasticOut)),
+//         weight: 40,
+//       ),
+//       TweenSequenceItem(
+//         tween: Tween<double>(
+//           begin: 1.0,
+//           end: 0,
+//         ).chain(CurveTween(curve: Curves.easeIn)),
+//         weight: 20,
+//       ),
+//     ]).animate(_heartCtrl);
+//     _heartOpacity = TweenSequence([
+//       TweenSequenceItem(tween: ConstantTween(1.0), weight: 80),
+//       TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 20),
+//     ]).animate(_heartCtrl);
+//   }
+
+//   // ── gestures ──────────────────────────────────────────────────────────────
+
+//   void _onTap() {
+//     _removeOverlay();
+//     if (!_isInit || _ctrl == null) return;
+//     try {
+//       _isPlaying ? _ctrl!.pause() : _ctrl!.play();
+//     } catch (_) {}
+//     if (mounted) {
+//       setState(() => _showControls = true);
+//       Future.delayed(const Duration(seconds: 2), () {
+//         if (mounted) setState(() => _showControls = false);
+//       });
+//     }
+//   }
+
+//   void _onDoubleTap(TapDownDetails d) {
+//     HapticFeedback.mediumImpact();
+//     _removeOverlay();
+//     setState(() {
+//       _heartPos = d.localPosition;
+//       _showHeart = true;
+//     });
+//     _heartCtrl.forward(from: 0).then((_) {
+//       if (mounted) setState(() => _showHeart = false);
+//     });
+//     if (!widget.reel.isLiked) _react(ReactionType.like);
+//   }
+
+//   void _onLPS(LongPressStartDetails _) {
+//     try {
+//       _ctrl?.pause();
+//     } catch (_) {}
+//   }
+
+//   void _onLPE(LongPressEndDetails _) {
+//     if (widget.isActive && _isInit) {
+//       try {
+//         _ctrl?.play();
+//       } catch (_) {}
+//     }
+//   }
+
+//   void _seekTo(double f) {
+//     if (!_isInit || _ctrl == null) return;
+//     final t = Duration(milliseconds: (_dur.inMilliseconds * f).round());
+//     try {
+//       _ctrl!.seekTo(t);
+//     } catch (_) {}
+//     if (mounted) setState(() => _pos = t);
+//   }
+
+//   void _toggleMute() {
+//     setState(() => _isMuted = !_isMuted);
+//     try {
+//       _ctrl?.setVolume(_isMuted ? 0.0 : 1.0);
+//     } catch (_) {}
+//   }
+
+//   // ── reactions ─────────────────────────────────────────────────────────────
+
+//   Future<void> _react(ReactionType type) async {
+//     final r = widget.reel;
+//     final same = r.currentUserReaction == type.value;
+//     final n = ref.read(reelsFeedProvider.notifier);
+//     n.applyReaction(r.id, (r.isLiked && same) ? null : type.value);
+//     final res = await _likeService.reactReel(r.id, type);
+//     n.applyReaction(
+//       r.id,
+//       res.success ? res.reactionType?.value : r.currentUserReaction,
+//     );
+//   }
+
+//   void _showPicker() {
+//     if (_reactionOverlay != null) {
+//       _removeOverlay();
+//       return;
+//     }
+//     HapticFeedback.mediumImpact();
+//     _reactionOverlay = OverlayEntry(
+//       builder:
+//           (_) => _VerticalReactionPicker(
+//             layerLink: _reactionLink,
+//             currentReaction: widget.reel.currentReactionType,
+//             onSelect: (t) {
+//               _removeOverlay();
+//               _react(t);
+//             },
+//             onDismiss: _removeOverlay,
+//           ),
+//     );
+//     Overlay.of(context).insert(_reactionOverlay!);
+//   }
+
+//   void _removeOverlay() {
+//     _reactionOverlay?.remove();
+//     _reactionOverlay = null;
+//   }
+
+//   bool _isMe() =>
+//       AppData().isMe(widget.reel.userId) ||
+//       AppData().isMe(widget.reel.username);
+
+//   void _options() {
+//     try {
+//       _ctrl?.pause();
+//     } catch (_) {}
+//     _removeOverlay();
+//     showModalBottomSheet(
+//       context: context,
+//       backgroundColor: Colors.transparent,
+//       builder:
+//           (_) => _ReelOptionsSheet(
+//             isOwner: _isMe(),
+//             reel: widget.reel,
+//             onEdit: _isMe() ? _editDialog : null,
+//             onDelete: _isMe() ? _deleteDialog : null,
+//             onRepost: !_isMe() ? _doRepost : null,
+//           ),
+//     ).then((_) {
+//       if (widget.isActive && mounted && _isInit) {
+//         try {
+//           _ctrl?.play();
+//         } catch (_) {}
+//       }
+//     });
+//   }
+
+//   void _editDialog() {
+//     final tc = TextEditingController(text: widget.reel.caption);
+//     showDialog(
+//       context: context,
+//       builder:
+//           (_) => AlertDialog(
+//             backgroundColor: const Color(0xFF1C1C1E),
+//             shape: RoundedRectangleBorder(
+//               borderRadius: BorderRadius.circular(16),
+//             ),
+//             title: const Text(
+//               'Edit Caption',
+//               style: TextStyle(
+//                 color: Colors.white,
+//                 fontWeight: FontWeight.w700,
+//               ),
+//             ),
+//             content: TextField(
+//               controller: tc,
+//               maxLines: 4,
+//               minLines: 1,
+//               style: const TextStyle(color: Colors.white),
+//               decoration: InputDecoration(
+//                 hintText: 'Write a caption…',
+//                 hintStyle: const TextStyle(color: Colors.white38),
+//                 filled: true,
+//                 fillColor: Colors.white10,
+//                 border: OutlineInputBorder(
+//                   borderRadius: BorderRadius.circular(10),
+//                   borderSide: BorderSide.none,
+//                 ),
+//               ),
+//             ),
+//             actions: [
+//               TextButton(
+//                 onPressed: () => Navigator.pop(context),
+//                 child: const Text(
+//                   'Cancel',
+//                   style: TextStyle(color: Colors.white54),
+//                 ),
+//               ),
+//               ElevatedButton(
+//                 style: ElevatedButton.styleFrom(
+//                   backgroundColor: const Color(0xFFF48706),
+//                   shape: RoundedRectangleBorder(
+//                     borderRadius: BorderRadius.circular(10),
+//                   ),
+//                 ),
+//                 onPressed: () async {
+//                   final cap = tc.text.trim();
+//                   Navigator.pop(context);
+//                   final err = await ref
+//                       .read(reelsFeedProvider.notifier)
+//                       .editReel(widget.reel.id, cap);
+//                   if (mounted)
+//                     _snack(err ?? 'Caption updated!', err: err != null);
+//                 },
+//                 child: const Text(
+//                   'Save',
+//                   style: TextStyle(
+//                     color: Colors.white,
+//                     fontWeight: FontWeight.w700,
+//                   ),
+//                 ),
+//               ),
+//             ],
+//           ),
+//     );
+//   }
+
+//   void _deleteDialog() {
+//     showDialog(
+//       context: context,
+//       builder:
+//           (_) => AlertDialog(
+//             backgroundColor: const Color(0xFF1C1C1E),
+//             shape: RoundedRectangleBorder(
+//               borderRadius: BorderRadius.circular(16),
+//             ),
+//             title: const Text(
+//               'Delete Reel',
+//               style: TextStyle(
+//                 color: Colors.white,
+//                 fontWeight: FontWeight.w700,
+//               ),
+//             ),
+//             content: const Text(
+//               'This reel will be permanently deleted.',
+//               style: TextStyle(color: Colors.white70),
+//             ),
+//             actions: [
+//               TextButton(
+//                 onPressed: () => Navigator.pop(context),
+//                 child: const Text(
+//                   'Cancel',
+//                   style: TextStyle(color: Colors.white54),
+//                 ),
+//               ),
+//               ElevatedButton(
+//                 style: ElevatedButton.styleFrom(
+//                   backgroundColor: Colors.redAccent,
+//                   shape: RoundedRectangleBorder(
+//                     borderRadius: BorderRadius.circular(10),
+//                   ),
+//                 ),
+//                 onPressed: () async {
+//                   Navigator.pop(context);
+//                   final err = await ref
+//                       .read(reelsFeedProvider.notifier)
+//                       .deleteReel(widget.reel.id);
+//                   if (err != null && mounted) _snack(err, err: true);
+//                 },
+//                 child: const Text(
+//                   'Delete',
+//                   style: TextStyle(
+//                     color: Colors.white,
+//                     fontWeight: FontWeight.w700,
+//                   ),
+//                 ),
+//               ),
+//             ],
+//           ),
+//     );
+//   }
+
+//   Future<void> _doRepost() async {
+//     _snack('Reposting…');
+//     final err = await ref
+//         .read(reelsFeedProvider.notifier)
+//         .repostReel(widget.reel.id);
+//     if (mounted) _snack(err ?? 'Reposted!', err: err != null);
+//   }
+
+//   void _share() => Share.share(
+//     'Check out this reel by @${widget.reel.username}!\n${widget.reel.bestVideoUrl ?? ''}',
+//   );
+
+//   void _snack(String msg, {bool err = false}) {
+//     if (!mounted) return;
+//     ScaffoldMessenger.of(context).showSnackBar(
+//       SnackBar(
+//         content: Text(msg),
+//         backgroundColor: err ? Colors.redAccent : const Color(0xFFF48706),
+//         behavior: SnackBarBehavior.floating,
+//         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+//         duration: const Duration(seconds: 3),
+//       ),
+//     );
+//   }
+
+//   // ════════════════════════════════════════════════════════════════════════
+//   // BUILD — off-screen = thumbnail only, active = NativeVideoPlayer
+//   // ════════════════════════════════════════════════════════════════════════
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final size = MediaQuery.of(context).size;
+
+//     if (!widget.isActive || _ctrl == null) {
+//       return Stack(
+//         fit: StackFit.expand,
+//         children: [_thumb(size), _overlay(size, ready: false)],
+//       );
+//     }
+
+//     return NativeVideoPlayer(
+//       controller: _ctrl!,
+//       overlayBuilder: (_, __) => _overlay(size, ready: _isInit),
+//     );
+//   }
+
+//   Widget _overlay(Size size, {required bool ready}) => Stack(
+//     fit: StackFit.expand,
+//     children: [
+//       Positioned.fill(
+//         child: GestureDetector(
+//           onTap: _onTap,
+//           onDoubleTapDown: _onDoubleTap,
+//           onDoubleTap: () {},
+//           onLongPressStart: _onLPS,
+//           onLongPressEnd: _onLPE,
+//           behavior: HitTestBehavior.translucent,
+//           child: Container(color: Colors.transparent),
+//         ),
+//       ),
+//       _gradients(),
+//       _topBar(),
+//       _bottomLeft(size),
+//       _actions(),
+//       if (ready) _progress(size),
+//       if (_showControls && ready) _pauseHint(),
+//       if (_showHeart) _heartBurst(),
+//       if (widget.isActive && !ready) _statusOverlay(),
+//       if (_showComments) _comments(),
+//     ],
+//   );
+
+//   Widget _statusOverlay() {
+//     if (_hasError) {
+//       return Positioned.fill(
+//         child: Center(
+//           child: GestureDetector(
+//             onTap: () {
+//               setState(() => _hasError = false);
+//               _start();
+//             },
+//             child: Container(
+//               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+//               decoration: BoxDecoration(
+//                 color: Colors.black.withOpacity(0.6),
+//                 borderRadius: BorderRadius.circular(12),
+//               ),
+//               child: const Row(
+//                 mainAxisSize: MainAxisSize.min,
+//                 children: [
+//                   Icon(Icons.refresh, color: Colors.white, size: 20),
+//                   SizedBox(width: 8),
+//                   Text(
+//                     'Tap to retry',
+//                     style: TextStyle(color: Colors.white, fontSize: 14),
+//                   ),
+//                 ],
+//               ),
+//             ),
+//           ),
+//         ),
+//       );
+//     }
+//     return Positioned.fill(
+//       child: IgnorePointer(
+//         child: Center(
+//           child: Container(
+//             width: 52,
+//             height: 52,
+//             decoration: BoxDecoration(
+//               color: Colors.black.withOpacity(0.4),
+//               shape: BoxShape.circle,
+//             ),
+//             child: const Padding(
+//               padding: EdgeInsets.all(13),
+//               child: CircularProgressIndicator(
+//                 color: Colors.white,
+//                 strokeWidth: 2.5,
+//               ),
+//             ),
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+
+//   Widget _thumb(Size size) {
+//     final t = widget.reel.thumbnail;
+//     if (t != null && t.isNotEmpty) {
+//       return CachedNetworkImage(
+//         imageUrl: t,
+//         fit: BoxFit.cover,
+//         width: size.width,
+//         height: size.height,
+//         placeholder: (_, __) => const ColoredBox(color: Colors.black),
+//         errorWidget: (_, __, ___) => const ColoredBox(color: Colors.black),
+//       );
+//     }
+//     return const ColoredBox(color: Colors.black);
+//   }
+
+//   Widget _gradients() => Stack(
+//     children: [
+//       Positioned(
+//         top: 0,
+//         left: 0,
+//         right: 0,
+//         height: 120,
+//         child: Container(
+//           decoration: BoxDecoration(
+//             gradient: LinearGradient(
+//               begin: Alignment.topCenter,
+//               end: Alignment.bottomCenter,
+//               colors: [Colors.black.withOpacity(0.5), Colors.transparent],
+//             ),
+//           ),
+//         ),
+//       ),
+//       Positioned(
+//         bottom: 0,
+//         left: 0,
+//         right: 0,
+//         height: 320,
+//         child: Container(
+//           decoration: BoxDecoration(
+//             gradient: LinearGradient(
+//               begin: Alignment.bottomCenter,
+//               end: Alignment.topCenter,
+//               colors: [Colors.black.withOpacity(0.8), Colors.transparent],
+//             ),
+//           ),
+//         ),
+//       ),
+//     ],
+//   );
+
+//   Widget _topBar() => Positioned(
+//     top: MediaQuery.of(context).padding.top + 8,
+//     left: 8,
+//     right: 16,
+//     child: Row(
+//       children: [
+//         IconButton(
+//           icon: const Icon(
+//             Icons.arrow_back_ios_new_rounded,
+//             color: Colors.white,
+//             size: 22,
+//           ),
+//           onPressed: () {
+//             widget.scm.disposeAll();
+//             Navigator.maybePop(context);
+//           },
+//         ),
+//         const Spacer(),
+//         const Text(
+//           'Reels',
+//           style: TextStyle(
+//             color: Colors.white,
+//             fontSize: 18,
+//             fontWeight: FontWeight.w700,
+//             letterSpacing: 0.3,
+//           ),
+//         ),
+//         const Spacer(),
+//       ],
+//     ),
+//   );
+
+//   Widget _bottomLeft(Size size) => Positioned(
+//     bottom: 70,
+//     left: 12,
+//     right: 80,
+//     child: Column(
+//       crossAxisAlignment: CrossAxisAlignment.start,
+//       mainAxisSize: MainAxisSize.min,
+//       children: [
+//         if (widget.reel.isRepost && widget.reel.sharedReelDetails != null)
+//           Padding(
+//             padding: const EdgeInsets.only(bottom: 6),
+//             child: Row(
+//               children: [
+//                 const Icon(
+//                   Icons.repeat_rounded,
+//                   color: Colors.white70,
+//                   size: 14,
+//                 ),
+//                 const SizedBox(width: 4),
+//                 Text(
+//                   'Reposted from @${widget.reel.sharedReelDetails!.username}',
+//                   style: const TextStyle(
+//                     color: Colors.white70,
+//                     fontSize: 12,
+//                     fontWeight: FontWeight.w500,
+//                     shadows: [Shadow(blurRadius: 3)],
+//                   ),
+//                 ),
+//               ],
+//             ),
+//           ),
+//         GestureDetector(
+//           onTap:
+//               () => Navigator.push(
+//                 context,
+//                 MaterialPageRoute(
+//                   builder:
+//                       (_) =>
+//                           SpecificUserProfilePage(userId: widget.reel.userId),
+//                 ),
+//               ),
+//           child: Row(
+//             children: [
+//               _avatar(),
+//               const SizedBox(width: 10),
+//               Flexible(
+//                 child: Text(
+//                   widget.reel.username,
+//                   style: const TextStyle(
+//                     color: Colors.white,
+//                     fontWeight: FontWeight.w700,
+//                     fontSize: 15,
+//                     shadows: [Shadow(blurRadius: 4)],
+//                   ),
+//                   overflow: TextOverflow.ellipsis,
+//                 ),
+//               ),
+//               const SizedBox(width: 10),
+//               if (!_isMe())
+//                 _InlineFollowButton(
+//                   reel: widget.reel,
+//                   onFollowChanged:
+//                       (v) => ref
+//                           .read(reelsFeedProvider.notifier)
+//                           .updateFollow(widget.reel.userId, v),
+//                 ),
+//             ],
+//           ),
+//         ),
+//         if (widget.reel.caption.isNotEmpty) ...[
+//           const SizedBox(height: 8),
+//           _ExpandableCaption(caption: widget.reel.caption),
+//         ],
+//       ],
+//     ),
+//   );
+
+//   Widget _avatar() {
+//     final url = widget.reel.avatar;
+//     final init =
+//         widget.reel.username.isNotEmpty
+//             ? widget.reel.username[0].toUpperCase()
+//             : '?';
+//     Widget fb = Container(
+//       color: Colors.grey.shade700,
+//       alignment: Alignment.center,
+//       child: Text(
+//         init,
+//         style: const TextStyle(
+//           color: Colors.white,
+//           fontWeight: FontWeight.bold,
+//         ),
+//       ),
+//     );
+//     return Container(
+//       width: 40,
+//       height: 40,
+//       decoration: BoxDecoration(
+//         shape: BoxShape.circle,
+//         border: Border.all(color: Colors.white, width: 1.5),
+//       ),
+//       child: ClipOval(
+//         child:
+//             url.isNotEmpty
+//                 ? CachedNetworkImage(
+//                   imageUrl: url,
+//                   fit: BoxFit.cover,
+//                   placeholder: (_, __) => fb,
+//                   errorWidget: (_, __, ___) => fb,
+//                 )
+//                 : fb,
+//       ),
+//     );
+//   }
+
+//   Widget _actions() {
+//     final reel = widget.reel;
+//     final reaction = reel.currentReactionType;
+//     return Positioned(
+//       right: 8,
+//       bottom: 80,
+//       child: Column(
+//         mainAxisSize: MainAxisSize.min,
+//         children: [
+//           CompositedTransformTarget(
+//             link: _reactionLink,
+//             child: GestureDetector(
+//               onTap: () => _react(reaction ?? ReactionType.like),
+//               onLongPress: _showPicker,
+//               child: Column(
+//                 mainAxisSize: MainAxisSize.min,
+//                 children: [
+//                   SizedBox(
+//                     width: 44,
+//                     height: 44,
+//                     child: Center(
+//                       child:
+//                           reaction != null
+//                               ? Text(
+//                                 reaction.emoji,
+//                                 style: const TextStyle(fontSize: 28),
+//                               )
+//                               : const Icon(
+//                                 Icons.favorite_border_rounded,
+//                                 color: Colors.white,
+//                                 size: 30,
+//                                 shadows: [Shadow(blurRadius: 6)],
+//                               ),
+//                     ),
+//                   ),
+//                   Text(
+//                     _fmt(reel.reactionsCount),
+//                     style: const TextStyle(
+//                       color: Colors.white,
+//                       fontSize: 12,
+//                       fontWeight: FontWeight.w600,
+//                       shadows: [Shadow(blurRadius: 4)],
+//                     ),
+//                   ),
+//                 ],
+//               ),
+//             ),
+//           ),
+//           const SizedBox(height: 20),
+//           _ActionButton(
+//             icon: Icons.chat_bubble_outline_rounded,
+//             label: _fmt(reel.commentsCount),
+//             onTap: () => setState(() => _showComments = !_showComments),
+//           ),
+//           const SizedBox(height: 20),
+//           if (!_isMe()) ...[
+//             _ActionButton(
+//               icon: Icons.repeat_rounded,
+//               label: 'Repost',
+//               onTap: _doRepost,
+//             ),
+//             const SizedBox(height: 20),
+//           ],
+//           _ActionButton(
+//             icon: Icons.send_rounded,
+//             label: 'Share',
+//             onTap: _share,
+//           ),
+//           IconButton(
+//             icon: const Icon(
+//               Icons.more_vert_rounded,
+//               color: Colors.white,
+//               size: 24,
+//             ),
+//             onPressed: _options,
+//           ),
+//           const SizedBox(height: 20),
+//           _ActionButton(
+//             icon: _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+//             label: '',
+//             onTap: _toggleMute,
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+
+//   Widget _progress(Size size) {
+//     final total = _dur.inMilliseconds;
+//     final p = _pos.inMilliseconds.clamp(0, total > 0 ? total : 1);
+//     final f = total > 0 ? p / total : 0.0;
+//     return Positioned(
+//       bottom: 52,
+//       left: 0,
+//       right: 0,
+//       child: GestureDetector(
+//         onHorizontalDragStart: (_) => setState(() => _isSeeking = true),
+//         onHorizontalDragUpdate:
+//             (d) =>
+//                 _seekTo(d.localPosition.dx.clamp(0.0, size.width) / size.width),
+//         onHorizontalDragEnd: (_) => setState(() => _isSeeking = false),
+//         onTapDown:
+//             (d) =>
+//                 _seekTo(d.localPosition.dx.clamp(0.0, size.width) / size.width),
+//         behavior: HitTestBehavior.opaque,
+//         child: SizedBox(
+//           height: 20,
+//           child: Stack(
+//             alignment: Alignment.centerLeft,
+//             children: [
+//               Container(height: 2, color: Colors.white24),
+//               FractionallySizedBox(
+//                 widthFactor: f.clamp(0.0, 1.0),
+//                 child: Container(height: 2, color: Colors.white),
+//               ),
+//               Positioned(
+//                 left: (f * size.width - 6).clamp(0.0, size.width - 12),
+//                 child: Container(
+//                   width: 12,
+//                   height: 12,
+//                   decoration: const BoxDecoration(
+//                     color: Colors.white,
+//                     shape: BoxShape.circle,
+//                   ),
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+
+//   Widget _pauseHint() => Center(
+//     child: AnimatedOpacity(
+//       opacity: _showControls ? 1.0 : 0.0,
+//       duration: const Duration(milliseconds: 200),
+//       child: Container(
+//         width: 72,
+//         height: 72,
+//         decoration: BoxDecoration(
+//           color: Colors.black.withOpacity(0.55),
+//           shape: BoxShape.circle,
+//         ),
+//         child: Icon(
+//           _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+//           color: Colors.white,
+//           size: 42,
+//         ),
+//       ),
+//     ),
+//   );
+
+//   Widget _heartBurst() => Positioned(
+//     left: _heartPos.dx - 48,
+//     top: _heartPos.dy - 48,
+//     child: IgnorePointer(
+//       child: AnimatedBuilder(
+//         animation: _heartCtrl,
+//         builder:
+//             (_, __) => Opacity(
+//               opacity: _heartOpacity.value,
+//               child: Transform.scale(
+//                 scale: _heartScale.value,
+//                 child: const Icon(
+//                   Icons.favorite_rounded,
+//                   color: Colors.white,
+//                   size: 96,
+//                   shadows: [
+//                     Shadow(color: Colors.red, blurRadius: 20),
+//                     Shadow(blurRadius: 8),
+//                   ],
+//                 ),
+//               ),
+//             ),
+//       ),
+//     ),
+//   );
+
+//   Widget _comments() => Positioned(
+//     bottom: 0,
+//     left: 0,
+//     right: 0,
+//     height: MediaQuery.of(context).size.height * 0.6,
+//     child: GestureDetector(
+//       onTap: () {},
+//       child: Container(
+//         decoration: const BoxDecoration(
+//           color: Colors.white,
+//           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+//         ),
+//         child: Column(
+//           children: [
+//             Padding(
+//               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+//               child: Row(
+//                 children: [
+//                   const Spacer(),
+//                   Container(
+//                     width: 36,
+//                     height: 4,
+//                     decoration: BoxDecoration(
+//                       color: Colors.grey.shade300,
+//                       borderRadius: BorderRadius.circular(2),
+//                     ),
+//                   ),
+//                   const Spacer(),
+//                   GestureDetector(
+//                     onTap: () => setState(() => _showComments = false),
+//                     child: const Icon(Icons.close, size: 20),
+//                   ),
+//                 ],
+//               ),
+//             ),
+//             Expanded(
+//               child: CommentSection(
+//                 contentId: widget.reel.id,
+//                 onCommentAdded:
+//                     () => ref
+//                         .read(reelsFeedProvider.notifier)
+//                         .incrementComments(widget.reel.id),
+//               ),
+//             ),
+//           ],
+//         ),
+//       ),
+//     ),
+//   );
+
+//   String _fmt(int n) {
+//     if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
+//     if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
+//     return n > 0 ? '$n' : '';
+//   }
+// }
+
+// // ════════════════════════════════════════════════════════════════════════════
+// // OPTIONS SHEET
+// // ════════════════════════════════════════════════════════════════════════════
+
+// class _ReelOptionsSheet extends StatelessWidget {
+//   final bool isOwner;
+//   final ReelModel reel;
+//   final VoidCallback? onEdit, onDelete, onRepost;
+
+//   const _ReelOptionsSheet({
+//     required this.isOwner,
+//     required this.reel,
+//     this.onEdit,
+//     this.onDelete,
+//     this.onRepost,
+//   });
+
+//   @override
+//   Widget build(BuildContext context) => Container(
+//     decoration: const BoxDecoration(
+//       color: Color(0xFF1C1C1E),
+//       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+//     ),
+//     padding: const EdgeInsets.fromLTRB(0, 12, 0, 32),
+//     child: Column(
+//       mainAxisSize: MainAxisSize.min,
+//       children: [
+//         Container(
+//           width: 36,
+//           height: 4,
+//           margin: const EdgeInsets.only(bottom: 16),
+//           decoration: BoxDecoration(
+//             color: Colors.white24,
+//             borderRadius: BorderRadius.circular(2),
+//           ),
+//         ),
+//         if (isOwner) ...[
+//           _Tile(
+//             icon: Icons.edit_rounded,
+//             label: 'Edit Caption',
+//             onTap: () {
+//               Navigator.pop(context);
+//               onEdit?.call();
+//             },
+//           ),
+//           _Tile(
+//             icon: Icons.delete_outline_rounded,
+//             label: 'Delete Reel',
+//             color: Colors.redAccent,
+//             onTap: () {
+//               Navigator.pop(context);
+//               onDelete?.call();
+//             },
+//           ),
+//         ] else
+//           _Tile(
+//             icon: Icons.repeat_rounded,
+//             label: 'Repost',
+//             onTap: () {
+//               Navigator.pop(context);
+//               onRepost?.call();
+//             },
+//           ),
+//         _Tile(
+//           icon: Icons.close_rounded,
+//           label: 'Cancel',
+//           color: Colors.white54,
+//           onTap: () => Navigator.pop(context),
+//         ),
+//       ],
+//     ),
+//   );
+// }
+
+// class _Tile extends StatelessWidget {
+//   final IconData icon;
+//   final String label;
+//   final Color color;
+//   final VoidCallback onTap;
+//   const _Tile({
+//     required this.icon,
+//     required this.label,
+//     this.color = Colors.white,
+//     required this.onTap,
+//   });
+
+//   @override
+//   Widget build(BuildContext context) => InkWell(
+//     onTap: onTap,
+//     child: Padding(
+//       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+//       child: Row(
+//         children: [
+//           Icon(icon, color: color, size: 22),
+//           const SizedBox(width: 16),
+//           Text(
+//             label,
+//             style: TextStyle(
+//               color: color,
+//               fontSize: 16,
+//               fontWeight: FontWeight.w500,
+//             ),
+//           ),
+//         ],
+//       ),
+//     ),
+//   );
+// }
+
+// // ════════════════════════════════════════════════════════════════════════════
+// // REACTION PICKER
+// // ════════════════════════════════════════════════════════════════════════════
+
+// class _VerticalReactionPicker extends StatefulWidget {
+//   final LayerLink layerLink;
+//   final ReactionType? currentReaction;
+//   final void Function(ReactionType) onSelect;
+//   final VoidCallback onDismiss;
+//   const _VerticalReactionPicker({
+//     required this.layerLink,
+//     required this.currentReaction,
+//     required this.onSelect,
+//     required this.onDismiss,
+//   });
+
+//   @override
+//   State<_VerticalReactionPicker> createState() => _VRPState();
+// }
+
+// class _VRPState extends State<_VerticalReactionPicker>
+//     with SingleTickerProviderStateMixin {
+//   late AnimationController _ctrl;
+//   late Animation<double> _sc, _fa;
+//   ReactionType? _hov;
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     _ctrl = AnimationController(
+//       vsync: this,
+//       duration: const Duration(milliseconds: 250),
+//     );
+//     _sc = CurvedAnimation(parent: _ctrl, curve: Curves.easeOutBack);
+//     _fa = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+//     _ctrl.forward();
+//   }
+
+//   @override
+//   void dispose() {
+//     _ctrl.dispose();
+//     super.dispose();
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     const h = 52.0;
+//     final ph = ReactionType.values.length * h + 16;
+//     return Stack(
+//       children: [
+//         Positioned.fill(
+//           child: GestureDetector(
+//             onTap: widget.onDismiss,
+//             behavior: HitTestBehavior.translucent,
+//             child: Container(color: Colors.transparent),
+//           ),
+//         ),
+//         CompositedTransformFollower(
+//           link: widget.layerLink,
+//           showWhenUnlinked: false,
+//           offset: Offset(-68, -(ph / 2) + 22),
+//           child: FadeTransition(
+//             opacity: _fa,
+//             child: ScaleTransition(
+//               scale: _sc,
+//               alignment: Alignment.centerRight,
+//               child: Material(
+//                 color: Colors.transparent,
+//                 child: Container(
+//                   width: 56,
+//                   padding: const EdgeInsets.symmetric(vertical: 8),
+//                   decoration: BoxDecoration(
+//                     color: Colors.black.withOpacity(0.75),
+//                     borderRadius: BorderRadius.circular(28),
+//                     boxShadow: [
+//                       BoxShadow(
+//                         color: Colors.black.withOpacity(0.4),
+//                         blurRadius: 16,
+//                         offset: const Offset(0, 4),
+//                       ),
+//                     ],
+//                   ),
+//                   child: Column(
+//                     mainAxisSize: MainAxisSize.min,
+//                     children:
+//                         ReactionType.values.map((r) {
+//                           final active = widget.currentReaction == r;
+//                           final hov = _hov == r;
+//                           return GestureDetector(
+//                             onTap: () => widget.onSelect(r),
+//                             onTapDown: (_) => setState(() => _hov = r),
+//                             onTapCancel: () => setState(() => _hov = null),
+//                             child: SizedBox(
+//                               width: 56,
+//                               height: h,
+//                               child: Stack(
+//                                 alignment: Alignment.center,
+//                                 clipBehavior: Clip.none,
+//                                 children: [
+//                                   if (active)
+//                                     Container(
+//                                       width: 40,
+//                                       height: 40,
+//                                       decoration: BoxDecoration(
+//                                         color: Colors.white.withOpacity(0.15),
+//                                         shape: BoxShape.circle,
+//                                       ),
+//                                     ),
+//                                   TweenAnimationBuilder<double>(
+//                                     tween: Tween(
+//                                       begin: 1.0,
+//                                       end: hov ? 1.4 : (active ? 1.15 : 1.0),
+//                                     ),
+//                                     duration: const Duration(milliseconds: 200),
+//                                     curve: Curves.easeOutBack,
+//                                     builder:
+//                                         (_, s, c) =>
+//                                             Transform.scale(scale: s, child: c),
+//                                     child: Text(
+//                                       r.emoji,
+//                                       style: const TextStyle(fontSize: 26),
+//                                     ),
+//                                   ),
+//                                   if (hov)
+//                                     Positioned(
+//                                       left: -72,
+//                                       child: Container(
+//                                         padding: const EdgeInsets.symmetric(
+//                                           horizontal: 8,
+//                                           vertical: 4,
+//                                         ),
+//                                         decoration: BoxDecoration(
+//                                           color: Colors.black87,
+//                                           borderRadius: BorderRadius.circular(
+//                                             8,
+//                                           ),
+//                                         ),
+//                                         child: Text(
+//                                           r.label,
+//                                           style: const TextStyle(
+//                                             color: Colors.white,
+//                                             fontSize: 11,
+//                                             fontWeight: FontWeight.w600,
+//                                           ),
+//                                         ),
+//                                       ),
+//                                     ),
+//                                 ],
+//                               ),
+//                             ),
+//                           );
+//                         }).toList(),
+//                   ),
+//                 ),
+//               ),
+//             ),
+//           ),
+//         ),
+//       ],
+//     );
+//   }
+// }
+
+// // ════════════════════════════════════════════════════════════════════════════
+// // ACTION BUTTON
+// // ════════════════════════════════════════════════════════════════════════════
+
+// class _ActionButton extends StatefulWidget {
+//   final IconData icon;
+//   final Color iconColor;
+//   final String label;
+//   final VoidCallback onTap;
+//   const _ActionButton({
+//     required this.icon,
+//     this.iconColor = Colors.white,
+//     required this.label,
+//     required this.onTap,
+//   });
+
+//   @override
+//   State<_ActionButton> createState() => _ABState();
+// }
+
+// class _ABState extends State<_ActionButton>
+//     with SingleTickerProviderStateMixin {
+//   late AnimationController _ctrl;
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     _ctrl = AnimationController(
+//       vsync: this,
+//       duration: const Duration(milliseconds: 120),
+//       lowerBound: 0.88,
+//       upperBound: 1.0,
+//       value: 1.0,
+//     );
+//   }
+
+//   @override
+//   void dispose() {
+//     _ctrl.dispose();
+//     super.dispose();
+//   }
+
+//   Future<void> _tap() async {
+//     await _ctrl.reverse();
+//     _ctrl.forward();
+//     HapticFeedback.lightImpact();
+//     widget.onTap();
+//   }
+
+//   @override
+//   Widget build(BuildContext context) => GestureDetector(
+//     onTap: _tap,
+//     behavior: HitTestBehavior.opaque,
+//     child: ScaleTransition(
+//       scale: _ctrl,
+//       child: Column(
+//         mainAxisSize: MainAxisSize.min,
+//         children: [
+//           Icon(
+//             widget.icon,
+//             color: widget.iconColor,
+//             size: 30,
+//             shadows: const [Shadow(blurRadius: 6)],
+//           ),
+//           if (widget.label.isNotEmpty) ...[
+//             const SizedBox(height: 3),
+//             Text(
+//               widget.label,
+//               style: const TextStyle(
+//                 color: Colors.white,
+//                 fontSize: 12,
+//                 fontWeight: FontWeight.w600,
+//                 shadows: [Shadow(blurRadius: 4)],
+//               ),
+//             ),
+//           ],
+//         ],
+//       ),
+//     ),
+//   );
+// }
+
+// // ════════════════════════════════════════════════════════════════════════════
+// // INLINE FOLLOW BUTTON
+// // ════════════════════════════════════════════════════════════════════════════
+
+// class _InlineFollowButton extends StatelessWidget {
+//   final ReelModel reel;
+//   final ValueChanged<bool> onFollowChanged;
+//   const _InlineFollowButton({
+//     required this.reel,
+//     required this.onFollowChanged,
+//   });
+
+//   @override
+//   Widget build(BuildContext context) => FollowButton(
+//     targetUserId: reel.userId,
+//     initialFollowStatus: reel.isFollowed,
+//     onFollowSuccess: () {
+//       reel.isFollowed = true;
+//       onFollowChanged(true);
+//     },
+//     onUnfollowSuccess: () {
+//       reel.isFollowed = false;
+//       onFollowChanged(false);
+//     },
+//   );
+// }
+
+// // ════════════════════════════════════════════════════════════════════════════
+// // EXPANDABLE CAPTION
+// // ════════════════════════════════════════════════════════════════════════════
+
+// class _ExpandableCaption extends StatefulWidget {
+//   final String caption;
+//   const _ExpandableCaption({required this.caption});
+
+//   @override
+//   State<_ExpandableCaption> createState() => _ECState();
+// }
+
+// class _ECState extends State<_ExpandableCaption> {
+//   bool _exp = false;
+
+//   @override
+//   Widget build(BuildContext context) => GestureDetector(
+//     onTap: () => setState(() => _exp = !_exp),
+//     child: AnimatedSize(
+//       duration: const Duration(milliseconds: 250),
+//       curve: Curves.easeInOut,
+//       child: RichText(
+//         maxLines: _exp ? null : 2,
+//         overflow: _exp ? TextOverflow.visible : TextOverflow.ellipsis,
+//         text: TextSpan(
+//           children: [
+//             TextSpan(
+//               text: widget.caption,
+//               style: const TextStyle(
+//                 color: Colors.white,
+//                 fontSize: 13,
+//                 height: 1.45,
+//                 shadows: [Shadow(blurRadius: 4)],
+//               ),
+//             ),
+//             if (!_exp)
+//               const TextSpan(
+//                 text: ' more',
+//                 style: TextStyle(
+//                   color: Colors.white70,
+//                   fontSize: 12,
+//                   fontWeight: FontWeight.w600,
+//                 ),
+//               ),
+//           ],
+//         ),
+//       ),
+//     ),
+//   );
+// }
+
+// // ════════════════════════════════════════════════════════════════════════════
+// // SHIMMER + ERROR
+// // ════════════════════════════════════════════════════════════════════════════
+
+// class _ReelsShimmer extends StatelessWidget {
+//   const _ReelsShimmer();
+//   @override
+//   Widget build(BuildContext context) => Shimmer.fromColors(
+//     baseColor: Colors.grey.shade900,
+//     highlightColor: Colors.grey.shade700,
+//     period: const Duration(milliseconds: 1400),
+//     child: Container(color: Colors.black),
+//   );
+// }
+
+// class _ReelsError extends StatelessWidget {
+//   final VoidCallback onRetry;
+//   const _ReelsError({required this.onRetry});
+//   @override
+//   Widget build(BuildContext context) => Center(
+//     child: Column(
+//       mainAxisAlignment: MainAxisAlignment.center,
+//       children: [
+//         const Icon(Icons.error_outline, color: Colors.white54, size: 56),
+//         const SizedBox(height: 16),
+//         const Text(
+//           'Could not load reels',
+//           style: TextStyle(color: Colors.white70, fontSize: 16),
+//         ),
+//         const SizedBox(height: 20),
+//         ElevatedButton.icon(
+//           onPressed: onRetry,
+//           icon: const Icon(Icons.refresh),
+//           label: const Text('Retry'),
+//           style: ElevatedButton.styleFrom(
+//             backgroundColor: const Color(0xFFF48706),
+//             foregroundColor: Colors.white,
+//             shape: RoundedRectangleBorder(
+//               borderRadius: BorderRadius.circular(20),
+//             ),
+//           ),
+//         ),
+//       ],
+//     ),
+//   );
+// }
+
+// import 'dart:async';
+// import 'dart:convert';
+// import 'dart:developer' as developer;
+
+// import 'package:better_native_video_player/better_native_video_player.dart';
+// import 'package:cached_network_image/cached_network_image.dart';
+// import 'package:flutter/gestures.dart';
+// import 'package:flutter/material.dart';
+// import 'package:flutter/services.dart';
+// import 'package:flutter_riverpod/flutter_riverpod.dart';
+// import 'package:http/http.dart' as http;
+// import 'package:share_plus/share_plus.dart';
+// import 'package:shimmer/shimmer.dart';
+// import 'package:innovator/Innovator/App_data/App_data.dart';
+// import 'package:innovator/Innovator/screens/comment/comment_section.dart';
+// import 'package:innovator/Innovator/screens/Follow/follow_Button.dart';
+// import 'package:innovator/Innovator/screens/Likes/Content-Like-Service.dart';
+// import 'package:innovator/Innovator/screens/SHow_Specific_Profile/Show_Specific_Profile.dart';
+
+// // ════════════════════════════════════════════════════════════════════════════
+// // MODELS
+// // ════════════════════════════════════════════════════════════════════════════
+
+// class ReelModel {
+//   final String id;
+//   final String userId;
+//   final String username;
+//   final String avatar;
+//   String caption;
+//   final String? videoUrl;
+//   final String? hlsUrl;
+//   final String? thumbnail;
+//   int viewsCount;
+//   int reactionsCount;
+//   String? currentUserReaction;
+//   bool isFollowed;
+//   int commentsCount;
+//   final DateTime createdAt;
+//   final String? sharedReelId;
+//   final ReelModel? sharedReelDetails;
+
+//   ReelModel({
+//     required this.id,
+//     required this.userId,
+//     required this.username,
+//     required this.avatar,
+//     required this.caption,
+//     this.videoUrl,
+//     this.hlsUrl,
+//     this.thumbnail,
+//     required this.viewsCount,
+//     required this.reactionsCount,
+//     this.currentUserReaction,
+//     required this.isFollowed,
+//     required this.commentsCount,
+//     required this.createdAt,
+//     this.sharedReelId,
+//     this.sharedReelDetails,
+//   });
+
+//   bool get hasVideo =>
+//       (hlsUrl != null && hlsUrl!.isNotEmpty) ||
+//       (videoUrl != null && videoUrl!.isNotEmpty);
+
+//   /// Always prefer HLS for smooth adaptive streaming
+//   String? get bestVideoUrl =>
+//       (hlsUrl != null && hlsUrl!.isNotEmpty) ? hlsUrl : videoUrl;
+
+//   /// True if the best URL is an HLS stream
+//   bool get isHls {
+//     final url = bestVideoUrl;
+//     if (url == null) return false;
+//     return url.contains('.m3u8') || url.contains('hls');
+//   }
+
+//   bool get isLiked => currentUserReaction != null;
+//   bool get isRepost => sharedReelId != null;
+//   ReactionType? get currentReactionType =>
+//       ReactionTypeExtension.fromValue(currentUserReaction);
+
+//   factory ReelModel.fromJson(Map<String, dynamic> j) => ReelModel(
+//     id: j['id']?.toString() ?? '',
+//     userId: j['user_id']?.toString() ?? '',
+//     username: j['username']?.toString() ?? '',
+//     avatar: j['avatar']?.toString() ?? '',
+//     caption: j['caption']?.toString() ?? '',
+//     videoUrl: j['video']?.toString(),
+//     hlsUrl: j['hls_playlist_url']?.toString(),
+//     thumbnail: j['thumbnail']?.toString(),
+//     viewsCount: (j['views_count'] as num?)?.toInt() ?? 0,
+//     reactionsCount:
+//         (j['reactions_count'] as num?)?.toInt() ??
+//         (j['like_count'] as num?)?.toInt() ??
+//         0,
+//     currentUserReaction: j['current_user_reaction']?.toString(),
+//     isFollowed: j['is_followed'] == true,
+//     commentsCount: (j['comments_count'] as num?)?.toInt() ?? 0,
+//     createdAt:
+//         DateTime.tryParse(j['created_at']?.toString() ?? '') ?? DateTime.now(),
+//     sharedReelId: j['shared_reel']?.toString(),
+//     sharedReelDetails:
+//         j['shared_reel_details'] != null
+//             ? ReelModel.fromJson(
+//               j['shared_reel_details'] as Map<String, dynamic>,
+//             )
+//             : null,
+//   );
+// }
+
+// class ReelOperationResult {
+//   final bool success;
+//   final String? errorMessage;
+//   final ReelModel? data;
+//   const ReelOperationResult({
+//     required this.success,
+//     this.errorMessage,
+//     this.data,
+//   });
+// }
+
+// class ReelsFeed {
+//   final List<ReelModel> reels;
+//   final String? nextCursor;
+//   final bool hasMore;
+//   const ReelsFeed({
+//     required this.reels,
+//     this.nextCursor,
+//     required this.hasMore,
+//   });
+// }
+
+// // ════════════════════════════════════════════════════════════════════════════
+// // API SERVICE
+// // ════════════════════════════════════════════════════════════════════════════
+
+// class ReelsApiService {
+//   static const _base = 'http://36.253.137.34:8005';
+//   static const _reelsUrl = '$_base/api/reels/';
+
+//   static Map<String, String> _headers() {
+//     final token = AppData().accessToken ?? '';
+//     return {
+//       'Content-Type': 'application/json',
+//       'Accept': 'application/json',
+//       if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+//     };
+//   }
+
+//   static Future<ReelsFeed> fetchReels({String? cursor}) async {
+//     final uri =
+//         (cursor != null && cursor.isNotEmpty)
+//             ? Uri.parse(cursor)
+//             : Uri.parse(_reelsUrl);
+//     final res = await http
+//         .get(uri, headers: _headers())
+//         .timeout(const Duration(seconds: 20));
+//     developer.log('[Feed] Status: ${res.statusCode}');
+//     if (res.statusCode == 200) {
+//       final data = json.decode(res.body) as Map<String, dynamic>;
+//       final raw = data['results'] as List<dynamic>? ?? [];
+//       developer.log(
+//         '[Feed] Parsing ${raw.length} posts — '
+//         'hasMore: ${data['next'] != null} — next: ${data['next']}',
+//       );
+//       final results =
+//           raw
+//               .whereType<Map<String, dynamic>>()
+//               .map(ReelModel.fromJson)
+//               .where((r) => r.hasVideo)
+//               .toList();
+//       developer.log('[Feed] ✓ ${results.length} valid posts');
+//       return ReelsFeed(
+//         reels: results,
+//         nextCursor: data['next']?.toString(),
+//         hasMore: data['next'] != null,
+//       );
+//     }
+//     throw Exception('Reels fetch failed: ${res.statusCode}');
+//   }
+
+//   static Future<void> recordView(String reelId) async {
+//     try {
+//       await http
+//           .post(Uri.parse('$_reelsUrl$reelId/view/'), headers: _headers())
+//           .timeout(const Duration(seconds: 5));
+//     } catch (_) {}
+//   }
+
+//   static Future<ReelOperationResult> editReel({
+//     required String reelId,
+//     required String caption,
+//   }) async {
+//     try {
+//       final res = await http
+//           .patch(
+//             Uri.parse('$_reelsUrl$reelId/'),
+//             headers: _headers(),
+//             body: json.encode({'caption': caption}),
+//           )
+//           .timeout(const Duration(seconds: 15));
+//       if (res.statusCode == 200) {
+//         return ReelOperationResult(
+//           success: true,
+//           data: ReelModel.fromJson(
+//             json.decode(res.body) as Map<String, dynamic>,
+//           ),
+//         );
+//       }
+//       return ReelOperationResult(
+//         success: false,
+//         errorMessage: _parseError(res.body, res.statusCode),
+//       );
+//     } catch (_) {
+//       return const ReelOperationResult(
+//         success: false,
+//         errorMessage: 'Network error.',
+//       );
+//     }
+//   }
+
+//   static Future<ReelOperationResult> deleteReel(String reelId) async {
+//     try {
+//       final res = await http
+//           .delete(Uri.parse('$_reelsUrl$reelId/'), headers: _headers())
+//           .timeout(const Duration(seconds: 15));
+//       if (res.statusCode == 204 || res.statusCode == 200) {
+//         return const ReelOperationResult(success: true);
+//       }
+//       return ReelOperationResult(
+//         success: false,
+//         errorMessage: _parseError(res.body, res.statusCode),
+//       );
+//     } catch (_) {
+//       return const ReelOperationResult(
+//         success: false,
+//         errorMessage: 'Network error.',
+//       );
+//     }
+//   }
+
+//   static Future<ReelOperationResult> repostReel(String reelId) async {
+//     try {
+//       final res = await http
+//           .post(Uri.parse('$_reelsUrl$reelId/repost/'), headers: _headers())
+//           .timeout(const Duration(seconds: 15));
+//       if (res.statusCode == 200 || res.statusCode == 201) {
+//         return ReelOperationResult(
+//           success: true,
+//           data: ReelModel.fromJson(
+//             json.decode(res.body) as Map<String, dynamic>,
+//           ),
+//         );
+//       }
+//       return ReelOperationResult(
+//         success: false,
+//         errorMessage: _parseError(res.body, res.statusCode),
+//       );
+//     } catch (_) {
+//       return const ReelOperationResult(
+//         success: false,
+//         errorMessage: 'Network error.',
+//       );
+//     }
+//   }
+
+//   static String _parseError(String body, int code) {
+//     try {
+//       final d = json.decode(body);
+//       if (d is Map) {
+//         final v = d['detail'] ?? d['message'] ?? d['error'];
+//         if (v != null) return v.toString();
+//       }
+//     } catch (_) {}
+//     return 'Something went wrong ($code)';
+//   }
+// }
+
+// // ════════════════════════════════════════════════════════════════════════════
+// // RIVERPOD STATE
+// // ════════════════════════════════════════════════════════════════════════════
+
+// final activeReelIndexProvider = StateProvider<int>((ref) => 0);
+
+// class ReelsFeedNotifier extends StateNotifier<AsyncValue<List<ReelModel>>> {
+//   ReelsFeedNotifier() : super(const AsyncValue.loading()) {
+//     _load();
+//   }
+
+//   String? _nextCursor;
+//   bool _hasMore = true;
+//   bool _isLoadingMore = false;
+
+//   Future<void> _load() async {
+//     try {
+//       final feed = await ReelsApiService.fetchReels();
+//       _nextCursor = feed.nextCursor;
+//       _hasMore = feed.hasMore;
+//       state = AsyncValue.data(feed.reels);
+//       developer.log('[Feed] Initial: ${feed.reels.length} posts');
+//     } catch (e, st) {
+//       state = AsyncValue.error(e, st);
+//     }
+//   }
+
+//   Future<void> refresh() async {
+//     _nextCursor = null;
+//     _hasMore = true;
+//     state = const AsyncValue.loading();
+//     await _load();
+//   }
+
+//   Future<void> loadMore() async {
+//     if (_isLoadingMore || !_hasMore || _nextCursor == null) return;
+//     _isLoadingMore = true;
+//     try {
+//       final current = state.value ?? [];
+//       final feed = await ReelsApiService.fetchReels(cursor: _nextCursor);
+//       _nextCursor = feed.nextCursor;
+//       _hasMore = feed.hasMore;
+//       state = AsyncValue.data([...current, ...feed.reels]);
+//       developer.log('[Feed] Refreshed: ${feed.reels.length} posts');
+//     } catch (_) {
+//     } finally {
+//       _isLoadingMore = false;
+//     }
+//   }
+
+//   void applyReaction(String reelId, String? newReaction) {
+//     final list = state.value;
+//     if (list == null) return;
+//     final idx = list.indexWhere((r) => r.id == reelId);
+//     if (idx == -1) return;
+//     final reel = list[idx];
+//     final had = reel.currentUserReaction != null;
+//     final will = newReaction != null;
+//     reel.currentUserReaction = newReaction;
+//     if (!had && will) reel.reactionsCount++;
+//     if (had && !will)
+//       reel.reactionsCount = (reel.reactionsCount - 1).clamp(0, 999999);
+//     state = AsyncValue.data(List.from(list));
+//   }
+
+//   void updateFollow(String userId, bool isFollowed) {
+//     final list = state.value;
+//     if (list == null) return;
+//     for (final r in list) {
+//       if (r.userId == userId) r.isFollowed = isFollowed;
+//     }
+//     state = AsyncValue.data(List.from(list));
+//   }
+
+//   void incrementComments(String reelId) {
+//     final list = state.value;
+//     if (list == null) return;
+//     final idx = list.indexWhere((r) => r.id == reelId);
+//     if (idx != -1) list[idx].commentsCount++;
+//     state = AsyncValue.data(List.from(list));
+//   }
+
+//   Future<String?> editReel(String reelId, String newCaption) async {
+//     final list = state.value;
+//     if (list == null) return 'No data';
+//     final idx = list.indexWhere((r) => r.id == reelId);
+//     if (idx == -1) return 'Not found';
+//     final old = list[idx].caption;
+//     list[idx].caption = newCaption;
+//     state = AsyncValue.data(List.from(list));
+//     final result = await ReelsApiService.editReel(
+//       reelId: reelId,
+//       caption: newCaption,
+//     );
+//     if (result.success) {
+//       if (result.data != null) list[idx].caption = result.data!.caption;
+//       state = AsyncValue.data(List.from(list));
+//       return null;
+//     }
+//     list[idx].caption = old;
+//     state = AsyncValue.data(List.from(list));
+//     return result.errorMessage;
+//   }
+
+//   Future<String?> deleteReel(String reelId) async {
+//     final result = await ReelsApiService.deleteReel(reelId);
+//     if (result.success) {
+//       state = AsyncValue.data(
+//         (state.value ?? []).where((r) => r.id != reelId).toList(),
+//       );
+//       return null;
+//     }
+//     return result.errorMessage;
+//   }
+
+//   Future<String?> repostReel(String reelId) async {
+//     final result = await ReelsApiService.repostReel(reelId);
+//     if (result.success && result.data != null) {
+//       state = AsyncValue.data([result.data!, ...(state.value ?? [])]);
+//       return null;
+//     }
+//     return result.errorMessage;
+//   }
+// }
+
+// final reelsFeedProvider =
+//     StateNotifierProvider<ReelsFeedNotifier, AsyncValue<List<ReelModel>>>(
+//       (ref) => ReelsFeedNotifier(),
+//     );
+
+// // ════════════════════════════════════════════════════════════════════════════
+// // CONTROLLER MANAGER
+// //
+// // FIX SUMMARY
+// // ───────────
+// // The MissingPluginException was caused by calling ctrl.initialize() before
+// // the NativeVideoPlayer platform view had a chance to register its
+// // MethodChannel on the native side.
+// //
+// // The platform view registration happens asynchronously after the Flutter
+// // widget tree renders. The old code called initialize() immediately after
+// // acquiring a controller, racing against this registration.
+// //
+// // NEW APPROACH:
+// //   1. One controller per reel ID — reuse if not replaced.
+// //   2. The _ReelItemState drives init: it waits for the NativeVideoPlayer
+// //      widget to be inserted into the tree (via a post-frame callback AFTER
+// //      the build that includes the widget), then calls initialize().
+// //   3. The manager only tracks active/idle state — no timing logic here.
+// // ════════════════════════════════════════════════════════════════════════════
+
+// class _ControllerManager {
+//   static int _seed = 700;
+
+//   NativeVideoPlayerController? _ctrl;
+//   String? _reelId;
+
+//   NativeVideoPlayerController? get controller => _ctrl;
+//   String? get activeReelId => _reelId;
+
+//   /// Acquire a controller for [reelId].
+//   /// If one already exists for the same reel, reuse it.
+//   /// Otherwise, dispose old and create fresh.
+//   NativeVideoPlayerController acquire(String reelId) {
+//     if (_reelId == reelId && _ctrl != null) {
+//       developer.log('[SCM] ♻️  Reusing ctrl id=${_ctrl!.id} for reel $reelId');
+//       return _ctrl!;
+//     }
+//     _dispose();
+//     final c = NativeVideoPlayerController(
+//       id: _seed++,
+//       autoPlay: false,
+//       enableLooping: true,
+//       showNativeControls: false,
+//     );
+//     _ctrl = c;
+//     _reelId = reelId;
+//     developer.log('[SCM] ✅ ctrl id=${c.id} for reel $reelId');
+//     return c;
+//   }
+
+//   void pause() {
+//     try {
+//       _ctrl?.pause();
+//     } catch (_) {}
+//   }
+
+//   void _dispose() {
+//     if (_ctrl == null) return;
+//     developer.log('[SCM] 🗑 Releasing ctrl id=${_ctrl!.id}');
+//     try {
+//       _ctrl!.pause();
+//     } catch (_) {}
+//     try {
+//       _ctrl!.dispose();
+//     } catch (_) {}
+//     _ctrl = null;
+//     _reelId = null;
+//   }
+
+//   void disposeAll() => _dispose();
+// }
+
+// // ════════════════════════════════════════════════════════════════════════════
+// // REELS SCREEN
+// // ════════════════════════════════════════════════════════════════════════════
+
+// class ReelsScreen extends ConsumerStatefulWidget {
+//   const ReelsScreen({Key? key}) : super(key: key);
+
+//   @override
+//   ConsumerState<ReelsScreen> createState() => _ReelsScreenState();
+// }
+
+// class _ReelsScreenState extends ConsumerState<ReelsScreen>
+//     with WidgetsBindingObserver {
+//   late final PageController _pageCtrl;
+//   final _cm = _ControllerManager();
+//   int _currentPage = 0;
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     WidgetsBinding.instance.addObserver(this);
+//     _pageCtrl = PageController();
+//     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+//     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+//   }
+
+//   @override
+//   void dispose() {
+//     WidgetsBinding.instance.removeObserver(this);
+//     _cm.disposeAll();
+//     _pageCtrl.dispose();
+//     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+//     SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+//     super.dispose();
+//   }
+
+//   @override
+//   void didChangeAppLifecycleState(AppLifecycleState state) {
+//     if (state == AppLifecycleState.paused ||
+//         state == AppLifecycleState.inactive) {
+//       _cm.pause();
+//     }
+//   }
+
+//   void _onPageChanged(int index) {
+//     _cm.pause();
+//     setState(() => _currentPage = index);
+//     ref.read(activeReelIndexProvider.notifier).state = index;
+//     final reels = ref.read(reelsFeedProvider).value ?? [];
+//     if (index >= reels.length - 3) {
+//       ref.read(reelsFeedProvider.notifier).loadMore();
+//     }
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final feedState = ref.watch(reelsFeedProvider);
+//     return PopScope(
+//       onPopInvoked: (_) => _cm.disposeAll(),
+//       child: Scaffold(
+//         backgroundColor: Colors.black,
+//         body: feedState.when(
+//           loading: () => const _ReelsShimmer(),
+//           error:
+//               (e, _) => _ReelsError(
+//                 onRetry: () => ref.read(reelsFeedProvider.notifier).refresh(),
+//               ),
+//           data: (reels) {
+//             if (reels.isEmpty) {
+//               return Center(
+//                 child: Column(
+//                   mainAxisAlignment: MainAxisAlignment.center,
+//                   children: [
+//                     const Icon(
+//                       Icons.video_library_outlined,
+//                       color: Colors.white54,
+//                       size: 64,
+//                     ),
+//                     const SizedBox(height: 16),
+//                     const Text(
+//                       'No reels yet',
+//                       style: TextStyle(color: Colors.white70, fontSize: 18),
+//                     ),
+//                     const SizedBox(height: 20),
+//                     TextButton(
+//                       onPressed:
+//                           () => ref.read(reelsFeedProvider.notifier).refresh(),
+//                       child: const Text(
+//                         'Refresh',
+//                         style: TextStyle(color: Colors.orange),
+//                       ),
+//                     ),
+//                   ],
+//                 ),
+//               );
+//             }
+//             return PageView.builder(
+//               controller: _pageCtrl,
+//               scrollDirection: Axis.vertical,
+//               onPageChanged: _onPageChanged,
+//               itemCount: reels.length,
+//               itemBuilder:
+//                   (ctx, i) => _ReelItem(
+//                     key: ValueKey(reels[i].id),
+//                     reel: reels[i],
+//                     isActive: i == _currentPage,
+//                     cm: _cm,
+//                   ),
+//             );
+//           },
+//         ),
+//       ),
+//     );
+//   }
+// }
+
+// // ════════════════════════════════════════════════════════════════════════════
+// // SINGLE REEL ITEM
+// // ════════════════════════════════════════════════════════════════════════════
+
+// class _ReelItem extends ConsumerStatefulWidget {
+//   final ReelModel reel;
+//   final bool isActive;
+//   final _ControllerManager cm;
+
+//   const _ReelItem({
+//     Key? key,
+//     required this.reel,
+//     required this.isActive,
+//     required this.cm,
+//   }) : super(key: key);
+
+//   @override
+//   ConsumerState<_ReelItem> createState() => _ReelItemState();
+// }
+
+// class _ReelItemState extends ConsumerState<_ReelItem>
+//     with SingleTickerProviderStateMixin {
+//   // ── controller state ──────────────────────────────────────────────────────
+//   NativeVideoPlayerController? _ctrl;
+
+//   /// True once we have called loadUrl() successfully and are ready to play
+//   bool _isReady = false;
+
+//   /// True while the async init chain is running
+//   bool _initRunning = false;
+
+//   /// True if init failed even after retry
+//   bool _hasError = false;
+
+//   // ── playback state ────────────────────────────────────────────────────────
+//   bool _isPlaying = false;
+//   bool _isMuted = false;
+//   bool _isSeeking = false;
+//   Duration _pos = Duration.zero;
+//   Duration _dur = Duration.zero;
+
+//   StreamSubscription<Duration>? _posSub;
+//   StreamSubscription<Duration>? _durSub;
+//   StreamSubscription<PlayerActivityState>? _stateSub;
+
+//   // ── UI state ──────────────────────────────────────────────────────────────
+//   bool _showControls = false;
+//   bool _showComments = false;
+//   bool _viewRecorded = false;
+
+//   // ── heart animation ───────────────────────────────────────────────────────
+//   late AnimationController _heartCtrl;
+//   late Animation<double> _heartScale;
+//   late Animation<double> _heartOpacity;
+//   bool _showHeart = false;
+//   Offset _heartPos = Offset.zero;
+
+//   // ── reaction overlay ──────────────────────────────────────────────────────
+//   OverlayEntry? _reactionOverlay;
+//   final LayerLink _reactionLink = LayerLink();
+//   final ContentLikeService _likeService = ContentLikeService(
+//     baseUrl: 'http://36.253.137.34:8005',
+//   );
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     _initHeart();
+//     if (widget.isActive) {
+//       // Schedule init after the first frame — by then the NativeVideoPlayer
+//       // platform view channel is registered on the native side.
+//       _scheduleInit();
+//     }
+//   }
+
+//   @override
+//   void didUpdateWidget(_ReelItem old) {
+//     super.didUpdateWidget(old);
+//     if (widget.isActive && !old.isActive) {
+//       // Became active — resume if ready, otherwise kick off init
+//       if (_isReady && _ctrl != null) {
+//         try {
+//           _ctrl!.play();
+//         } catch (_) {}
+//       } else if (!_initRunning) {
+//         _scheduleInit();
+//       }
+//       _recordView();
+//     } else if (!widget.isActive && old.isActive) {
+//       // Left screen — pause only, keep controller alive for quick return
+//       try {
+//         _ctrl?.pause();
+//       } catch (_) {}
+//       setState(() => _isPlaying = false);
+//     }
+//   }
+
+//   @override
+//   void dispose() {
+//     _detachStreams();
+//     _heartCtrl.dispose();
+//     _removeOverlay();
+//     try {
+//       _ctrl?.pause();
+//     } catch (_) {}
+//     // Do NOT call dispose() on the controller here — the manager owns it
+//     // and will dispose it when the next reel becomes active.
+//     _ctrl = null;
+//     super.dispose();
+//   }
+
+//   // ── platform view readiness ───────────────────────────────────────────────
+
+//   /// NativeVideoPlayer has no onViewCreated callback.
+//   /// addPostFrameCallback fires after the frame that first includes the
+//   /// NativeVideoPlayer widget — at that point ExoPlayer's MethodChannel
+//   /// is guaranteed to be registered on the native side, so initialize()
+//   /// won't throw MissingPluginException.
+//   void _scheduleInit() {
+//     WidgetsBinding.instance.addPostFrameCallback((_) {
+//       if (!mounted || !widget.isActive) return;
+//       if (!_initRunning && !_isReady) _startInit();
+//     });
+//   }
+
+//   // ── init sequence ─────────────────────────────────────────────────────────
+
+//   void _startInit() {
+//     if (!widget.isActive || !mounted || _initRunning) return;
+//     _isReady = false;
+//     _hasError = false;
+//     _initRunning = true;
+//     final ctrl = widget.cm.acquire(widget.reel.id);
+//     _ctrl = ctrl;
+//     _runInit(ctrl, attempt: 0);
+//   }
+
+//   Future<void> _runInit(
+//     NativeVideoPlayerController ctrl, {
+//     required int attempt,
+//   }) async {
+//     if (!mounted || !widget.isActive) {
+//       _initRunning = false;
+//       return;
+//     }
+//     try {
+//       developer.log(
+//         '[Reel] 🚀 init reel=${widget.reel.id} id=${ctrl.id} attempt=$attempt',
+//       );
+
+//       // Step 1: initialize the controller (sets up ExoPlayer on Android)
+//       await ctrl.initialize();
+//       if (!mounted || !widget.isActive) {
+//         _initRunning = false;
+//         return;
+//       }
+
+//       // Step 2: load the URL — explicitly pass VideoSourceType for HLS
+//       final url = widget.reel.bestVideoUrl!;
+//       final token = AppData().accessToken ?? '';
+//       final hdrs =
+//           token.isNotEmpty
+//               ? <String, String>{'Authorization': 'Bearer $token'}
+//               : null;
+
+//       // better_native_video_player auto-detects HLS from the .m3u8 URL —
+//       // no videoSourceType parameter needed; loadUrl only accepts url + headers.
+//       await ctrl.loadUrl(url: url, headers: hdrs);
+
+//       if (!mounted || !widget.isActive) {
+//         _initRunning = false;
+//         return;
+//       }
+
+//       _isReady = true;
+//       _hasError = false;
+//       _attachStreams(ctrl);
+
+//       if (_isMuted) {
+//         try {
+//           ctrl.setVolume(0);
+//         } catch (_) {}
+//       }
+
+//       try {
+//         ctrl.play();
+//       } catch (_) {}
+
+//       _recordView();
+//       if (mounted) setState(() {});
+//     } catch (e) {
+//       developer.log('[Reel] ❌ error attempt=$attempt: $e');
+//       _initRunning = false;
+
+//       if (attempt == 0 && mounted && widget.isActive) {
+//         // One retry after a short back-off — re-acquires a fresh controller
+//         await Future.delayed(const Duration(milliseconds: 500));
+//         if (!mounted || !widget.isActive) return;
+//         final fresh = widget.cm.acquire(
+//           '${widget.reel.id}_retry', // force new controller
+//         );
+//         // Fix: map back to correct reel after forced new id trick
+//         // Actually just dispose and re-acquire normally:
+//         widget.cm.disposeAll();
+//         final retry = widget.cm.acquire(widget.reel.id);
+//         _ctrl = retry;
+//         _initRunning = true;
+//         await _runInit(retry, attempt: 1);
+//         return;
+//       }
+
+//       if (mounted) setState(() => _hasError = true);
+//     } finally {
+//       if (_initRunning) _initRunning = false;
+//     }
+//   }
+
+//   void _recordView() {
+//     if (!_viewRecorded) {
+//       _viewRecorded = true;
+//       ReelsApiService.recordView(widget.reel.id);
+//     }
+//   }
+
+//   // ── stream subscriptions ──────────────────────────────────────────────────
+
+//   void _attachStreams(NativeVideoPlayerController c) {
+//     _detachStreams();
+//     _posSub = c.positionStream.listen((p) {
+//       if (mounted && !_isSeeking) setState(() => _pos = p);
+//     });
+//     _durSub = c.durationStream.listen((d) {
+//       if (mounted) setState(() => _dur = d);
+//     });
+//     _stateSub = c.playerStateStream.listen((s) {
+//       if (mounted)
+//         setState(() => _isPlaying = s == PlayerActivityState.playing);
+//     });
+//   }
+
+//   void _detachStreams() {
+//     _posSub?.cancel();
+//     _durSub?.cancel();
+//     _stateSub?.cancel();
+//     _posSub = _durSub = _stateSub = null;
+//   }
+
+//   // ── heart animation setup ─────────────────────────────────────────────────
+
+//   void _initHeart() {
+//     _heartCtrl = AnimationController(
+//       vsync: this,
+//       duration: const Duration(milliseconds: 700),
+//     );
+//     _heartScale = TweenSequence([
+//       TweenSequenceItem(
+//         tween: Tween<double>(
+//           begin: 0,
+//           end: 1.6,
+//         ).chain(CurveTween(curve: Curves.easeOut)),
+//         weight: 40,
+//       ),
+//       TweenSequenceItem(
+//         tween: Tween<double>(
+//           begin: 1.6,
+//           end: 1.0,
+//         ).chain(CurveTween(curve: Curves.elasticOut)),
+//         weight: 40,
+//       ),
+//       TweenSequenceItem(
+//         tween: Tween<double>(
+//           begin: 1.0,
+//           end: 0,
+//         ).chain(CurveTween(curve: Curves.easeIn)),
+//         weight: 20,
+//       ),
+//     ]).animate(_heartCtrl);
+//     _heartOpacity = TweenSequence([
+//       TweenSequenceItem(tween: ConstantTween(1.0), weight: 80),
+//       TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 20),
+//     ]).animate(_heartCtrl);
+//   }
+
+//   // ── gesture handlers ──────────────────────────────────────────────────────
+
+//   void _onTap() {
+//     _removeOverlay();
+//     if (!_isReady || _ctrl == null) return;
+//     try {
+//       _isPlaying ? _ctrl!.pause() : _ctrl!.play();
+//     } catch (_) {}
+//     if (mounted) {
+//       setState(() => _showControls = true);
+//       Future.delayed(const Duration(seconds: 2), () {
+//         if (mounted) setState(() => _showControls = false);
+//       });
+//     }
+//   }
+
+//   void _onDoubleTap(TapDownDetails d) {
+//     HapticFeedback.mediumImpact();
+//     _removeOverlay();
+//     setState(() {
+//       _heartPos = d.localPosition;
+//       _showHeart = true;
+//     });
+//     _heartCtrl.forward(from: 0).then((_) {
+//       if (mounted) setState(() => _showHeart = false);
+//     });
+//     if (!widget.reel.isLiked) _react(ReactionType.like);
+//   }
+
+//   void _onLPS(LongPressStartDetails _) {
+//     try {
+//       _ctrl?.pause();
+//     } catch (_) {}
+//   }
+
+//   void _onLPE(LongPressEndDetails _) {
+//     if (widget.isActive && _isReady) {
+//       try {
+//         _ctrl?.play();
+//       } catch (_) {}
+//     }
+//   }
+
+//   void _seekTo(double f) {
+//     if (!_isReady || _ctrl == null) return;
+//     final t = Duration(milliseconds: (_dur.inMilliseconds * f).round());
+//     try {
+//       _ctrl!.seekTo(t);
+//     } catch (_) {}
+//     if (mounted) setState(() => _pos = t);
+//   }
+
+//   void _toggleMute() {
+//     setState(() => _isMuted = !_isMuted);
+//     try {
+//       _ctrl?.setVolume(_isMuted ? 0.0 : 1.0);
+//     } catch (_) {}
+//   }
+
+//   // ── reactions ─────────────────────────────────────────────────────────────
+
+//   Future<void> _react(ReactionType type) async {
+//     final r = widget.reel;
+//     final same = r.currentUserReaction == type.value;
+//     final n = ref.read(reelsFeedProvider.notifier);
+//     n.applyReaction(r.id, (r.isLiked && same) ? null : type.value);
+//     final res = await _likeService.reactReel(r.id, type);
+//     n.applyReaction(
+//       r.id,
+//       res.success ? res.reactionType?.value : r.currentUserReaction,
+//     );
+//   }
+
+//   void _showPicker() {
+//     if (_reactionOverlay != null) {
+//       _removeOverlay();
+//       return;
+//     }
+//     HapticFeedback.mediumImpact();
+//     _reactionOverlay = OverlayEntry(
+//       builder:
+//           (_) => _VerticalReactionPicker(
+//             layerLink: _reactionLink,
+//             currentReaction: widget.reel.currentReactionType,
+//             onSelect: (t) {
+//               _removeOverlay();
+//               _react(t);
+//             },
+//             onDismiss: _removeOverlay,
+//           ),
+//     );
+//     Overlay.of(context).insert(_reactionOverlay!);
+//   }
+
+//   void _removeOverlay() {
+//     _reactionOverlay?.remove();
+//     _reactionOverlay = null;
+//   }
+
+//   bool _isMe() =>
+//       AppData().isMe(widget.reel.userId) ||
+//       AppData().isMe(widget.reel.username);
+
+//   void _options() {
+//     try {
+//       _ctrl?.pause();
+//     } catch (_) {}
+//     _removeOverlay();
+//     showModalBottomSheet(
+//       context: context,
+//       backgroundColor: Colors.transparent,
+//       builder:
+//           (_) => _ReelOptionsSheet(
+//             isOwner: _isMe(),
+//             reel: widget.reel,
+//             onEdit: _isMe() ? _editDialog : null,
+//             onDelete: _isMe() ? _deleteDialog : null,
+//             onRepost: !_isMe() ? _doRepost : null,
+//           ),
+//     ).then((_) {
+//       if (widget.isActive && mounted && _isReady) {
+//         try {
+//           _ctrl?.play();
+//         } catch (_) {}
+//       }
+//     });
+//   }
+
+//   void _editDialog() {
+//     final tc = TextEditingController(text: widget.reel.caption);
+//     showDialog(
+//       context: context,
+//       builder:
+//           (_) => AlertDialog(
+//             backgroundColor: const Color(0xFF1C1C1E),
+//             shape: RoundedRectangleBorder(
+//               borderRadius: BorderRadius.circular(16),
+//             ),
+//             title: const Text(
+//               'Edit Caption',
+//               style: TextStyle(
+//                 color: Colors.white,
+//                 fontWeight: FontWeight.w700,
+//               ),
+//             ),
+//             content: TextField(
+//               controller: tc,
+//               maxLines: 4,
+//               minLines: 1,
+//               style: const TextStyle(color: Colors.white),
+//               decoration: InputDecoration(
+//                 hintText: 'Write a caption…',
+//                 hintStyle: const TextStyle(color: Colors.white38),
+//                 filled: true,
+//                 fillColor: Colors.white10,
+//                 border: OutlineInputBorder(
+//                   borderRadius: BorderRadius.circular(10),
+//                   borderSide: BorderSide.none,
+//                 ),
+//               ),
+//             ),
+//             actions: [
+//               TextButton(
+//                 onPressed: () => Navigator.pop(context),
+//                 child: const Text(
+//                   'Cancel',
+//                   style: TextStyle(color: Colors.white54),
+//                 ),
+//               ),
+//               ElevatedButton(
+//                 style: ElevatedButton.styleFrom(
+//                   backgroundColor: const Color(0xFFF48706),
+//                   shape: RoundedRectangleBorder(
+//                     borderRadius: BorderRadius.circular(10),
+//                   ),
+//                 ),
+//                 onPressed: () async {
+//                   final cap = tc.text.trim();
+//                   Navigator.pop(context);
+//                   final err = await ref
+//                       .read(reelsFeedProvider.notifier)
+//                       .editReel(widget.reel.id, cap);
+//                   if (mounted)
+//                     _snack(err ?? 'Caption updated!', err: err != null);
+//                 },
+//                 child: const Text(
+//                   'Save',
+//                   style: TextStyle(
+//                     color: Colors.white,
+//                     fontWeight: FontWeight.w700,
+//                   ),
+//                 ),
+//               ),
+//             ],
+//           ),
+//     );
+//   }
+
+//   void _deleteDialog() {
+//     showDialog(
+//       context: context,
+//       builder:
+//           (_) => AlertDialog(
+//             backgroundColor: const Color(0xFF1C1C1E),
+//             shape: RoundedRectangleBorder(
+//               borderRadius: BorderRadius.circular(16),
+//             ),
+//             title: const Text(
+//               'Delete Reel',
+//               style: TextStyle(
+//                 color: Colors.white,
+//                 fontWeight: FontWeight.w700,
+//               ),
+//             ),
+//             content: const Text(
+//               'This reel will be permanently deleted.',
+//               style: TextStyle(color: Colors.white70),
+//             ),
+//             actions: [
+//               TextButton(
+//                 onPressed: () => Navigator.pop(context),
+//                 child: const Text(
+//                   'Cancel',
+//                   style: TextStyle(color: Colors.white54),
+//                 ),
+//               ),
+//               ElevatedButton(
+//                 style: ElevatedButton.styleFrom(
+//                   backgroundColor: Colors.redAccent,
+//                   shape: RoundedRectangleBorder(
+//                     borderRadius: BorderRadius.circular(10),
+//                   ),
+//                 ),
+//                 onPressed: () async {
+//                   Navigator.pop(context);
+//                   final err = await ref
+//                       .read(reelsFeedProvider.notifier)
+//                       .deleteReel(widget.reel.id);
+//                   if (err != null && mounted) _snack(err, err: true);
+//                 },
+//                 child: const Text(
+//                   'Delete',
+//                   style: TextStyle(
+//                     color: Colors.white,
+//                     fontWeight: FontWeight.w700,
+//                   ),
+//                 ),
+//               ),
+//             ],
+//           ),
+//     );
+//   }
+
+//   Future<void> _doRepost() async {
+//     _snack('Reposting…');
+//     final err = await ref
+//         .read(reelsFeedProvider.notifier)
+//         .repostReel(widget.reel.id);
+//     if (mounted) _snack(err ?? 'Reposted!', err: err != null);
+//   }
+
+//   void _share() => Share.share(
+//     'Check out this reel by @${widget.reel.username}!\n'
+//     '${widget.reel.bestVideoUrl ?? ''}',
+//   );
+
+//   void _snack(String msg, {bool err = false}) {
+//     if (!mounted) return;
+//     ScaffoldMessenger.of(context).showSnackBar(
+//       SnackBar(
+//         content: Text(msg),
+//         backgroundColor: err ? Colors.redAccent : const Color(0xFFF48706),
+//         behavior: SnackBarBehavior.floating,
+//         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+//         duration: const Duration(seconds: 3),
+//       ),
+//     );
+//   }
+
+//   // ════════════════════════════════════════════════════════════════════════
+//   // BUILD
+//   //
+//   // KEY DESIGN:
+//   //   • Off-screen items → thumbnail only, no NativeVideoPlayer in tree
+//   //   • Active item → NativeVideoPlayer in tree; once its platform view
+//   //     is created (_onPlatformViewCreated), we begin the init chain
+//   // ════════════════════════════════════════════════════════════════════════
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final size = MediaQuery.of(context).size;
+
+//     if (!widget.isActive) {
+//       // Off-screen: just a thumbnail (zero native cost)
+//       return Stack(
+//         fit: StackFit.expand,
+//         children: [_thumb(size), _overlay(size, ready: false)],
+//       );
+//     }
+
+//     // Acquire the controller now so it is ready when the platform view appears
+//     final ctrl = widget.cm.acquire(widget.reel.id);
+//     if (_ctrl != ctrl) {
+//       _ctrl = ctrl;
+//       _isReady = false;
+//     }
+
+//     // Schedule init after this frame — the NativeVideoPlayer platform view
+//     // will be registered on the native side by then.
+//     if (!_isReady && !_initRunning) _scheduleInit();
+
+//     return NativeVideoPlayer(
+//       controller: ctrl,
+//       overlayBuilder: (_, __) => _overlay(size, ready: _isReady),
+//     );
+//   }
+
+//   Widget _overlay(Size size, {required bool ready}) => Stack(
+//     fit: StackFit.expand,
+//     children: [
+//       Positioned.fill(
+//         child: GestureDetector(
+//           onTap: _onTap,
+//           onDoubleTapDown: _onDoubleTap,
+//           onDoubleTap: () {},
+//           onLongPressStart: _onLPS,
+//           onLongPressEnd: _onLPE,
+//           behavior: HitTestBehavior.translucent,
+//           child: Container(color: Colors.transparent),
+//         ),
+//       ),
+//       _gradients(),
+//       _topBar(),
+//       _bottomLeft(size),
+//       _actions(),
+//       if (ready) _progress(size),
+//       if (_showControls && ready) _pauseHint(),
+//       if (_showHeart) _heartBurst(),
+//       if (widget.isActive && !ready) _statusOverlay(),
+//       if (_showComments) _comments(),
+//     ],
+//   );
+
+//   Widget _statusOverlay() {
+//     if (_hasError) {
+//       return Positioned.fill(
+//         child: Center(
+//           child: GestureDetector(
+//             onTap: () {
+//               setState(() => _hasError = false);
+//               _scheduleInit();
+//             },
+//             child: Container(
+//               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+//               decoration: BoxDecoration(
+//                 color: Colors.black.withOpacity(0.6),
+//                 borderRadius: BorderRadius.circular(12),
+//               ),
+//               child: const Row(
+//                 mainAxisSize: MainAxisSize.min,
+//                 children: [
+//                   Icon(Icons.refresh, color: Colors.white, size: 20),
+//                   SizedBox(width: 8),
+//                   Text(
+//                     'Tap to retry',
+//                     style: TextStyle(color: Colors.white, fontSize: 14),
+//                   ),
+//                 ],
+//               ),
+//             ),
+//           ),
+//         ),
+//       );
+//     }
+//     // Loading spinner
+//     return Positioned.fill(
+//       child: IgnorePointer(
+//         child: Center(
+//           child: Container(
+//             width: 52,
+//             height: 52,
+//             decoration: BoxDecoration(
+//               color: Colors.black.withOpacity(0.4),
+//               shape: BoxShape.circle,
+//             ),
+//             child: const Padding(
+//               padding: EdgeInsets.all(13),
+//               child: CircularProgressIndicator(
+//                 color: Colors.white,
+//                 strokeWidth: 2.5,
+//               ),
+//             ),
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+
+//   Widget _thumb(Size size) {
+//     final t = widget.reel.thumbnail;
+//     if (t != null && t.isNotEmpty) {
+//       return CachedNetworkImage(
+//         imageUrl: t,
+//         fit: BoxFit.cover,
+//         width: size.width,
+//         height: size.height,
+//         placeholder: (_, __) => const ColoredBox(color: Colors.black),
+//         errorWidget: (_, __, ___) => const ColoredBox(color: Colors.black),
+//       );
+//     }
+//     return const ColoredBox(color: Colors.black);
+//   }
+
+//   Widget _gradients() => Stack(
+//     children: [
+//       Positioned(
+//         top: 0,
+//         left: 0,
+//         right: 0,
+//         height: 120,
+//         child: Container(
+//           decoration: BoxDecoration(
+//             gradient: LinearGradient(
+//               begin: Alignment.topCenter,
+//               end: Alignment.bottomCenter,
+//               colors: [Colors.black.withOpacity(0.5), Colors.transparent],
+//             ),
+//           ),
+//         ),
+//       ),
+//       Positioned(
+//         bottom: 0,
+//         left: 0,
+//         right: 0,
+//         height: 320,
+//         child: Container(
+//           decoration: BoxDecoration(
+//             gradient: LinearGradient(
+//               begin: Alignment.bottomCenter,
+//               end: Alignment.topCenter,
+//               colors: [Colors.black.withOpacity(0.8), Colors.transparent],
+//             ),
+//           ),
+//         ),
+//       ),
+//     ],
+//   );
+
+//   Widget _topBar() => Positioned(
+//     top: MediaQuery.of(context).padding.top + 8,
+//     left: 8,
+//     right: 16,
+//     child: Row(
+//       children: [
+//         IconButton(
+//           icon: const Icon(
+//             Icons.arrow_back_ios_new_rounded,
+//             color: Colors.white,
+//             size: 22,
+//           ),
+//           onPressed: () {
+//             widget.cm.disposeAll();
+//             Navigator.maybePop(context);
+//           },
+//         ),
+//         const Spacer(),
+//         const Text(
+//           'Reels',
+//           style: TextStyle(
+//             color: Colors.white,
+//             fontSize: 18,
+//             fontWeight: FontWeight.w700,
+//             letterSpacing: 0.3,
+//           ),
+//         ),
+//         const Spacer(),
+//       ],
+//     ),
+//   );
+
+//   Widget _bottomLeft(Size size) => Positioned(
+//     bottom: 70,
+//     left: 12,
+//     right: 80,
+//     child: Column(
+//       crossAxisAlignment: CrossAxisAlignment.start,
+//       mainAxisSize: MainAxisSize.min,
+//       children: [
+//         if (widget.reel.isRepost && widget.reel.sharedReelDetails != null)
+//           Padding(
+//             padding: const EdgeInsets.only(bottom: 6),
+//             child: Row(
+//               children: [
+//                 const Icon(
+//                   Icons.repeat_rounded,
+//                   color: Colors.white70,
+//                   size: 14,
+//                 ),
+//                 const SizedBox(width: 4),
+//                 Text(
+//                   'Reposted from @${widget.reel.sharedReelDetails!.username}',
+//                   style: const TextStyle(
+//                     color: Colors.white70,
+//                     fontSize: 12,
+//                     fontWeight: FontWeight.w500,
+//                     shadows: [Shadow(blurRadius: 3)],
+//                   ),
+//                 ),
+//               ],
+//             ),
+//           ),
+//         GestureDetector(
+//           onTap:
+//               () => Navigator.push(
+//                 context,
+//                 MaterialPageRoute(
+//                   builder:
+//                       (_) =>
+//                           SpecificUserProfilePage(userId: widget.reel.userId),
+//                 ),
+//               ),
+//           child: Row(
+//             children: [
+//               _avatar(),
+//               const SizedBox(width: 10),
+//               Flexible(
+//                 child: Text(
+//                   widget.reel.username,
+//                   style: const TextStyle(
+//                     color: Colors.white,
+//                     fontWeight: FontWeight.w700,
+//                     fontSize: 15,
+//                     shadows: [Shadow(blurRadius: 4)],
+//                   ),
+//                   overflow: TextOverflow.ellipsis,
+//                 ),
+//               ),
+//               const SizedBox(width: 10),
+//               if (!_isMe())
+//                 _InlineFollowButton(
+//                   reel: widget.reel,
+//                   onFollowChanged:
+//                       (v) => ref
+//                           .read(reelsFeedProvider.notifier)
+//                           .updateFollow(widget.reel.userId, v),
+//                 ),
+//             ],
+//           ),
+//         ),
+//         if (widget.reel.caption.isNotEmpty) ...[
+//           const SizedBox(height: 8),
+//           _ExpandableCaption(caption: widget.reel.caption),
+//         ],
+//       ],
+//     ),
+//   );
+
+//   Widget _avatar() {
+//     final url = widget.reel.avatar;
+//     final init =
+//         widget.reel.username.isNotEmpty
+//             ? widget.reel.username[0].toUpperCase()
+//             : '?';
+//     Widget fb = Container(
+//       color: Colors.grey.shade700,
+//       alignment: Alignment.center,
+//       child: Text(
+//         init,
+//         style: const TextStyle(
+//           color: Colors.white,
+//           fontWeight: FontWeight.bold,
+//         ),
+//       ),
+//     );
+//     return Container(
+//       width: 40,
+//       height: 40,
+//       decoration: BoxDecoration(
+//         shape: BoxShape.circle,
+//         border: Border.all(color: Colors.white, width: 1.5),
+//       ),
+//       child: ClipOval(
+//         child:
+//             url.isNotEmpty
+//                 ? CachedNetworkImage(
+//                   imageUrl: url,
+//                   fit: BoxFit.cover,
+//                   placeholder: (_, __) => fb,
+//                   errorWidget: (_, __, ___) => fb,
+//                 )
+//                 : fb,
+//       ),
+//     );
+//   }
+
+//   Widget _actions() {
+//     final reel = widget.reel;
+//     final reaction = reel.currentReactionType;
+//     return Positioned(
+//       right: 8,
+//       bottom: 80,
+//       child: Column(
+//         mainAxisSize: MainAxisSize.min,
+//         children: [
+//           CompositedTransformTarget(
+//             link: _reactionLink,
+//             child: GestureDetector(
+//               onTap: () => _react(reaction ?? ReactionType.like),
+//               onLongPress: _showPicker,
+//               child: Column(
+//                 mainAxisSize: MainAxisSize.min,
+//                 children: [
+//                   SizedBox(
+//                     width: 44,
+//                     height: 44,
+//                     child: Center(
+//                       child:
+//                           reaction != null
+//                               ? Text(
+//                                 reaction.emoji,
+//                                 style: const TextStyle(fontSize: 28),
+//                               )
+//                               : const Icon(
+//                                 Icons.favorite_border_rounded,
+//                                 color: Colors.white,
+//                                 size: 30,
+//                                 shadows: [Shadow(blurRadius: 6)],
+//                               ),
+//                     ),
+//                   ),
+//                   Text(
+//                     _fmt(reel.reactionsCount),
+//                     style: const TextStyle(
+//                       color: Colors.white,
+//                       fontSize: 12,
+//                       fontWeight: FontWeight.w600,
+//                       shadows: [Shadow(blurRadius: 4)],
+//                     ),
+//                   ),
+//                 ],
+//               ),
+//             ),
+//           ),
+//           const SizedBox(height: 20),
+//           _ActionButton(
+//             icon: Icons.chat_bubble_outline_rounded,
+//             label: _fmt(reel.commentsCount),
+//             onTap: () => setState(() => _showComments = !_showComments),
+//           ),
+//           const SizedBox(height: 20),
+//           if (!_isMe()) ...[
+//             _ActionButton(
+//               icon: Icons.repeat_rounded,
+//               label: 'Repost',
+//               onTap: _doRepost,
+//             ),
+//             const SizedBox(height: 20),
+//           ],
+//           _ActionButton(
+//             icon: Icons.send_rounded,
+//             label: 'Share',
+//             onTap: _share,
+//           ),
+//           IconButton(
+//             icon: const Icon(
+//               Icons.more_vert_rounded,
+//               color: Colors.white,
+//               size: 24,
+//             ),
+//             onPressed: _options,
+//           ),
+//           const SizedBox(height: 20),
+//           _ActionButton(
+//             icon: _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+//             label: '',
+//             onTap: _toggleMute,
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+
+//   Widget _progress(Size size) {
+//     final total = _dur.inMilliseconds;
+//     final p = _pos.inMilliseconds.clamp(0, total > 0 ? total : 1);
+//     final f = total > 0 ? p / total : 0.0;
+//     return Positioned(
+//       bottom: 52,
+//       left: 0,
+//       right: 0,
+//       child: GestureDetector(
+//         onHorizontalDragStart: (_) => setState(() => _isSeeking = true),
+//         onHorizontalDragUpdate:
+//             (d) =>
+//                 _seekTo(d.localPosition.dx.clamp(0.0, size.width) / size.width),
+//         onHorizontalDragEnd: (_) => setState(() => _isSeeking = false),
+//         onTapDown:
+//             (d) =>
+//                 _seekTo(d.localPosition.dx.clamp(0.0, size.width) / size.width),
+//         behavior: HitTestBehavior.opaque,
+//         child: SizedBox(
+//           height: 20,
+//           child: Stack(
+//             alignment: Alignment.centerLeft,
+//             children: [
+//               Container(height: 2, color: Colors.white24),
+//               FractionallySizedBox(
+//                 widthFactor: f.clamp(0.0, 1.0),
+//                 child: Container(height: 2, color: Colors.white),
+//               ),
+//               Positioned(
+//                 left: (f * size.width - 6).clamp(0.0, size.width - 12),
+//                 child: Container(
+//                   width: 12,
+//                   height: 12,
+//                   decoration: const BoxDecoration(
+//                     color: Colors.white,
+//                     shape: BoxShape.circle,
+//                   ),
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+
+//   Widget _pauseHint() => Center(
+//     child: AnimatedOpacity(
+//       opacity: _showControls ? 1.0 : 0.0,
+//       duration: const Duration(milliseconds: 200),
+//       child: Container(
+//         width: 72,
+//         height: 72,
+//         decoration: BoxDecoration(
+//           color: Colors.black.withOpacity(0.55),
+//           shape: BoxShape.circle,
+//         ),
+//         child: Icon(
+//           _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+//           color: Colors.white,
+//           size: 42,
+//         ),
+//       ),
+//     ),
+//   );
+
+//   Widget _heartBurst() => Positioned(
+//     left: _heartPos.dx - 48,
+//     top: _heartPos.dy - 48,
+//     child: IgnorePointer(
+//       child: AnimatedBuilder(
+//         animation: _heartCtrl,
+//         builder:
+//             (_, __) => Opacity(
+//               opacity: _heartOpacity.value,
+//               child: Transform.scale(
+//                 scale: _heartScale.value,
+//                 child: const Icon(
+//                   Icons.favorite_rounded,
+//                   color: Colors.white,
+//                   size: 96,
+//                   shadows: [
+//                     Shadow(color: Colors.red, blurRadius: 20),
+//                     Shadow(blurRadius: 8),
+//                   ],
+//                 ),
+//               ),
+//             ),
+//       ),
+//     ),
+//   );
+
+//   Widget _comments() => Positioned(
+//     bottom: 0,
+//     left: 0,
+//     right: 0,
+//     height: MediaQuery.of(context).size.height * 0.6,
+//     child: GestureDetector(
+//       onTap: () {},
+//       child: Container(
+//         decoration: const BoxDecoration(
+//           color: Colors.white,
+//           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+//         ),
+//         child: Column(
+//           children: [
+//             Padding(
+//               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+//               child: Row(
+//                 children: [
+//                   const Spacer(),
+//                   Container(
+//                     width: 36,
+//                     height: 4,
+//                     decoration: BoxDecoration(
+//                       color: Colors.grey.shade300,
+//                       borderRadius: BorderRadius.circular(2),
+//                     ),
+//                   ),
+//                   const Spacer(),
+//                   GestureDetector(
+//                     onTap: () => setState(() => _showComments = false),
+//                     child: const Icon(Icons.close, size: 20),
+//                   ),
+//                 ],
+//               ),
+//             ),
+//             Expanded(
+//               child: CommentSection(
+//                 contentId: widget.reel.id,
+//                 onCommentAdded:
+//                     () => ref
+//                         .read(reelsFeedProvider.notifier)
+//                         .incrementComments(widget.reel.id),
+//               ),
+//             ),
+//           ],
+//         ),
+//       ),
+//     ),
+//   );
+
+//   String _fmt(int n) {
+//     if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
+//     if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
+//     return n > 0 ? '$n' : '';
+//   }
+// }
+
+// // ════════════════════════════════════════════════════════════════════════════
+// // OPTIONS SHEET
+// // ════════════════════════════════════════════════════════════════════════════
+
+// class _ReelOptionsSheet extends StatelessWidget {
+//   final bool isOwner;
+//   final ReelModel reel;
+//   final VoidCallback? onEdit, onDelete, onRepost;
+
+//   const _ReelOptionsSheet({
+//     required this.isOwner,
+//     required this.reel,
+//     this.onEdit,
+//     this.onDelete,
+//     this.onRepost,
+//   });
+
+//   @override
+//   Widget build(BuildContext context) => Container(
+//     decoration: const BoxDecoration(
+//       color: Color(0xFF1C1C1E),
+//       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+//     ),
+//     padding: const EdgeInsets.fromLTRB(0, 12, 0, 32),
+//     child: Column(
+//       mainAxisSize: MainAxisSize.min,
+//       children: [
+//         Container(
+//           width: 36,
+//           height: 4,
+//           margin: const EdgeInsets.only(bottom: 16),
+//           decoration: BoxDecoration(
+//             color: Colors.white24,
+//             borderRadius: BorderRadius.circular(2),
+//           ),
+//         ),
+//         if (isOwner) ...[
+//           _Tile(
+//             icon: Icons.edit_rounded,
+//             label: 'Edit Caption',
+//             onTap: () {
+//               Navigator.pop(context);
+//               onEdit?.call();
+//             },
+//           ),
+//           _Tile(
+//             icon: Icons.delete_outline_rounded,
+//             label: 'Delete Reel',
+//             color: Colors.redAccent,
+//             onTap: () {
+//               Navigator.pop(context);
+//               onDelete?.call();
+//             },
+//           ),
+//         ] else
+//           _Tile(
+//             icon: Icons.repeat_rounded,
+//             label: 'Repost',
+//             onTap: () {
+//               Navigator.pop(context);
+//               onRepost?.call();
+//             },
+//           ),
+//         _Tile(
+//           icon: Icons.close_rounded,
+//           label: 'Cancel',
+//           color: Colors.white54,
+//           onTap: () => Navigator.pop(context),
+//         ),
+//       ],
+//     ),
+//   );
+// }
+
+// class _Tile extends StatelessWidget {
+//   final IconData icon;
+//   final String label;
+//   final Color color;
+//   final VoidCallback onTap;
+//   const _Tile({
+//     required this.icon,
+//     required this.label,
+//     this.color = Colors.white,
+//     required this.onTap,
+//   });
+
+//   @override
+//   Widget build(BuildContext context) => InkWell(
+//     onTap: onTap,
+//     child: Padding(
+//       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+//       child: Row(
+//         children: [
+//           Icon(icon, color: color, size: 22),
+//           const SizedBox(width: 16),
+//           Text(
+//             label,
+//             style: TextStyle(
+//               color: color,
+//               fontSize: 16,
+//               fontWeight: FontWeight.w500,
+//             ),
+//           ),
+//         ],
+//       ),
+//     ),
+//   );
+// }
+
+// // ════════════════════════════════════════════════════════════════════════════
+// // REACTION PICKER
+// // ════════════════════════════════════════════════════════════════════════════
+
+// class _VerticalReactionPicker extends StatefulWidget {
+//   final LayerLink layerLink;
+//   final ReactionType? currentReaction;
+//   final void Function(ReactionType) onSelect;
+//   final VoidCallback onDismiss;
+//   const _VerticalReactionPicker({
+//     required this.layerLink,
+//     required this.currentReaction,
+//     required this.onSelect,
+//     required this.onDismiss,
+//   });
+
+//   @override
+//   State<_VerticalReactionPicker> createState() => _VRPState();
+// }
+
+// class _VRPState extends State<_VerticalReactionPicker>
+//     with SingleTickerProviderStateMixin {
+//   late AnimationController _ctrl;
+//   late Animation<double> _sc, _fa;
+//   ReactionType? _hov;
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     _ctrl = AnimationController(
+//       vsync: this,
+//       duration: const Duration(milliseconds: 250),
+//     );
+//     _sc = CurvedAnimation(parent: _ctrl, curve: Curves.easeOutBack);
+//     _fa = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+//     _ctrl.forward();
+//   }
+
+//   @override
+//   void dispose() {
+//     _ctrl.dispose();
+//     super.dispose();
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     const h = 52.0;
+//     final ph = ReactionType.values.length * h + 16;
+//     return Stack(
+//       children: [
+//         Positioned.fill(
+//           child: GestureDetector(
+//             onTap: widget.onDismiss,
+//             behavior: HitTestBehavior.translucent,
+//             child: Container(color: Colors.transparent),
+//           ),
+//         ),
+//         CompositedTransformFollower(
+//           link: widget.layerLink,
+//           showWhenUnlinked: false,
+//           offset: Offset(-68, -(ph / 2) + 22),
+//           child: FadeTransition(
+//             opacity: _fa,
+//             child: ScaleTransition(
+//               scale: _sc,
+//               alignment: Alignment.centerRight,
+//               child: Material(
+//                 color: Colors.transparent,
+//                 child: Container(
+//                   width: 56,
+//                   padding: const EdgeInsets.symmetric(vertical: 8),
+//                   decoration: BoxDecoration(
+//                     color: Colors.black.withOpacity(0.75),
+//                     borderRadius: BorderRadius.circular(28),
+//                     boxShadow: [
+//                       BoxShadow(
+//                         color: Colors.black.withOpacity(0.4),
+//                         blurRadius: 16,
+//                         offset: const Offset(0, 4),
+//                       ),
+//                     ],
+//                   ),
+//                   child: Column(
+//                     mainAxisSize: MainAxisSize.min,
+//                     children:
+//                         ReactionType.values.map((r) {
+//                           final active = widget.currentReaction == r;
+//                           final hov = _hov == r;
+//                           return GestureDetector(
+//                             onTap: () => widget.onSelect(r),
+//                             onTapDown: (_) => setState(() => _hov = r),
+//                             onTapCancel: () => setState(() => _hov = null),
+//                             child: SizedBox(
+//                               width: 56,
+//                               height: h,
+//                               child: Stack(
+//                                 alignment: Alignment.center,
+//                                 clipBehavior: Clip.none,
+//                                 children: [
+//                                   if (active)
+//                                     Container(
+//                                       width: 40,
+//                                       height: 40,
+//                                       decoration: BoxDecoration(
+//                                         color: Colors.white.withOpacity(0.15),
+//                                         shape: BoxShape.circle,
+//                                       ),
+//                                     ),
+//                                   TweenAnimationBuilder<double>(
+//                                     tween: Tween(
+//                                       begin: 1.0,
+//                                       end: hov ? 1.4 : (active ? 1.15 : 1.0),
+//                                     ),
+//                                     duration: const Duration(milliseconds: 200),
+//                                     curve: Curves.easeOutBack,
+//                                     builder:
+//                                         (_, s, c) =>
+//                                             Transform.scale(scale: s, child: c),
+//                                     child: Text(
+//                                       r.emoji,
+//                                       style: const TextStyle(fontSize: 26),
+//                                     ),
+//                                   ),
+//                                   if (hov)
+//                                     Positioned(
+//                                       left: -72,
+//                                       child: Container(
+//                                         padding: const EdgeInsets.symmetric(
+//                                           horizontal: 8,
+//                                           vertical: 4,
+//                                         ),
+//                                         decoration: BoxDecoration(
+//                                           color: Colors.black87,
+//                                           borderRadius: BorderRadius.circular(
+//                                             8,
+//                                           ),
+//                                         ),
+//                                         child: Text(
+//                                           r.label,
+//                                           style: const TextStyle(
+//                                             color: Colors.white,
+//                                             fontSize: 11,
+//                                             fontWeight: FontWeight.w600,
+//                                           ),
+//                                         ),
+//                                       ),
+//                                     ),
+//                                 ],
+//                               ),
+//                             ),
+//                           );
+//                         }).toList(),
+//                   ),
+//                 ),
+//               ),
+//             ),
+//           ),
+//         ),
+//       ],
+//     );
+//   }
+// }
+
+// // ════════════════════════════════════════════════════════════════════════════
+// // ACTION BUTTON
+// // ════════════════════════════════════════════════════════════════════════════
+
+// class _ActionButton extends StatefulWidget {
+//   final IconData icon;
+//   final Color iconColor;
+//   final String label;
+//   final VoidCallback onTap;
+//   const _ActionButton({
+//     required this.icon,
+//     this.iconColor = Colors.white,
+//     required this.label,
+//     required this.onTap,
+//   });
+
+//   @override
+//   State<_ActionButton> createState() => _ABState();
+// }
+
+// class _ABState extends State<_ActionButton>
+//     with SingleTickerProviderStateMixin {
+//   late AnimationController _ctrl;
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     _ctrl = AnimationController(
+//       vsync: this,
+//       duration: const Duration(milliseconds: 120),
+//       lowerBound: 0.88,
+//       upperBound: 1.0,
+//       value: 1.0,
+//     );
+//   }
+
+//   @override
+//   void dispose() {
+//     _ctrl.dispose();
+//     super.dispose();
+//   }
+
+//   Future<void> _tap() async {
+//     await _ctrl.reverse();
+//     _ctrl.forward();
+//     HapticFeedback.lightImpact();
+//     widget.onTap();
+//   }
+
+//   @override
+//   Widget build(BuildContext context) => GestureDetector(
+//     onTap: _tap,
+//     behavior: HitTestBehavior.opaque,
+//     child: ScaleTransition(
+//       scale: _ctrl,
+//       child: Column(
+//         mainAxisSize: MainAxisSize.min,
+//         children: [
+//           Icon(
+//             widget.icon,
+//             color: widget.iconColor,
+//             size: 30,
+//             shadows: const [Shadow(blurRadius: 6)],
+//           ),
+//           if (widget.label.isNotEmpty) ...[
+//             const SizedBox(height: 3),
+//             Text(
+//               widget.label,
+//               style: const TextStyle(
+//                 color: Colors.white,
+//                 fontSize: 12,
+//                 fontWeight: FontWeight.w600,
+//                 shadows: [Shadow(blurRadius: 4)],
+//               ),
+//             ),
+//           ],
+//         ],
+//       ),
+//     ),
+//   );
+// }
+
+// // ════════════════════════════════════════════════════════════════════════════
+// // INLINE FOLLOW BUTTON
+// // ════════════════════════════════════════════════════════════════════════════
+
+// class _InlineFollowButton extends StatelessWidget {
+//   final ReelModel reel;
+//   final ValueChanged<bool> onFollowChanged;
+//   const _InlineFollowButton({
+//     required this.reel,
+//     required this.onFollowChanged,
+//   });
+
+//   @override
+//   Widget build(BuildContext context) => FollowButton(
+//     targetUserId: reel.userId,
+//     initialFollowStatus: reel.isFollowed,
+//     onFollowSuccess: () {
+//       reel.isFollowed = true;
+//       onFollowChanged(true);
+//     },
+//     onUnfollowSuccess: () {
+//       reel.isFollowed = false;
+//       onFollowChanged(false);
+//     },
+//   );
+// }
+
+// // ════════════════════════════════════════════════════════════════════════════
+// // EXPANDABLE CAPTION
+// // ════════════════════════════════════════════════════════════════════════════
+
+// class _ExpandableCaption extends StatefulWidget {
+//   final String caption;
+//   const _ExpandableCaption({required this.caption});
+
+//   @override
+//   State<_ExpandableCaption> createState() => _ECState();
+// }
+
+// class _ECState extends State<_ExpandableCaption> {
+//   bool _exp = false;
+
+//   @override
+//   Widget build(BuildContext context) => GestureDetector(
+//     onTap: () => setState(() => _exp = !_exp),
+//     child: AnimatedSize(
+//       duration: const Duration(milliseconds: 250),
+//       curve: Curves.easeInOut,
+//       child: RichText(
+//         maxLines: _exp ? null : 2,
+//         overflow: _exp ? TextOverflow.visible : TextOverflow.ellipsis,
+//         text: TextSpan(
+//           children: [
+//             TextSpan(
+//               text: widget.caption,
+//               style: const TextStyle(
+//                 color: Colors.white,
+//                 fontSize: 13,
+//                 height: 1.45,
+//                 shadows: [Shadow(blurRadius: 4)],
+//               ),
+//             ),
+//             if (!_exp)
+//               const TextSpan(
+//                 text: ' more',
+//                 style: TextStyle(
+//                   color: Colors.white70,
+//                   fontSize: 12,
+//                   fontWeight: FontWeight.w600,
+//                 ),
+//               ),
+//           ],
+//         ),
+//       ),
+//     ),
+//   );
+// }
+
+// // ════════════════════════════════════════════════════════════════════════════
+// // SHIMMER + ERROR
+// // ════════════════════════════════════════════════════════════════════════════
+
+// class _ReelsShimmer extends StatelessWidget {
+//   const _ReelsShimmer();
+//   @override
+//   Widget build(BuildContext context) => Shimmer.fromColors(
+//     baseColor: Colors.grey.shade900,
+//     highlightColor: Colors.grey.shade700,
+//     period: const Duration(milliseconds: 1400),
+//     child: Container(color: Colors.black),
+//   );
+// }
+
+// class _ReelsError extends StatelessWidget {
+//   final VoidCallback onRetry;
+//   const _ReelsError({required this.onRetry});
+//   @override
+//   Widget build(BuildContext context) => Center(
+//     child: Column(
+//       mainAxisAlignment: MainAxisAlignment.center,
+//       children: [
+//         const Icon(Icons.error_outline, color: Colors.white54, size: 56),
+//         const SizedBox(height: 16),
+//         const Text(
+//           'Could not load reels',
+//           style: TextStyle(color: Colors.white70, fontSize: 16),
+//         ),
+//         const SizedBox(height: 20),
+//         ElevatedButton.icon(
+//           onPressed: onRetry,
+//           icon: const Icon(Icons.refresh),
+//           label: const Text('Retry'),
+//           style: ElevatedButton.styleFrom(
+//             backgroundColor: const Color(0xFFF48706),
+//             foregroundColor: Colors.white,
+//             shape: RoundedRectangleBorder(
+//               borderRadius: BorderRadius.circular(20),
+//             ),
+//           ),
+//         ),
+//       ],
+//     ),
+//   );
+// }
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
@@ -628,14 +4938,8 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
             return Stack(
               fit: StackFit.expand,
               children: [
-                const ColoredBox(color: Colors.black),
                 // ── Single shared SurfaceView (never leaves the tree) ──────
-                Center(
-                  child: AspectRatio(
-                    aspectRatio: 9 / 16,
-                    child: const ReelsSurfaceWidget(),
-                  ),
-                ),
+                const ReelsSurfaceWidget(),
 
                 // ── PageView: transparent, handles swipe + overlays ────────
                 // Each page renders its OWN reel's avatar/name/caption/buttons.
@@ -779,27 +5083,10 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
     super.dispose();
   }
 
-  // void _scheduleVideoReveal() {
-  //   _loadingTimer?.cancel();
-  //   _isPlaying = true;
-  //   _loadingTimer = Timer(const Duration(milliseconds: 600), () {
-  //     if (mounted && widget.isActive) {
-  //       setState(() => _isLoading = false);
-  //     }
-  //   });
-  // }
-
   void _scheduleVideoReveal() {
     _loadingTimer?.cancel();
     _isPlaying = true;
-    // Fallback timeout in case first frame never fires
-    _loadingTimer = Timer(const Duration(milliseconds: 2000), () {
-      if (mounted && widget.isActive) {
-        setState(() => _isLoading = false);
-      }
-    });
-    ReelsPlayer.listenFirstFrame(widget.activeSlot, () {
-      _loadingTimer?.cancel();
+    _loadingTimer = Timer(const Duration(milliseconds: 600), () {
       if (mounted && widget.isActive) {
         setState(() => _isLoading = false);
       }
@@ -1103,6 +5390,7 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
     if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
     return n > 0 ? '$n' : '';
   }
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -1152,51 +5440,34 @@ class _ReelOverlayState extends ConsumerState<_ReelOverlay>
     );
   }
 
-  // Widget _buildLoadingOverlay() => Stack(
-  //   fit: StackFit.expand,
-  //   children: [
-  //     Container(
-  //       decoration: const BoxDecoration(
-  //         gradient: LinearGradient(
-  //           begin: Alignment.topCenter,
-  //           end: Alignment.bottomCenter,
-  //           colors: [Color(0xFF0D0D0D), Color(0xFF1A1A1A), Color(0xFF0D0D0D)],
-  //         ),
-  //       ),
-  //     ),
-  //     Shimmer.fromColors(
-  //       baseColor: Colors.white.withOpacity(0.03),
-  //       highlightColor: Colors.white.withOpacity(0.08),
-  //       period: const Duration(milliseconds: 1200),
-  //       child: Container(color: Colors.white.withOpacity(0.03)),
-  //     ),
-  //     const Center(
-  //       child: SizedBox(
-  //         width: 36,
-  //         height: 36,
-  //         child: CircularProgressIndicator(
-  //           color: Colors.white54,
-  //           strokeWidth: 2.5,
-  //         ),
-  //       ),
-  //     ),
-  //   ],
-  // );
-
   Widget _buildLoadingOverlay() => Stack(
     fit: StackFit.expand,
     children: [
-      // REPLACE the gradient container + shimmer + spinner with this:
-      if (widget.reel.thumbnail != null && widget.reel.thumbnail!.isNotEmpty)
-        Image.network(
-          widget.reel.thumbnail!,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(color: Colors.black),
-        )
-      else
-        Container(color: Colors.black),
-      // Keep a subtle dark overlay so UI elements are readable
-      Container(color: Colors.black.withOpacity(0.25)),
+      Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF0D0D0D), Color(0xFF1A1A1A), Color(0xFF0D0D0D)],
+          ),
+        ),
+      ),
+      Shimmer.fromColors(
+        baseColor: Colors.white.withOpacity(0.03),
+        highlightColor: Colors.white.withOpacity(0.08),
+        period: const Duration(milliseconds: 1200),
+        child: Container(color: Colors.white.withOpacity(0.03)),
+      ),
+      const Center(
+        child: SizedBox(
+          width: 36,
+          height: 36,
+          child: CircularProgressIndicator(
+            color: Colors.white54,
+            strokeWidth: 2.5,
+          ),
+        ),
+      ),
     ],
   );
 

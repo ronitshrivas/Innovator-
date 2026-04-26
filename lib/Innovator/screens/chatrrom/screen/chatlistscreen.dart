@@ -304,6 +304,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
     }
   }
 
+class _ChatListScreenState extends ConsumerState<ChatListScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(mutualFriendsProvider);

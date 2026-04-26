@@ -1,6 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+// ════════════════════════════════════════════════════════════════════════════
+// ReelsPlayer — Dart wrapper around the native MethodChannel
+//
+// SLOT CONVENTION (3 ExoPlayer instances, 1 shared surface):
+//   slot 0 → previous reel  (pre-buffered, no surface)
+//   slot 1 → current reel   (playing, has the display surface)
+//   slot 2 → next reel      (pre-buffered, no surface)
+//
+// SURFACE SWITCHING FLOW:
+//   1. Feed loads     → prepare(0, url0) + prepare(1, url1)
+//                     → switchSurface(0)   ← surface → slot 0
+//                     → play(0)
+//   2. User swipes    → pause(oldSlot)
+//                     → switchSurface(newSlot)   ← moves surface instantly
+//                     → play(newSlot)
+//                     → prepare(nextSlot, nextUrl)
+//   3. Leave screen   → releaseAll()
+// ════════════════════════════════════════════════════════════════════════════
+
 class ReelsPlayer {
   static const _channel = MethodChannel('reels_player');
 

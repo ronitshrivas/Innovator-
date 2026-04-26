@@ -336,6 +336,10 @@ final notificationBadgeProvider = Provider<int>((ref) {
   return ref.watch(notificationProvider.select((s) => s.unreadCount));
 });
 
+
+
+
+
 final Map<String, List<String>> _groupedMessages = {};
 
 Future<void> _showSystemNotification(AppNotification n) async {
@@ -374,7 +378,7 @@ Future<void> _showSystemNotification(AppNotification n) async {
     );
 
     await _plugin.show(
-      sender.hashCode,
+      sender.hashCode, 
       sender,
       n.body,
       NotificationDetails(android: androidDetails),

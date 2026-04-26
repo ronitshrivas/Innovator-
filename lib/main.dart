@@ -1,19 +1,21 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:device_preview/device_preview.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:get/get.dart';
-import 'package:hive/hive.dart';
+import 'package:get/get.dart'; 
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/hive/feed_cache_service.dart';
 import 'package:innovator/Innovator/provider/global_chat_listener.dart';
 import 'package:innovator/Innovator/provider/notification_provider.dart';
+import 'package:innovator/Innovator/screens/Likes/hive_reaction_queue.dart';
 import 'package:innovator/Innovator/screens/Splash_Screen/splash_screen.dart';
 import 'package:innovator/Innovator/services/fcm_services.dart';
 import 'package:innovator/KMS/screens/auth/login_screen.dart';
@@ -40,6 +42,7 @@ void main() async {
         developer.log('App starting...');
         WidgetsFlutterBinding.ensureInitialized();
         await Hive.initFlutter(); // must be before openBox
+        await HiveReactionQueue.instance.init();
         await FeedCacheService.instance.init();
         SystemChrome.setSystemUIOverlayStyle(
           const SystemUiOverlayStyle(
@@ -53,7 +56,15 @@ void main() async {
           _firebaseMessagingBackgroundHandler,
         );
         developer.log(' Starting UI...');
-        runApp(ProviderScope(child: InnovatorHomePage()));
+        // runApp(ProviderScope(child: InnovatorHomePage()));
+        runApp(
+          DevicePreview(
+            enabled: kDebugMode,
+            builder: (context) {
+              return ProviderScope(child: InnovatorHomePage());
+            },
+          ),
+        );
         developer.log('App started successfully');
       } catch (e, stackTrace) {
         developer.log('Critical error in main: $e\n$stackTrace');

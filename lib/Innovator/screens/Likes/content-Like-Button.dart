@@ -1,28 +1,18 @@
+import 'dart:async';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/screens/Likes/Content-Like-Service.dart';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// LikeButton — tap to like/unlike, long-press to pick any reaction
-// Behaviour matches LinkedIn:
-//   • Short tap   → toggles "Like" reaction on/off
-//   • Long press  → shows floating emoji picker above the button;
-//                   tap any reaction to apply it (replaces the current one)
-//   • Label + count shown beside the icon (pass showLabel: true)
-// ─────────────────────────────────────────────────────────────────────────────
+import 'package:innovator/Innovator/screens/Likes/hive_reaction_queue.dart';
+import 'dart:developer' as developer;
 
 class LikeButton extends StatefulWidget {
   final String contentId;
   final bool initialLikeStatus;
   final ContentLikeService likeService;
   final Function(bool)? onLikeToggled;
-
-  /// Actual reaction type string from API ('like','love','angry',etc.)
-  /// Restores the correct emoji on first render
   final String? initialReactionType;
-
-  /// Optional: display the reaction label + count inline
   final bool showLabel;
   final int initialCount;
   final bool isReel;
@@ -45,25 +35,24 @@ class LikeButton extends StatefulWidget {
 
 class _LikeButtonState extends State<LikeButton>
     with SingleTickerProviderStateMixin {
-  // ── State ──────────────────────────────────────────────────────────────────
   ReactionType? _currentReaction;
-  bool _isLoading = false;
+  bool _isApiInFlight = false;
+  bool _isSyncing = false; // true only while flush() is actively calling API
+
   late int _count;
 
-  // Reaction picker overlay
   OverlayEntry? _overlayEntry;
   final LayerLink _layerLink = LayerLink();
 
-  // Bounce animation for the icon on reaction change
   late AnimationController _bounceCtrl;
   late Animation<double> _bounceAnim;
 
-  // ── Lifecycle ──────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
-    // Restore actual reaction type from API (e.g. 'angry', 'love', 'like')
-    // Falls back to generic 'like' if type string is missing
+
+    HiveReactionQueue.instance.setService(widget.likeService);
+
     if (widget.initialLikeStatus) {
       _currentReaction =
           widget.initialReactionType != null
@@ -73,6 +62,7 @@ class _LikeButtonState extends State<LikeButton>
     } else {
       _currentReaction = null;
     }
+
     _count = widget.initialCount;
 
     _bounceCtrl = AnimationController(
@@ -81,51 +71,108 @@ class _LikeButtonState extends State<LikeButton>
     );
     _bounceAnim = TweenSequence([
       TweenSequenceItem(
-        tween: Tween<double>(
-          begin: 1.0,
-          end: 1.45,
-        ).chain(CurveTween(curve: Curves.easeOut)),
+        tween: Tween<double>(begin: 1.0, end: 1.45)
+            .chain(CurveTween(curve: Curves.easeOut)),
         weight: 40,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(
-          begin: 1.45,
-          end: 0.88,
-        ).chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween<double>(begin: 1.45, end: 0.88)
+            .chain(CurveTween(curve: Curves.easeInOut)),
         weight: 30,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(
-          begin: 0.88,
-          end: 1.0,
-        ).chain(CurveTween(curve: Curves.elasticOut)),
+        tween: Tween<double>(begin: 0.88, end: 1.0)
+            .chain(CurveTween(curve: Curves.elasticOut)),
         weight: 30,
       ),
     ]).animate(_bounceCtrl);
+
+    // Register to receive flush results from HiveReactionQueue
+    HiveReactionQueue.instance.addListener(widget.contentId, _onSyncResult);
   }
 
   @override
   void dispose() {
+    HiveReactionQueue.instance.removeListener(widget.contentId);
     _removeOverlay();
     _bounceCtrl.dispose();
     super.dispose();
   }
 
-  // ── Tap: toggle Like ───────────────────────────────────────────────────────
-  Future<void> _handleTap() async {
-    if (_isLoading) return;
-    _removeOverlay();
+  // ── Called by HiveReactionQueue after flushing this post ──────────────────
+  void _onSyncResult(
+    String contentId,
+    bool succeeded,
+    ReactionType? reactionType,   // what was attempted
+    ReactionType? previousType,   // what was there BEFORE the offline action
+  ) {
+    if (!mounted) return;
 
-    // If already liked → remove; otherwise apply "like"
-    if (_currentReaction != null) {
-      await _applyReaction(null); // toggle off
+    if (succeeded) {
+      // API accepted the queued reaction — UI is already showing the right
+      // state (optimistic), just clear the syncing spinner
+      setState(() {
+        _isSyncing = false;
+        _currentReaction = reactionType; // confirm final state
+      });
+      developer.log(
+        '[LikeButton] ✓ Sync confirmed for ${widget.contentId}',
+      );
     } else {
-      await _applyReaction(ReactionType.like);
+      // API rejected (4xx) or 5xx — revert to previous state immediately
+      // WITHOUT requiring a page refresh
+      setState(() {
+        _isSyncing = false;
+
+        final hadReactionBefore = previousType != null;
+        final hasReactionNow = _currentReaction != null;
+
+        if (hasReactionNow && !hadReactionBefore) {
+          // User added a reaction offline but API rejected it → remove it
+          _count = (_count - 1).clamp(0, 999999);
+        } else if (!hasReactionNow && hadReactionBefore) {
+          // User removed a reaction offline but API rejected it → restore it
+          _count = _count + 1;
+        }
+
+        // Revert to the state before the offline action
+        _currentReaction = previousType;
+      });
+
+      // Notify parent so the feed list count also updates
+      widget.onLikeToggled?.call(_currentReaction != null);
+
+      developer.log(
+        '[LikeButton] ✗ Sync failed for ${widget.contentId} — '
+        'reverted to previousType=${previousType?.name}',
+      );
     }
   }
 
-  // ── Long press: show picker ────────────────────────────────────────────────
+  // ── Connectivity ──────────────────────────────────────────────────────────
+  Future<bool> _isOnline() async {
+    try {
+      final results = await Connectivity().checkConnectivity();
+      return results.any(
+        (r) =>
+            r == ConnectivityResult.wifi ||
+            r == ConnectivityResult.mobile ||
+            r == ConnectivityResult.ethernet,
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ── Tap / long-press ──────────────────────────────────────────────────────
+  Future<void> _handleTap() async {
+    if (_isApiInFlight || _isSyncing) return;
+    _removeOverlay();
+    await _applyReaction(_currentReaction != null ? null : ReactionType.like);
+  }
+
   void _handleLongPress() {
+    if (_isSyncing) return;
     HapticFeedback.mediumImpact();
     if (_overlayEntry != null) {
       _removeOverlay();
@@ -134,50 +181,106 @@ class _LikeButtonState extends State<LikeButton>
     _showReactionPicker();
   }
 
-  // ── Apply a reaction (null = remove) ──────────────────────────────────────
+  // ── Core reaction logic ───────────────────────────────────────────────────
   Future<void> _applyReaction(ReactionType? type) async {
-    if (_isLoading) return;
-    setState(() => _isLoading = true);
+    if (_isApiInFlight) return;
 
-    final previous = _currentReaction;
+    final previous = _currentReaction; // snapshot BEFORE change
 
-    ReactionResult result;
-    if (type == null) {
-      result =
-          widget.isReel
-              ? await widget.likeService.reactReel(
+    // Optimistic update — full opacity, looks same as online like
+    _updateLocalState(type, previous);
+    widget.onLikeToggled?.call(_currentReaction != null);
+    _isApiInFlight = true;
+
+    try {
+      final online = await _isOnline();
+
+      if (!online) {
+        // Offline → queue silently. UI already shows the optimistic state.
+        // Store `previous` so we can revert if the API later rejects it.
+        developer.log('[LikeButton] Offline → queuing ${widget.contentId}');
+        await HiveReactionQueue.instance.enqueue(
+          contentId: widget.contentId,
+          type: type,
+          isReel: widget.isReel,
+          previousType: previous, // ← key: needed for revert on failure
+        );
+        return;
+      }
+
+      // ── Online path ──────────────────────────────────────────────────────
+      ReactionResult result;
+      if (type == null) {
+        // Removing reaction
+        result = widget.isReel
+            ? await widget.likeService.reactReel(
                 widget.contentId,
                 previous ?? ReactionType.like,
               )
-              : await widget.likeService.reactPost(
+            : await widget.likeService.reactPost(
                 widget.contentId,
                 previous ?? ReactionType.like,
               );
-      if (result.success) {
-        _setReaction(null, previous);
+      } else {
+        result = widget.isReel
+            ? await widget.likeService.reactReel(widget.contentId, type)
+            : await widget.likeService.reactPost(widget.contentId, type);
       }
-    } else {
-      result =
-          widget.isReel
-              ? await widget.likeService.reactReel(widget.contentId, type)
-              : await widget.likeService.reactPost(widget.contentId, type);
+
       if (result.success) {
-        _setReaction(result.reactionType ?? type, previous);
+        if (type != null && result.reactionType != null && mounted) {
+          setState(() => _currentReaction = result.reactionType);
+        }
+        // Remove any previously queued entry
+        await HiveReactionQueue.instance.dequeue(widget.contentId);
+        developer.log('[LikeButton] ✓ API confirmed ${widget.contentId}');
+      } else {
+        // 5xx — revert immediately (don't queue, this was an online attempt)
+        developer.log('[LikeButton] 5xx → reverting ${widget.contentId}');
+        _revertState(previous, type);
       }
+    } on NonRetryableException catch (e) {
+      // 4xx — revert immediately, don't queue
+      developer.log(
+        '[LikeButton] Non-retryable (${e.statusCode}) → reverting '
+        '${widget.contentId}',
+      );
+      _revertState(previous, type);
+      await HiveReactionQueue.instance.dequeue(widget.contentId);
+    } catch (e) {
+      // Network error during an ONLINE attempt → queue for retry
+      developer.log('[LikeButton] Network error → queuing: $e');
+      await HiveReactionQueue.instance.enqueue(
+        contentId: widget.contentId,
+        type: type,
+        isReel: widget.isReel,
+        previousType: previous,
+      );
+    } finally {
+      if (mounted) setState(() => _isApiInFlight = false);
     }
+  }
 
-    if (mounted) setState(() => _isLoading = false);
-
+  /// Revert to [previous] state, undoing what [attempted] did to the count.
+  void _revertState(ReactionType? previous, ReactionType? attempted) {
+    if (!mounted) return;
+    setState(() {
+      // Undo the optimistic count change
+      if (attempted != null && previous == null) {
+        // We added a reaction → undo the +1
+        _count = (_count - 1).clamp(0, 999999);
+      } else if (attempted == null && previous != null) {
+        // We removed a reaction → undo the -1
+        _count = _count + 1;
+      }
+      _currentReaction = previous;
+    });
     widget.onLikeToggled?.call(_currentReaction != null);
   }
 
-  void _setReaction(ReactionType? newType, ReactionType? previous) {
+  void _updateLocalState(ReactionType? newType, ReactionType? previous) {
     if (!mounted) return;
     setState(() {
-      // Presence change only:
-      //   null → type  → +1  (first reaction)
-      //   type → null  → -1  (removed reaction)
-      //   typeA → typeB → 0  (switching 👍→❤️: same count)
       if (newType != null && previous == null) {
         _count++;
       } else if (newType == null && previous != null) {
@@ -188,20 +291,19 @@ class _LikeButtonState extends State<LikeButton>
     _bounceCtrl.forward(from: 0);
   }
 
-  // ── Overlay helpers ────────────────────────────────────────────────────────
+  // ── Overlay ───────────────────────────────────────────────────────────────
   void _showReactionPicker() {
     final overlay = Overlay.of(context);
     _overlayEntry = OverlayEntry(
-      builder:
-          (_) => _ReactionPickerOverlay(
-            layerLink: _layerLink,
-            onSelect: (type) {
-              _removeOverlay();
-              _applyReaction(type);
-            },
-            onDismiss: _removeOverlay,
-            currentReaction: _currentReaction,
-          ),
+      builder: (_) => _ReactionPickerOverlay(
+        layerLink: _layerLink,
+        onSelect: (type) {
+          _removeOverlay();
+          _applyReaction(type);
+        },
+        onDismiss: _removeOverlay,
+        currentReaction: _currentReaction,
+      ),
     );
     overlay.insert(_overlayEntry!);
   }
@@ -211,15 +313,14 @@ class _LikeButtonState extends State<LikeButton>
     _overlayEntry = null;
   }
 
-  // ── UI ─────────────────────────────────────────────────────────────────────
+  // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final reaction = _currentReaction;
     final hasReaction = reaction != null;
-
-    // Icon + colour based on current reaction
     final emoji = hasReaction ? reaction.emoji : null;
     final label = hasReaction ? reaction.label : 'Like';
+    // Always full opacity — no fading for offline/pending reactions
     final iconColor =
         hasReaction ? _reactionColor(reaction) : Colors.grey.shade700;
 
@@ -231,34 +332,44 @@ class _LikeButtonState extends State<LikeButton>
         behavior: HitTestBehavior.opaque,
         child: AnimatedBuilder(
           animation: _bounceAnim,
-          builder:
-              (context, child) =>
-                  Transform.scale(scale: _bounceAnim.value, child: child),
+          builder: (context, child) =>
+              Transform.scale(scale: _bounceAnim.value, child: child),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Icon / emoji
-                _isLoading
-                    ? SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: iconColor,
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // Always full opacity — looks identical online or offline
+                    emoji != null
+                        ? Text(
+                            emoji,
+                            style: TextStyle(fontSize: 22, color: iconColor),
+                          )
+                        : Icon(
+                            Icons.thumb_up_alt_outlined,
+                            color: iconColor,
+                            size: 22,
+                          ),
+
+                    // Tiny spinner only while actively syncing to API
+                    if (_isSyncing)
+                      Positioned(
+                        top: -3,
+                        right: -3,
+                        child: SizedBox(
+                          width: 8,
+                          height: 8,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.5,
+                            color: iconColor,
+                          ),
+                        ),
                       ),
-                    )
-                    : emoji != null
-                    ? Text(
-                      emoji,
-                      style: const TextStyle(fontSize: 22, color: Colors.red),
-                    )
-                    : Icon(
-                      Icons.thumb_up_alt_outlined,
-                      color: iconColor,
-                      size: 22,
-                    ),
+                  ],
+                ),
 
                 if (widget.showLabel) ...[
                   const SizedBox(width: 5),
@@ -287,7 +398,7 @@ class _LikeButtonState extends State<LikeButton>
   Color _reactionColor(ReactionType r) {
     switch (r) {
       case ReactionType.like:
-        return const Color(0xFF0A66C2); // LinkedIn blue
+        return const Color(0xFF0A66C2);
       case ReactionType.love:
         return Colors.red.shade500;
       case ReactionType.haha:
@@ -306,10 +417,7 @@ class _LikeButtonState extends State<LikeButton>
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Reaction Picker Overlay
-// Appears above the button, floats as a pill — identical UX to LinkedIn
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Reaction picker overlay ───────────────────────────────────────────────────
 
 class _ReactionPickerOverlay extends StatefulWidget {
   final LayerLink layerLink;
@@ -333,8 +441,6 @@ class _ReactionPickerOverlayState extends State<_ReactionPickerOverlay>
   late AnimationController _ctrl;
   late Animation<double> _scaleAnim;
   late Animation<double> _fadeAnim;
-
-  // Which emoji is being hovered/pressed
   ReactionType? _hovered;
 
   static const _reactions = ReactionType.values;
@@ -361,7 +467,6 @@ class _ReactionPickerOverlayState extends State<_ReactionPickerOverlay>
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Transparent dismissal layer
         Positioned.fill(
           child: GestureDetector(
             onTap: widget.onDismiss,
@@ -369,12 +474,9 @@ class _ReactionPickerOverlayState extends State<_ReactionPickerOverlay>
             child: Container(color: Colors.transparent),
           ),
         ),
-
-        // The picker pill, anchored above the button
         CompositedTransformFollower(
           link: widget.layerLink,
           showWhenUnlinked: false,
-          // Offset: shift up by 64dp + some padding so it floats above the row
           offset: const Offset(-16, -58),
           child: FadeTransition(
             opacity: _fadeAnim,
@@ -400,14 +502,9 @@ class _ReactionPickerOverlayState extends State<_ReactionPickerOverlay>
                       ),
                     ],
                   ),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    physics: const NeverScrollableScrollPhysics(),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children:
-                          _reactions.map((r) => _buildReactionItem(r)).toList(),
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: _reactions.map(_buildReactionItem).toList(),
                   ),
                 ),
               ),
@@ -421,7 +518,6 @@ class _ReactionPickerOverlayState extends State<_ReactionPickerOverlay>
   Widget _buildReactionItem(ReactionType r) {
     final isActive = widget.currentReaction == r;
     final isHovered = _hovered == r;
-
     final targetScale = isHovered ? 1.5 : (isActive ? 1.15 : 1.0);
     final targetY = isHovered ? -10.0 : (isActive ? -3.0 : 0.0);
 
@@ -430,24 +526,19 @@ class _ReactionPickerOverlayState extends State<_ReactionPickerOverlay>
       onTapDown: (_) => setState(() => _hovered = r),
       onTapCancel: () => setState(() => _hovered = null),
       child: TweenAnimationBuilder<double>(
-        tween: Tween<double>(begin: 1.0, end: targetScale),
+        tween: Tween(begin: 1.0, end: targetScale),
         duration: const Duration(milliseconds: 280),
         curve: Curves.elasticOut,
-        builder: (context, scale, child) {
-          return TweenAnimationBuilder<double>(
-            tween: Tween<double>(begin: 0.0, end: targetY),
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOutBack,
-            builder: (context, dy, _) {
-              return Transform.translate(
-                offset: Offset(0, dy),
-                child: Transform.scale(scale: scale, child: child),
-              );
-            },
-          );
-        },
+        builder: (_, scale, child) => TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: targetY),
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutBack,
+          builder: (_, dy, __) => Transform.translate(
+            offset: Offset(0, dy),
+            child: Transform.scale(scale: scale, child: child),
+          ),
+        ),
         child: Container(
-          margin: EdgeInsets.zero,
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
           child: Stack(
             alignment: Alignment.center,
@@ -457,7 +548,7 @@ class _ReactionPickerOverlayState extends State<_ReactionPickerOverlay>
                 r.emoji,
                 style: TextStyle(
                   fontSize: isActive ? 20 : 18,
-                  color: Colors.red,
+                  inherit: false,
                 ),
               ),
               if (isHovered)

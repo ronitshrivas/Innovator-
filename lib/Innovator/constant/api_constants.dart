@@ -21,7 +21,7 @@ class ApiConstants {
   static const String enrollments = '$studentBase/enrollments/';
 
   //change password
-  static const String changePassword = '$authBase/change-password';
+  static const String changePassword = '$authBase/change-password/';
 
   //Login Endpointts
   static const String login = '$authBase/sso/login/';

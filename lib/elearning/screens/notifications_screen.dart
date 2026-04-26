@@ -25,17 +25,19 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
 
     return Material(
       child: CustomRefreshIndicator(
-        onRefresh: () => ref.read(elearningNotificationListProvider.notifier).refresh(),
+        onRefresh:
+            () =>
+                ref.read(elearningNotificationListProvider.notifier).refresh(),
         child: Scaffold(
           backgroundColor: Colors.white,
           appBar: AppBar(
             elevation: 0,
-            // scrolledUnderElevation: 0,
+            scrolledUnderElevation: 0,
             backgroundColor: Colors.transparent,
-            // title: const Text(
-            //   'Notifications',
-            //   style: TextStyle(color: Colors.black87),
-            // ),
+            title: const Text(
+              'Notifications',
+              style: TextStyle(color: Colors.black87),
+            ),
             leading: IconButton(
               onPressed: () => Navigator.of(context).pop(),
               icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),
@@ -90,6 +92,11 @@ class _NotificationTile extends ConsumerStatefulWidget {
   const _NotificationTile({required this.notification});
   final ElearningNotificationModel notification;
 
+  @override
+  ConsumerState<_NotificationTile> createState() => _NotificationTileState();
+}
+
+class _NotificationTileState extends ConsumerState<_NotificationTile> {
   @override
   ConsumerState<_NotificationTile> createState() => _NotificationTileState();
 }

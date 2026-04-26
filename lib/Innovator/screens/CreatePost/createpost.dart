@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
+import 'package:innovator/Innovator/provider/upload_provider.dart';
 import 'package:innovator/Innovator/screens/CreatePost/reels_camera_screen.dart';
 import 'package:innovator/Innovator/screens/CreatePost/reels_preview_screen.dart';
 import 'package:innovator/Innovator/screens/Profile/profile_page.dart';
@@ -19,9 +19,8 @@ import 'package:mime/mime.dart';
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:path/path.dart' as path;
 import 'package:image_picker/image_picker.dart';
+ 
 
-// FIX: Changed StatefulWidget → ConsumerStatefulWidget so we can watch
-// drawerProfileProvider for live avatar/name updates.
 class CreatePostScreen extends ConsumerStatefulWidget {
   const CreatePostScreen({super.key});
 
@@ -29,7 +28,6 @@ class CreatePostScreen extends ConsumerStatefulWidget {
   ConsumerState<CreatePostScreen> createState() => _CreatePostScreenState();
 }
 
-// FIX: Changed State → ConsumerState
 class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
     with SingleTickerProviderStateMixin {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -56,6 +54,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
   List<Map<String, dynamic>> _categories = [];
   bool _categoriesLoading = true;
   String? _selectedCategoryId;
+
   final Color _primaryColor = const Color.fromRGBO(244, 135, 6, 1);
   final Color _facebookBlue = const Color(0xFF1877F2);
   final Color _backgroundColor = const Color(0xFFF0F2F5);
@@ -79,11 +78,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
     _descriptionController.addListener(_updateButtonState);
   }
 
-  // FIX: Removed _loadCachedProfile(), _onCacheUpdated(), and all
-  // InstantCache.version / InstantCache.get() calls. Profile data now comes
-  // from drawerProfileProvider via ref.watch() in build(), which is the
-  // single source of truth and updates automatically.
-
   void _updateButtonState() {
     if (_isPostButtonEnabled) {
       _animationController.forward();
@@ -106,8 +100,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
       (_descriptionController.text.isNotEmpty || _selectedFiles.isNotEmpty) &&
       !_isCreatingPost &&
       !_isProcessingAI;
-
-  // ── Categories ────────────────────────────────────────────────────────────
 
   Future<void> _fetchCategories() async {
     try {
@@ -137,8 +129,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
       debugPrint('Categories error: $e');
     }
   }
-
-  // ── Show category bottom sheet ────────────────────────────────────────────
 
   void _showCategoryPicker() {
     showModalBottomSheet(
@@ -301,8 +291,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
     }
   }
 
-  // ── Media pickers ─────────────────────────────────────────────────────────
-
   Future<void> _captureImage() async {
     try {
       final XFile? captured = await _picker.pickImage(
@@ -375,7 +363,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
       );
       if (result == null) return;
 
-      // Split into video files (→ Reels) and everything else (→ create post)
       final List<PlatformFile> videoFiles = [];
       final List<PlatformFile> otherFiles = [];
 
@@ -388,13 +375,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
         }
       }
 
-      // Non-video files go to the existing create-post flow
       if (otherFiles.isNotEmpty) {
         setState(() => _selectedFiles.addAll(otherFiles));
         _updateButtonState();
       }
 
-      // Video files → Reels preview / upload
       for (final vf in videoFiles) {
         if (vf.path != null) {
           await Navigator.push(
@@ -417,7 +402,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
         maxDuration: const Duration(minutes: 5),
       );
       if (video != null && mounted) {
-        // Recorded videos always go to the Reels flow
         await Navigator.push(
           context,
           MaterialPageRoute(
@@ -429,8 +413,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
       _showError('Error recording video: $e');
     }
   }
-
-  // ── GROQ / ELIZA AI ───────────────────────────────────────────────────────
 
   Future<String> _callGroqAPI(String message) async {
     final response = await http
@@ -532,8 +514,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
     }
   }
 
-  // ── User profile ──────────────────────────────────────────────────────────
-
   Future<void> _fetchUserProfile() async {
     try {
       if (AppData().accessToken?.isEmpty ?? true) {
@@ -555,76 +535,162 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
     }
   }
 
-  // ── Create post ───────────────────────────────────────────────────────────
+  // Future<void> _createPost() async {
+  //   if (_descriptionController.text.trim().isEmpty && _selectedFiles.isEmpty) {
+  //     _showError('Please enter a description or select a file');
+  //     return;
+  //   }
+
+  //   setState(() => _isCreatingPost = true);
+
+  //   try {
+  //     final uri = Uri.parse(ApiConstants.createpost);
+  //     final request = http.MultipartRequest('POST', uri);
+
+  //     if (_appData.accessToken != null) {
+  //       request.headers['Authorization'] = 'Bearer ${_appData.accessToken}';
+  //     }
+
+  //     request.fields['content'] = _descriptionController.text.trim();
+
+  //     if (_selectedCategoryId != null) {
+  //       request.fields['category_ids'] = _selectedCategoryId!;
+  //     }
+
+  //     for (final file in _selectedFiles) {
+  //       if (file.path == null) continue;
+  //       final mimeType =
+  //           lookupMimeType(file.path!) ?? 'application/octet-stream';
+  //       request.files.add(
+  //         await http.MultipartFile.fromPath(
+  //           'uploaded_media',
+  //           file.path!,
+  //           contentType: MediaType.parse(mimeType),
+  //           filename: path.basename(file.path!),
+  //         ),
+  //       );
+  //     }
+
+  //     final streamed = await request.send().timeout(
+  //       const Duration(seconds: 60),
+  //     );
+  //     final response = await http.Response.fromStream(streamed);
+
+  //     if (response.statusCode == 200 || response.statusCode == 201) {
+  //       _showSuccess('Post published successfully!');
+  //       _clearForm();
+  //       Navigator.pushAndRemoveUntil(
+  //         context,
+  //         MaterialPageRoute(builder: (_) => Homepage()),
+  //         (route) => false,
+  //       );
+  //     } else if (response.statusCode == 401) {
+  //       _showError('Authentication failed. Please log in again.');
+  //     } else {
+  //       Map<String, dynamic> body = {};
+  //       try {
+  //         body = json.decode(response.body) as Map<String, dynamic>;
+  //       } catch (_) {}
+  //       final msg =
+  //           body['detail']?.toString() ??
+  //           body['message']?.toString() ??
+  //           'Failed to create post (${response.statusCode})';
+  //       _showError(msg);
+  //     }
+  //   } catch (e) {
+  //     _showError('Error creating post: $e');
+  //   } finally {
+  //     setState(() => _isCreatingPost = false);
+  //   }
+  // }
 
   Future<void> _createPost() async {
-    if (_descriptionController.text.trim().isEmpty && _selectedFiles.isEmpty) {
-      _showError('Please enter a description or select a file');
-      return;
-    }
-
-    setState(() => _isCreatingPost = true);
-
-    try {
-      final uri = Uri.parse(ApiConstants.createpost);
-      final request = http.MultipartRequest('POST', uri);
-
-      if (_appData.accessToken != null) {
-        request.headers['Authorization'] = 'Bearer ${_appData.accessToken}';
-      }
-
-      request.fields['content'] = _descriptionController.text.trim();
-
-      if (_selectedCategoryId != null) {
-        request.fields['category_ids'] = _selectedCategoryId!;
-      }
-
-      for (final file in _selectedFiles) {
-        if (file.path == null) continue;
-        final mimeType =
-            lookupMimeType(file.path!) ?? 'application/octet-stream';
-        request.files.add(
-          await http.MultipartFile.fromPath(
-            'uploaded_media',
-            file.path!,
-            contentType: MediaType.parse(mimeType),
-            filename: path.basename(file.path!),
-          ),
-        );
-      }
-
-      final streamed = await request.send().timeout(
-        const Duration(seconds: 60),
-      );
-      final response = await http.Response.fromStream(streamed);
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        _showSuccess('Post published successfully!');
-        _clearForm();
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => Homepage()),
-          (route) => false,
-        );
-      } else if (response.statusCode == 401) {
-        _showError('Authentication failed. Please log in again.');
-      } else {
-        Map<String, dynamic> body = {};
-        try {
-          body = json.decode(response.body) as Map<String, dynamic>;
-        } catch (_) {}
-        final msg =
-            body['detail']?.toString() ??
-            body['message']?.toString() ??
-            'Failed to create post (${response.statusCode})';
-        _showError(msg);
-      }
-    } catch (e) {
-      _showError('Error creating post: $e');
-    } finally {
-      setState(() => _isCreatingPost = false);
-    }
+  if (_descriptionController.text.trim().isEmpty && _selectedFiles.isEmpty) {
+    _showError('Please enter a description or select a file');
+    return;
   }
+
+  // Capture everything BEFORE navigating (widget will be disposed)
+  final String content = _descriptionController.text.trim();
+  final String? categoryId = _selectedCategoryId;
+  final List<PlatformFile> filesToUpload = List.from(_selectedFiles);
+  final String? accessToken = _appData.accessToken;
+
+  // ✅ Get the ProviderContainer — survives navigation
+  final container = ProviderScope.containerOf(context);
+
+  // ✅ Set uploading true BEFORE navigating
+  container.read(postUploadingProvider.notifier).state = true;
+  container.read(postUploadMessageProvider.notifier).state = null;
+
+  // ✅ Navigate immediately
+  _clearForm();
+  Navigator.pushAndRemoveUntil(
+    context,
+    MaterialPageRoute(builder: (_) => const Homepage()),
+    (route) => false,
+  );
+
+  // ✅ Upload runs after navigation using container (not ref)
+  try {
+    final uri = Uri.parse(ApiConstants.createpost);
+    final request = http.MultipartRequest('POST', uri);
+
+    if (accessToken != null) {
+      request.headers['Authorization'] = 'Bearer $accessToken';
+    }
+
+    request.fields['content'] = content;
+
+    if (categoryId != null) {
+      request.fields['category_ids'] = categoryId;
+    }
+
+    for (final file in filesToUpload) {
+      if (file.path == null) continue;
+      final mimeType =
+          lookupMimeType(file.path!) ?? 'application/octet-stream';
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'uploaded_media',
+          file.path!,
+          contentType: MediaType.parse(mimeType),
+          filename: path.basename(file.path!),
+        ),
+      );
+    }
+
+    final streamed = await request.send().timeout(
+      const Duration(seconds: 60),
+    );
+    final response = await http.Response.fromStream(streamed);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      container.read(postUploadingProvider.notifier).state = false;
+      container.read(postUploadMessageProvider.notifier).state =
+          'Post published successfully! 🎉';
+    } else if (response.statusCode == 401) {
+      container.read(postUploadingProvider.notifier).state = false;
+      container.read(postUploadMessageProvider.notifier).state =
+          'Authentication failed. Please log in again.';
+    } else {
+      Map<String, dynamic> body = {};
+      try {
+        body = json.decode(response.body) as Map<String, dynamic>;
+      } catch (_) {}
+      final msg =
+          body['detail']?.toString() ??
+          body['message']?.toString() ??
+          'Failed to create post (${response.statusCode})';
+      container.read(postUploadingProvider.notifier).state = false;
+      container.read(postUploadMessageProvider.notifier).state = msg;
+    }
+  } catch (e) {
+    container.read(postUploadingProvider.notifier).state = false;
+    container.read(postUploadMessageProvider.notifier).state =
+        'Error uploading post: $e';
+  }
+}
 
   void _clearForm() {
     setState(() {
@@ -663,17 +729,10 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
     );
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
-    // FIX: Read profile from Riverpod — replaces all InstantCache.get() and
-    // InstantCache.version calls. When the avatar changes anywhere in the app,
-    // drawerProfileProvider emits a new state and only this build() re-runs.
     final profile = ref.watch(drawerProfileProvider);
 
-    // Resolve avatar URL — only append ?v= when imageVersion > 0 (i.e. when
-    // the avatar was actually changed), same logic as _ProfileAvatar in the drawer.
     final String? resolvedPictureUrl = () {
       final pic = profile.picture;
       if (pic == null || pic.isEmpty) return null;
@@ -684,7 +743,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
           : base;
     }();
 
-    // Display name: prefer Riverpod state, fall back to AppData
     final userData = AppData().currentUser ?? _userData;
     final String displayName =
         profile.name != 'User'
@@ -707,7 +765,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
               children: [
                 const SizedBox(height: 40),
 
-                // ── Compose area ───────────────────────────────────────────
                 Container(
                   constraints: const BoxConstraints(minHeight: 400),
                   color: _cardColor,
@@ -717,7 +774,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Avatar
                           GestureDetector(
                             onTap:
                                 () => Navigator.push(
@@ -748,7 +804,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
                           ),
                           const SizedBox(width: 12),
 
-                          // Name + category selector
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -763,7 +818,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
                                 ),
                                 const SizedBox(height: 8),
 
-                                // Category chip / picker trigger
                                 GestureDetector(
                                   onTap: _showCategoryPicker,
                                   child: AnimatedContainer(
@@ -855,7 +909,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
                             ),
                           ),
 
-                          // ELIZA AI button
                           IconButton(
                             onPressed:
                                 _isProcessingAI ? null : _enhancePostWithAI,
@@ -902,8 +955,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
                 ),
 
                 const SizedBox(height: 8),
-
-                // ── Media buttons ──────────────────────────────────────────
                 Container(
                   color: _cardColor,
                   padding: const EdgeInsets.all(16),
@@ -1088,13 +1139,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
           ),
         ],
       ),
-      // CHANGE: bottomSheet → bottomNavigationBar
       bottomNavigationBar: Container(
         padding: EdgeInsets.only(
           top: 12,
           left: 16,
           right: 16,
-          // KEY FIX: Add system navigation bar height
           bottom: MediaQuery.of(context).padding.bottom + 12,
         ),
         decoration: BoxDecoration(
@@ -1150,7 +1199,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
         ),
       ),
       floatingActionButton: CountBadgeFAB(
-        count: unreadCount, // ← real-time total
+        count: unreadCount,
         gifAsset: 'animation/chaticon.gif',
         backgroundColor: Colors.transparent,
         onPressed: () {
@@ -1160,7 +1209,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
             MaterialPageRoute(builder: (_) => const ChatListScreen()),
           ).then((_) {
             ref.invalidate(mutualFriendsProvider);
-            //ref.read(mutualFriendsProvider.notifier).refresh();
           });
         },
       ),

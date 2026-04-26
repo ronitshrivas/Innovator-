@@ -256,13 +256,13 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                 // Description
                 if (product.description != null &&
                     product.description!.isNotEmpty) ...[
-                  _sectionLabel('Description'),
+                  _sectionLabel('Description:'),
                   const SizedBox(height: 6),
                   Text(
                     product.description!,
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey[700],
+                      color: Colors.black,
                       height: 1.6,
                     ),
                   ),
@@ -271,127 +271,37 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
 
                 // Category row
                 if (product.category != null) ...[
-                  _sectionLabel('Category'),
-                  const SizedBox(height: 8),
-                  GestureDetector(
-                    onTap:
-                        product.categoryDetails != null
-                            ? () => showDialog(
-                              context: context,
-                              builder:
-                                  (context) => Dialog(
-                                    backgroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(24),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Container(
-                                                padding: const EdgeInsets.all(
-                                                  8,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: _kOrange.withAlpha(26),
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                ),
-                                                child: const Icon(
-                                                  Icons.category_outlined,
-                                                  color: _kOrange,
-                                                  size: 20,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 12),
-                                              const Text(
-                                                'Category Details',
-                                                style: TextStyle(
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 16),
-                                          const Divider(),
-                                          const SizedBox(height: 12),
-
-                                          Text(
-                                            'Name: ${product.categoryDetails!.name}',
-                                          ),
-                                          Text(
-                                            'Slug: ${product.categoryDetails!.slug}',
-                                          ),
-                                          Text(
-                                            'Description: ${product.categoryDetails!.description}',
-                                          ),
-                                          const SizedBox(height: 16),
-                                          Align(
-                                            alignment: Alignment.centerRight,
-                                            child: TextButton(
-                                              onPressed:
-                                                  () => Navigator.pop(context),
-                                              style: TextButton.styleFrom(
-                                                foregroundColor: _kOrange,
-                                              ),
-                                              child: const Text('Close'),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                            )
-                            : null,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 8,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Category:",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      decoration: BoxDecoration(
-                        color: Colors.blue,
-                        borderRadius: BorderRadius.circular(10),
-                        border:
-                            product.categoryDetails != null
-                                ? Border.all(color: Colors.blue)
-                                : null,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.blue,
+                          borderRadius: BorderRadius.circular(10),
+                          border:
+                              product.categoryDetails != null
+                                  ? Border.all(color: Colors.blue)
+                                  : null,
+                        ),
+                        child: Text(
+                          product.categoryDetails!.name,
+                          style: TextStyle(fontSize: 13, color: Colors.black),
+                        ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.category_outlined,
-                            size: 16,
-                            color: Colors.blue,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            product.category!,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.blue.shade700,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          if (product.categoryDetails != null) ...[
-                            const SizedBox(width: 4),
-                            Icon(
-                              Icons.info_outline,
-                              size: 14,
-                              color: Colors.blue.shade400,
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 8),
                 ],
 
                 // Stock detail row

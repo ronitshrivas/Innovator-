@@ -24,8 +24,6 @@ import 'package:http_parser/http_parser.dart';
 import 'package:get/get.dart';
 import 'package:innovator/Innovator/controllers/user_controller.dart';
 
-import '../Feed/Optimize Media/full_screen_image_viewer.dart';
-
 class UserProfileData {
   final String id;
   final String username;
@@ -526,9 +524,12 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       _postsLoaded = false;
     });
     final newFuture = UserProfileService.getUserProfile();
-    setState(() => _profileFuture = newFuture);
+    setState(() {
+      _profileFuture = newFuture;
+    });
     try {
       final freshProfile = await newFuture;
+      if (!mounted) return;
       _populatePostsFromProfile(freshProfile);
       _countsNotifier.value = (
         followers: freshProfile.followersCount,
@@ -587,10 +588,13 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       imageCache.evict(NetworkImage(newAvatarPath));
       _userController.profilePictureVersion.value++;
 
-      setState(() {
-        _isUploading = false;
-        _loadProfile();
-      });
+      // setState(() {
+      //   _isUploading = false;
+      //   _loadProfile();
+      // });
+
+      setState(() => _isUploading = false);
+      _loadProfile();
     } catch (e) {
       setState(() {
         _isPickingImage = false;
@@ -717,16 +721,23 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Obx(
-                          () => Text(
-                            _userController.userName.value ??
-                                (profile.fullName.isNotEmpty
-                                    ? profile.fullName
-                                    : profile.username),
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        // Obx(
+                        //   () => Text(
+                        //     _userController.userName.value ??
+                        //         (profile.fullName.isNotEmpty
+                        //             ? profile.fullName
+                        //             : profile.username),
+                        //     style: const TextStyle(
+                        //       fontSize: 22,
+                        //       fontWeight: FontWeight.bold,
+                        //     ),
+                        //   ),
+                        // ),
+                        Text(
+                          profile.fullName,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                         Text(
@@ -1043,13 +1054,21 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       key: ValueKey(content.id),
       child: FeedItem(
         content: content,
-        onLikeToggled:
-            (isLiked) => setState(() {
-              content.isLiked = isLiked;
-              content.likes += isLiked ? 1 : -1;
-            }),
-        onFollowToggled:
-            (isFollowed) => setState(() => content.isFollowed = isFollowed),
+        onLikeToggled: (hasReaction) {
+          final wasAlreadyLiked = content.isLiked;
+
+          content.isLiked = hasReaction;
+
+          if (hasReaction && !wasAlreadyLiked) {
+            content.likes = content.likes + 1;
+          } else if (!hasReaction && wasAlreadyLiked) {
+            content.likes = (content.likes - 1).clamp(0, 999999);
+          }
+        },
+        onFollowToggled: (isFollowed) {
+          if (!mounted) return;
+          setState(() => content.isFollowed = isFollowed);
+        },
       ),
     );
   }

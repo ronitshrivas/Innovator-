@@ -17,10 +17,8 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  // App theme color
   final Color primaryColor = const Color.fromRGBO(244, 135, 6, 1);
 
-  // Settings state variables
   bool pushNotifications = true;
   bool emailNotifications = false;
   bool privateAccount = false;
@@ -31,7 +29,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool saveToGallery = false;
   String selectedLanguage = 'English';
 
-  // Loading state
   bool _isLoading = true;
 
   @override
@@ -40,7 +37,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _loadSettings();
   }
 
-  // Load settings from SharedPreferences
   Future<void> _loadSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -58,7 +54,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      // Handle error loading settings
       setState(() {
         _isLoading = false;
       });
@@ -71,7 +66,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  // Save individual setting
   Future<void> _saveSetting(String key, dynamic value) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -86,7 +80,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         await prefs.setDouble(key, value);
       }
 
-      // Show success feedback
       Get.snackbar(
         'Saved',
         'All Settings Saved Successfully',
@@ -94,57 +87,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         colorText: AppColors.whitecolor,
       );
     } catch (e) {
-      // Handle save error
       Get.snackbar(
         'Failed',
         'Failed to Save Settings',
-        backgroundColor: Colors.red,
-        colorText: AppColors.whitecolor,
-      );
-    }
-  }
-
-  // Save all settings at once
-
-  // Reset settings to default
-  Future<void> _resetSettings() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-
-      // Clear all settings
-      await prefs.remove('pushNotifications');
-      await prefs.remove('emailNotifications');
-      await prefs.remove('privateAccount');
-      await prefs.remove('allowTagging');
-      await prefs.remove('showOnlineStatus');
-      await prefs.remove('darkMode');
-      await prefs.remove('autoPlayVideos');
-      await prefs.remove('saveToGallery');
-      await prefs.remove('selectedLanguage');
-
-      // Reset to defaults
-      setState(() {
-        pushNotifications = true;
-        emailNotifications = false;
-        privateAccount = false;
-        allowTagging = true;
-        showOnlineStatus = true;
-        darkMode = false;
-        autoPlayVideos = true;
-        saveToGallery = false;
-        selectedLanguage = 'English';
-      });
-
-      Get.snackbar(
-        'Reset',
-        'Settings Reset to Default',
-        backgroundColor: Colors.green,
-        colorText: AppColors.whitecolor,
-      );
-    } catch (e) {
-      Get.snackbar(
-        'Failed',
-        'Failed to Reset',
         backgroundColor: Colors.red,
         colorText: AppColors.whitecolor,
       );
@@ -187,35 +132,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         backgroundColor: primaryColor,
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.whitecolor),
-        // actions: [
-        //   // Save all settings button
-        //   IconButton(
-        //     icon: const Icon(Icons.save),
-        //     onPressed: _saveAllSettings,
-        //     tooltip: 'Save All Settings',
-        //   ),
-        //   // Reset settings button
-        //   PopupMenuButton<String>(
-        //     icon: const Icon(Icons.more_vert),
-        //     onSelected: (value) {
-        //       if (value == 'reset') {
-        //         _showResetDialog();
-        //       }
-        //     },
-        //     itemBuilder: (context) => [
-        //       const PopupMenuItem(
-        //         value: 'reset',
-        //         child: Row(
-        //           children: [
-        //             Icon(Icons.restore, color: Colors.red),
-        //             SizedBox(width: 8),
-        //             Text('Reset to Default'),
-        //           ],
-        //         ),
-        //       ),
-        //     ],
-        //   ),
-        // ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -299,206 +215,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         MaterialPageRoute(builder: (_) => BlockedUsersScreen()),
                       ),
                 ),
-                // _buildSettingsTile(
-                //   icon: Icons.block,
-                //   title: 'Notification',
-                //   subtitle: 'Test Notification',
-                //   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DailyNotificationSettings ())),
-                // ),
-
-                // _buildSettingsTile(
-                //   icon: Icons.report,
-                //   title: 'Report a Problem',
-                //   subtitle: 'Get help or report issues',
-                //   onTap: () => _navigateToScreen('Report Problem'),
-                // ),
               ],
             ),
 
-            const SizedBox(height: 16),
-
-            // Notifications Section
-            // _buildSectionCard(
-            //   title: 'Notifications',
-            //   icon: Icons.notifications,
-            //   children: [
-            //     _buildSwitchTile(
-            //       icon: Icons.push_pin,
-            //       title: 'Push Notifications',
-            //       subtitle: 'Receive notifications on your device',
-            //       value: pushNotifications,
-            //       onChanged: (value) {
-            //         setState(() => pushNotifications = value);
-            //         _saveSetting('pushNotifications', value);
-            //       },
-            //     ),
-            //     _buildSwitchTile(
-            //       icon: Icons.email,
-            //       title: 'Email Notifications',
-            //       subtitle: 'Receive updates via email',
-            //       value: emailNotifications,
-            //       onChanged: (value) {
-            //         setState(() => emailNotifications = value);
-            //         _saveSetting('emailNotifications', value);
-            //       },
-            //     ),
-            //     _buildSettingsTile(
-            //       icon: Icons.tune,
-            //       title: 'Notification Preferences',
-            //       subtitle: 'Customize what notifications you receive',
-            //       onTap: () => _navigateToScreen('Notification Preferences'),
-            //     ),
-            //   ],
-            // ),
-
-            // const SizedBox(height: 16),
-
-            // // Media & Storage Section
-            // _buildSectionCard(
-            //   title: 'Media & Storage',
-            //   icon: Icons.photo_library,
-            //   children: [
-            //     _buildSwitchTile(
-            //       icon: Icons.play_circle,
-            //       title: 'Auto-play Videos',
-            //       subtitle: 'Videos play automatically in feed',
-            //       value: autoPlayVideos,
-            //       onChanged: (value) {
-            //         setState(() => autoPlayVideos = value);
-            //         _saveSetting('autoPlayVideos', value);
-            //       },
-            //     ),
-            //     _buildSwitchTile(
-            //       icon: Icons.download,
-            //       title: 'Save to Gallery',
-            //       subtitle: 'Automatically save posted media',
-            //       value: saveToGallery,
-            //       onChanged: (value) {
-            //         setState(() => saveToGallery = value);
-            //         _saveSetting('saveToGallery', value);
-            //       },
-            //     ),
-            //     _buildSettingsTile(
-            //       icon: Icons.storage,
-            //       title: 'Storage & Data',
-            //       subtitle: 'Manage app storage usage',
-            //       onTap: () => _navigateToScreen('Storage Settings'),
-            //     ),
-            //   ],
-            // ),
-
-            // const SizedBox(height: 16),
-
-            // // App Preferences Section
-            // _buildSectionCard(
-            //   title: 'App Preferences',
-            //   icon: Icons.settings,
-            //   children: [
-            //     _buildSwitchTile(
-            //       icon: Icons.dark_mode,
-            //       title: 'Dark Mode',
-            //       subtitle: 'Use dark theme',
-            //       value: darkMode,
-            //       onChanged: (value) {
-            //         setState(() => darkMode = value);
-            //         _saveSetting('darkMode', value);
-            //       },
-            //     ),
-            //     _buildLanguageTile(),
-            //     _buildSettingsTile(
-            //       icon: Icons.font_download,
-            //       title: 'Font Size',
-            //       subtitle: 'Adjust text size',
-            //       onTap: () => _navigateToScreen('Font Settings'),
-            //     ),
-            //   ],
-            // ),
-
-            // const SizedBox(height: 16),
-
-            // // Support Section
-            // _buildSectionCard(
-            //   title: 'Support',
-            //   icon: Icons.help,
-            //   children: [
-            //     _buildSettingsTile(
-            //       icon: Icons.help_outline,
-            //       title: 'Help Center',
-            //       subtitle: 'Get help and support',
-            //       onTap: () => _navigateToScreen('Help Center'),
-            //     ),
-            //     _buildSettingsTile(
-            //       icon: Icons.info_outline,
-            //       title: 'About',
-            //       subtitle: 'App version and information',
-            //       onTap: () => _navigateToScreen('About'),
-            //     ),
-            //     _buildSettingsTile(
-            //       icon: Icons.rate_review,
-            //       title: 'Rate App',
-            //       subtitle: 'Rate us on the app store',
-            //       onTap: () => _rateApp(),
-            //     ),
-            //   ],
-            // ),
-
-            // const SizedBox(height: 32),
-
-            // // Save Settings Button
-            // Container(
-            //   width: double.infinity,
-            //   margin: const EdgeInsets.only(bottom: 16),
-            //   child: ElevatedButton.icon(
-            //     onPressed: _saveAllSettings,
-            //     icon: const Icon(Icons.save),
-            //     label: const Text(
-            //       'Save All Settings',
-            //       style: TextStyle(
-            //         fontSize: 16,
-            //         fontWeight: FontWeight.bold,
-            //       ),
-            //     ),
-            //     style: ElevatedButton.styleFrom(
-            //       backgroundColor: primaryColor,
-            //       foregroundColor: AppColors.whitecolor,
-            //       padding: const EdgeInsets.symmetric(vertical: 16),
-            //       shape: RoundedRectangleBorder(
-            //         borderRadius: BorderRadius.circular(12),
-            //       ),
-            //     ),
-            //   ),
-            // ),
-
-            // // Logout Button
-            // Center(
-            //   child: SizedBox(
-            //     width: double.infinity,
-            //     child: ElevatedButton(
-            //       onPressed: () => _showLogoutDialog(),
-            //       style: ElevatedButton.styleFrom(
-            //         backgroundColor: Colors.red[600],
-            //         foregroundColor: AppColors.whitecolor,
-            //         padding: const EdgeInsets.symmetric(vertical: 16),
-            //         shape: RoundedRectangleBorder(
-            //           borderRadius: BorderRadius.circular(12),
-            //         ),
-            //       ),
-            //       child: const Text(
-            //         'Logout',
-            //         style: TextStyle(
-            //           fontSize: 16,
-            //           fontWeight: FontWeight.bold,
-            //         ),
-            //       ),
-            //     ),
-            //   ),
-            // ),
             const SizedBox(height: 16),
           ],
         ),
       ),
       floatingActionButton: CountBadgeFAB(
-        count: unreadCount, // ← real-time total
+        count: unreadCount,
         gifAsset: 'animation/chaticon.gif',
         backgroundColor: Colors.transparent,
         onPressed: () {
@@ -508,7 +233,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             MaterialPageRoute(builder: (_) => const ChatListScreen()),
           ).then((_) {
             ref.invalidate(mutualFriendsProvider);
-            //ref.read(mutualFriendsProvider.notifier).refresh();
           });
         },
       ),
@@ -593,149 +317,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         activeColor: primaryColor,
       ),
       contentPadding: EdgeInsets.zero,
-    );
-  }
-
-  Widget _buildLanguageTile() {
-    return ListTile(
-      leading: Icon(Icons.language, color: Colors.grey[600]),
-      title: const Text(
-        'Language',
-        style: TextStyle(fontWeight: FontWeight.w500),
-      ),
-      subtitle: Text(
-        selectedLanguage,
-        style: TextStyle(color: Colors.grey[600], fontSize: 12),
-      ),
-      trailing: Icon(
-        Icons.arrow_forward_ios,
-        color: Colors.grey[400],
-        size: 16,
-      ),
-      onTap: () => _showLanguageDialog(),
-      contentPadding: EdgeInsets.zero,
-    );
-  }
-
-  void _navigateToScreen(String screenName) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Opening $screenName...'),
-        backgroundColor: primaryColor,
-        duration: const Duration(seconds: 1),
-      ),
-    );
-    // Add your navigation logic here
-    // Navigator.pushNamed(context, '/screenName');
-  }
-
-  void _showLanguageDialog() {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Select Language'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildLanguageOption('English'),
-                _buildLanguageOption('Spanish'),
-                _buildLanguageOption('French'),
-                _buildLanguageOption('German'),
-                _buildLanguageOption('Japanese'),
-              ],
-            ),
-          ),
-    );
-  }
-
-  Widget _buildLanguageOption(String language) {
-    return ListTile(
-      title: Text(language),
-      leading: Radio<String>(
-        value: language,
-        groupValue: selectedLanguage,
-        onChanged: (value) {
-          setState(() => selectedLanguage = value!);
-          _saveSetting('selectedLanguage', value!);
-          Navigator.pop(context);
-        },
-        activeColor: primaryColor,
-      ),
-    );
-  }
-
-  void _rateApp() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Opening app store...'),
-        duration: Duration(seconds: 1),
-      ),
-    );
-    // Add your app store rating logic here
-  }
-
-  void _showResetDialog() {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Reset Settings'),
-            content: const Text(
-              'Are you sure you want to reset all settings to their default values? This action cannot be undone.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _resetSettings();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange[600],
-                  foregroundColor: AppColors.whitecolor,
-                ),
-                child: const Text('Reset'),
-              ),
-            ],
-          ),
-    );
-  }
-
-  void _showLogoutDialog() {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Logout'),
-            content: const Text('Are you sure you want to logout?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  // Add your logout logic here
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Logged out successfully'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red[600],
-                  foregroundColor: AppColors.whitecolor,
-                ),
-                child: const Text('Logout'),
-              ),
-            ],
-          ),
     );
   }
 }
