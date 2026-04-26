@@ -147,7 +147,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           'Login saved — access_token: ${accessToken.substring(0, 30)}...',
         );
         developer.log('User: $user');
-
         await _saveCredentials();
         if (!mounted) return;
         _navigateAfterLogin(user);
@@ -157,7 +156,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           final fcmToken = await FirebaseMessaging.instance.getToken();
           developer.log('FCM TOKEN IS: $fcmToken');
           if (fcmToken == null) return;
-          if (!mounted) return;  
+          if (!mounted) return;
           await Future.wait([
             FCMService().registerToken(),
             ref
@@ -170,8 +169,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         });
       } else {
         final data = jsonDecode(response.body) as Map<String, dynamic>?;
+
+        final detail = data?['detail'];
         final msg =
-            data?['detail']?.toString() ??
+            (detail is List ? detail.join(', ') : detail?.toString()) ??
             data?['message']?.toString() ??
             data?['error']?.toString() ??
             'Login failed (${response.statusCode})';
@@ -191,8 +192,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   // ── Google Sign-In ────────────────────────────────────────────────────────
 
-  /// Shows the native Google account picker, gets the idToken,
-  /// signs into Firebase, then sends the token to the backend SSO API.
+  // Shows the native Google account picker, gets the idToken,
+  // signs into Firebase, then sends the token to the backend SSO API.
   Future<void> _showAccountPicker() async {
     setState(() => _isGoogleLoading = true);
 
@@ -323,7 +324,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           final fcmToken = await FirebaseMessaging.instance.getToken();
           developer.log('FCM TOKEN after Google login: $fcmToken');
           if (fcmToken == null) return;
-          if (!mounted) return;  
+          if (!mounted) return;
           await Future.wait([
             FCMService().registerToken(),
             ref
