@@ -641,26 +641,45 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                   Stack(
                     children: [
                       Obx(
-                        () => CircleAvatar(
-                          radius: 60,
-                          backgroundColor: const Color.fromRGBO(
-                            235,
-                            111,
-                            70,
-                            0.2,
+                        () => GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (_) => FullScreenImageViewer(
+                                      imageUrl:
+                                          _userController
+                                              .getFullProfilePicturePath() ??
+                                          profile.avatarUrl ??
+                                          '',
+                                      tag:
+                                          'profile_${_userController.profilePictureVersion.value}',
+                                    ),
+                              ),
+                            );
+                          },
+                          child: CircleAvatar(
+                            radius: 60,
+                            backgroundColor: const Color.fromRGBO(
+                              235,
+                              111,
+                              70,
+                              0.2,
+                            ),
+                            key: ValueKey(
+                              'profile_${_userController.profilePictureVersion.value}',
+                            ),
+                            backgroundImage: _resolveAvatarImage(profile),
+                            child:
+                                _shouldShowPlaceholder(profile)
+                                    ? const Icon(
+                                      Icons.person,
+                                      size: 60,
+                                      color: Color.fromRGBO(244, 135, 6, 1),
+                                    )
+                                    : null,
                           ),
-                          key: ValueKey(
-                            'profile_${_userController.profilePictureVersion.value}',
-                          ),
-                          backgroundImage: _resolveAvatarImage(profile),
-                          child:
-                              _shouldShowPlaceholder(profile)
-                                  ? const Icon(
-                                    Icons.person,
-                                    size: 60,
-                                    color: Color.fromRGBO(244, 135, 6, 1),
-                                  )
-                                  : null,
                         ),
                       ),
                       Positioned(
@@ -969,13 +988,13 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                                 value: profile.email,
                                 icon: Icons.email,
                               ),
-                              if (profile.bio != null &&
-                                  profile.bio!.isNotEmpty)
-                                ProfileInfoCard(
-                                  title: 'Bio',
-                                  value: profile.bio!,
-                                  icon: Icons.description,
-                                ),
+                              // if (profile.bio != null &&
+                              //     profile.bio!.isNotEmpty)
+                              //   ProfileInfoCard(
+                              //     title: 'Bio',
+                              //     value: profile.bio!,
+                              //     icon: Icons.description,
+                              //   ),
                               ProfileInfoCard(
                                 title: 'Member Since',
                                 value: _formatDate(profile.createdAt),

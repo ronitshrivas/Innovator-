@@ -4437,7 +4437,7 @@ class ReelsApiService {
     };
   }
 
-  static Future<List<ReelModel>> fetchReels({String? cursor}) async {
+  static Future<Map<String, dynamic>> fetchReels({String? cursor}) async {
     final uri =
         (cursor != null && cursor.isNotEmpty)
             ? Uri.parse(cursor)
@@ -4445,13 +4445,23 @@ class ReelsApiService {
     final res = await http
         .get(uri, headers: _headers())
         .timeout(const Duration(seconds: 20));
+    // if (res.statusCode == 200) {
+    //   final data = json.decode(res.body) as Map<String, dynamic>;
+    //   return (data['results'] as List<dynamic>? ?? [])
+    //       .whereType<Map<String, dynamic>>()
+    //       .map(ReelModel.fromJson)
+    //       .where((r) => r.hasVideo)
+    //       .toList();
+    // }
     if (res.statusCode == 200) {
       final data = json.decode(res.body) as Map<String, dynamic>;
-      return (data['results'] as List<dynamic>? ?? [])
-          .whereType<Map<String, dynamic>>()
-          .map(ReelModel.fromJson)
-          .where((r) => r.hasVideo)
-          .toList();
+      final reels =
+          (data['results'] as List<dynamic>? ?? [])
+              .whereType<Map<String, dynamic>>()
+              .map(ReelModel.fromJson)
+              .where((r) => r.hasVideo)
+              .toList();
+      return {'reels': reels, 'next': data['next']}; // ADD next
     }
     throw Exception('Fetch failed: ${res.statusCode}');
   }
@@ -4568,9 +4578,20 @@ class ReelsFeedNotifier extends StateNotifier<AsyncValue<List<ReelModel>>> {
   bool _hasMore = true;
   bool _busy = false;
 
+  // Future<void> _load() async {
+  //   try {
+  //     state = AsyncValue.data(await ReelsApiService.fetchReels());
+  //   } catch (e, st) {
+  //     state = AsyncValue.error(e, st);
+  //   }
+  // }
+
   Future<void> _load() async {
     try {
-      state = AsyncValue.data(await ReelsApiService.fetchReels());
+      final result = await ReelsApiService.fetchReels();
+      _next = result['next'] as String?; // ADD THIS
+      _hasMore = _next != null; // ADD THIS
+      state = AsyncValue.data(result['reels'] as List<ReelModel>);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
@@ -4583,11 +4604,26 @@ class ReelsFeedNotifier extends StateNotifier<AsyncValue<List<ReelModel>>> {
     await _load();
   }
 
+  // Future<void> loadMore() async {
+  //   if (_busy || !_hasMore || _next == null) return;
+  //   _busy = true;
+  //   try {
+  //     final more = await ReelsApiService.fetchReels(cursor: _next);
+  //     state = AsyncValue.data([...(state.value ?? []), ...more]);
+  //   } catch (_) {
+  //   } finally {
+  //     _busy = false;
+  //   }
+  // }
+
   Future<void> loadMore() async {
     if (_busy || !_hasMore || _next == null) return;
     _busy = true;
     try {
-      final more = await ReelsApiService.fetchReels(cursor: _next);
+      final result = await ReelsApiService.fetchReels(cursor: _next);
+      _next = result['next'] as String?; // ADD THIS
+      _hasMore = _next != null; // ADD THIS
+      final more = result['reels'] as List<ReelModel>;
       state = AsyncValue.data([...(state.value ?? []), ...more]);
     } catch (_) {
     } finally {

@@ -37,6 +37,16 @@ class ReelsPlayer {
     }
   }
 
+  // ADD in your ReelsPlayer class init
+  static void listenFirstFrame(int slot, VoidCallback onReady) {
+    _channel.invokeMethod('onFirstFrame', {'slot': slot});
+    _channel.setMethodCallHandler((call) async {
+      if (call.method == 'firstFrameReady' && call.arguments['slot'] == slot) {
+        onReady();
+      }
+    });
+  }
+
   /// Switch the shared display surface to a given slot.
   /// Call this BEFORE play() when changing reels.
   static Future<void> switchSurface(int slot) async {

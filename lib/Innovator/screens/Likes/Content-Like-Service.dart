@@ -194,6 +194,29 @@ class ContentLikeService {
       return const ReactionResult(success: false, shouldDiscard: false);
     }
   }
+  // ── Remove reaction ──────────────────────────────────────────────────────────
+  /// DELETE /api/reactions/{reactionId}/
+  // Future<bool> removeReaction(String reactionId) async {
+  //   final token = _appData.accessToken;
+  //   if (token == null || token.isEmpty) return false;
+
+  //   try {
+  //     final response = await http.delete(
+  //       Uri.parse('${ApiConstants.sendreaction}$reactionId/'),
+  //       headers: {
+  //         'Authorization': 'Bearer $token',
+  //         'Accept': 'application/json',
+  //       },
+  //     );
+  //     log(
+  //       '[Reaction] DELETE /api/reactions/$reactionId/ → ${response.statusCode}',
+  //     );
+  //     return response.statusCode == 204 || response.statusCode == 200;
+  //   } catch (e) {
+  //     log('[Reaction] removeReaction error: $e');
+  //     return false;
+  //   }
+  // }
 
   Future<bool> toggleLike(String postId, bool isLiking) async {
     try {

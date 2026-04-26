@@ -292,9 +292,19 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
         ref.read(mutualFriendsProvider.notifier).bumpToTop(friendId);
         ref.read(lastActiveFriendProvider.notifier).state = null;
       }
+      _refreshOrder();
     });
   }
 
+  void _refreshOrder() {
+    final friendId = ref.read(lastActiveFriendProvider);
+    if (friendId != null) {
+      ref.read(mutualFriendsProvider.notifier).bumpToTop(friendId);
+      ref.read(lastActiveFriendProvider.notifier).state = null;
+    }
+  }
+
+class _ChatListScreenState extends ConsumerState<ChatListScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(mutualFriendsProvider);
@@ -449,7 +459,15 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
               isOnline: friend.onlineStatus,
             ),
       ),
-    );
+    ).then((_) {
+      if (context.mounted) {
+        final lastFriend = ref.read(lastActiveFriendProvider);
+        if (lastFriend != null) {
+          ref.read(mutualFriendsProvider.notifier).bumpToTop(lastFriend);
+          ref.read(lastActiveFriendProvider.notifier).state = null;
+        }
+      }
+    });
   }
 
   Widget _buildSectionHeader(String title, int count) {

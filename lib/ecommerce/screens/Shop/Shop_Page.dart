@@ -529,6 +529,32 @@ class _ShopPageState extends ConsumerState<ShopPage> {
                     return _buildCategoryTabs(categories);
                   },
                 ),
+                InkWell(
+                  onTap:
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const EcommerceNotificationScreen(),
+                        ),
+                      ),
+                  child: Consumer(
+                    builder: (context, ref, _) {
+                      final unreadAsync = ref.watch(
+                        ecommerceUnreadCountProvider,
+                      );
+                      final count = unreadAsync;
+                      return count > 0
+                          ? Badge.count(
+                            count: count,
+                            child: const Icon(
+                              Icons.notifications_outlined,
+                              size: 25,
+                            ),
+                          )
+                          : const Icon(Icons.notifications_outlined, size: 25);
+                    },
+                  ),
+                ),
               ],
             ),
           ),
