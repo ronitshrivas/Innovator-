@@ -4,6 +4,7 @@ import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/screens/Search/search_provider.dart';
 import 'package:innovator/Innovator/screens/chatrrom/screen/chatlistscreen.dart';
 import 'package:innovator/Innovator/screens/show_Specific_Profile/Show_Specific_Profile.dart';
+import 'package:innovator/Innovator/screens/suggested_users/suggested_user_screen.dart';
 import 'package:innovator/Innovator/widget/CustomizeFAB.dart';
 
 class SearchPage extends ConsumerStatefulWidget {
@@ -15,7 +16,6 @@ class SearchPage extends ConsumerStatefulWidget {
 
 class _SearchPageState extends ConsumerState<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
-  bool _isSuggestedUsersExpanded = false;
 
   @override
   void dispose() {
@@ -28,22 +28,29 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     final searchState = ref.watch(searchProvider);
     final notifier = ref.read(searchProvider.notifier);
     final unreadCount = ref.watch(chatUnreadCountProvider);
+
     return Scaffold(
       backgroundColor: AppColors.whitecolor,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.only(right: 10, left: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildSimpleHeader(),
               _buildSimpleSearchBar(notifier),
-              Expanded(child: _buildContent(searchState, notifier)),
+              const SizedBox(height: 8),
+
+              if (searchState.isSearching)
+                Expanded(child: _buildSearchResults(searchState)),
+
+              if (!searchState.isSearching) const SuggestedUsersSection(),
             ],
           ),
         ),
       ),
       floatingActionButton: CountBadgeFAB(
-        count: unreadCount, // ← real-time total
+        count: unreadCount,
         gifAsset: 'animation/chaticon.gif',
         backgroundColor: Colors.transparent,
         onPressed: () {
@@ -51,10 +58,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const ChatListScreen()),
-          ).then((_) {
-            ref.invalidate(mutualFriendsProvider);
-            //ref.read(mutualFriendsProvider.notifier).refresh();
-          });
+          ).then((_) => ref.invalidate(mutualFriendsProvider));
         },
       ),
     );
@@ -107,101 +111,64 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       backgroundColor: WidgetStatePropertyAll(Colors.grey[100]!),
       hintText: 'Search for people...',
       controller: _searchController,
+      leading: const Icon(Icons.search, color: Colors.grey),
+      trailing: [
+        if (_searchController.text.isNotEmpty)
+          IconButton(
+            icon: const Icon(Icons.close, color: Colors.grey, size: 18),
+            splashRadius: 16,
+            onPressed: () {
+              _searchController.clear();
+              notifier.search('');
+              setState(() {});
+            },
+          ),
+      ],
       onChanged: (value) {
         notifier.search(value);
+        setState(() {});
       },
       onTap: () {
         _searchController.clear();
         notifier.fetchSuggested();
         setState(() {});
       },
-      leading: const Icon(Icons.search, color: Colors.grey),
     );
   }
 
-  Widget _buildContent(SearchState searchState, SearchNotifier notifier) {
+  Widget _buildSearchResults(SearchState searchState) {
     if (searchState.isLoading) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircularProgressIndicator(color: Colors.orange),
-            SizedBox(height: 16),
-            Text('Loading...', style: TextStyle(color: Colors.grey)),
+            SizedBox(height: 14),
+            Text('Searching...', style: TextStyle(color: Colors.grey)),
           ],
         ),
       );
     }
 
-    return Container(
-      color: Colors.grey[50],
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Text(
-                  searchState.isSearching
-                      ? 'Search Results'
-                      : 'Suggested People',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
-                ),
-                const Spacer(),
-                if (!searchState.isSearching)
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        _isSuggestedUsersExpanded = !_isSuggestedUsersExpanded;
-                      });
-                    },
-                    child: Text(
-                      _isSuggestedUsersExpanded ? 'Show Less' : 'See All',
-                      style: const TextStyle(
-                        color: Colors.orange,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          Expanded(child: _buildUserList(searchState)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildUserList(SearchState searchState) {
-    final users =
-        searchState.isSearching || _isSuggestedUsersExpanded
-            ? searchState.users
-            : searchState.users.take(3).toList();
-
-    if (searchState.isSearching && users.isEmpty) {
+    if (searchState.users.isEmpty) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.search_off, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
+            Icon(Icons.search_off, size: 60, color: Colors.grey),
+            SizedBox(height: 14),
             Text(
               'No results found',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 17,
                 fontWeight: FontWeight.w500,
                 color: Colors.grey,
               ),
             ),
-            SizedBox(height: 8),
+            SizedBox(height: 6),
             Text(
               'Try a different search term',
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: Colors.grey, fontSize: 13),
             ),
           ],
         ),
@@ -209,24 +176,21 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: users.length,
-      itemBuilder: (context, index) {
-        return _buildUserCard(users[index]);
-      },
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      itemCount: searchState.users.length,
+      itemBuilder: (context, index) => _buildUserCard(searchState.users[index]),
     );
   }
 
   Widget _buildUserCard(SearchUser user) {
     return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => SpecificUserProfilePage(userId: user.id),
+      onTap:
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => SpecificUserProfilePage(userId: user.id),
+            ),
           ),
-        );
-      },
       borderRadius: BorderRadius.circular(12),
       child: Column(
         children: [
@@ -235,18 +199,13 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               _buildSearchAvatar(user),
               const SizedBox(width: 12),
               Expanded(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      user.username,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  user.username,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
                 ),
               ),
             ],
@@ -257,7 +216,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     );
   }
 
-  // NetworkImage instead of FileImage — avatar URL comes straight from API
   Widget _buildSearchAvatar(SearchUser user) {
     return CircleAvatar(
       radius: 20,

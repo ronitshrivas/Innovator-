@@ -99,7 +99,7 @@ class ApiConstants {
 
   static const String fetchreports = '$feedBase/users/reports-list/';
 
-  static const String fetchsuggestionusers = '$feedBase/users';
+  static const String fetchsuggestionusers = '$feedBase/suggested-users/';
 
   static const String fetchspecificfollowersandfollowing = '$feedBase/users/';
 
