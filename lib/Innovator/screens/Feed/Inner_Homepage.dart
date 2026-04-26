@@ -2265,7 +2265,7 @@ class _FeedItemState extends State<FeedItem>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
-          duration: const Duration(seconds: 2),
+          duration: const Duration(milliseconds: 800),
         ),
       );
     } else {
@@ -2286,7 +2286,7 @@ class _FeedItemState extends State<FeedItem>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
-          duration: const Duration(seconds: 2),
+          duration: const Duration(milliseconds: 500),
         ),
       );
     }
