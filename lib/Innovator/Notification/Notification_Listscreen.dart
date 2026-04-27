@@ -429,7 +429,6 @@ class _NotificationListScreenState extends State<NotificationListScreen>
             ),
           ],
         ),
-        floatingActionButton: _buildFloatingActionButtons(),
       ),
     );
   }
@@ -465,11 +464,11 @@ class _NotificationListScreenState extends State<NotificationListScreen>
         margin: const EdgeInsets.only(right: 10),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? theme.colorScheme.primary : Colors.white,
+          color: isSelected ? Color.fromRGBO(244, 135, 6, 1) : Colors.white,
           borderRadius: BorderRadius.circular(25),
           border: Border.all(
             color:
-                isSelected ? theme.colorScheme.primary : Colors.grey.shade300,
+                isSelected ? Color.fromRGBO(244, 135, 6, 1) : Colors.grey.shade300,
           ),
           boxShadow:
               isSelected
@@ -708,136 +707,6 @@ class _NotificationListScreenState extends State<NotificationListScreen>
     );
   }
 
-  Widget _buildFloatingActionButtons() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        if (notifications.any((n) => !n.isRead))
-          ScaleTransition(
-            scale: _fabAnimation,
-            child: FloatingActionButton.small(
-              onPressed: markAllAsRead,
-              backgroundColor: Colors.green,
-              heroTag: 'markAllRead',
-              child: const Icon(Icons.done_all, color: Colors.white),
-            ),
-          ),
-        const SizedBox(height: 12),
-        ScaleTransition(
-          scale: _fabAnimation,
-          child: FloatingActionButton(
-            onPressed: () {
-              HapticFeedback.mediumImpact();
-              fetchNotifications();
-            },
-            backgroundColor: const Color(0xFFF48706),
-            heroTag: 'refresh',
-            child: const Icon(Icons.refresh, color: Colors.white),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<bool?> _showStylizedDialog() {
-    return showGeneralDialog<bool>(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: '',
-      barrierColor: Colors.black.withAlpha(60),
-      transitionDuration: const Duration(milliseconds: 300),
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return Center(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(10),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.red.withAlpha(10),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.delete_sweep,
-                        color: Colors.red,
-                        size: 30,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Delete All Notifications',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'This action cannot be undone. All your notifications will be permanently deleted.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[600],
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildDialogButton(
-                            'Cancel',
-                            Colors.grey[100]!,
-                            Colors.grey[700]!,
-                            () => Navigator.pop(context, false),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildDialogButton(
-                            'Delete All',
-                            Colors.red,
-                            Colors.white,
-                            () => Navigator.pop(context, true),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        return ScaleTransition(
-          scale: CurvedAnimation(parent: animation, curve: Curves.elasticOut),
-          child: child,
-        );
-      },
-    );
-  }
-
   Future<bool> _showDeleteConfirmation() async {
     final result = await showDialog<bool>(
       context: context,
@@ -866,33 +735,6 @@ class _NotificationListScreenState extends State<NotificationListScreen>
           ),
     );
     return result ?? false;
-  }
-
-  Widget _buildDialogButton(
-    String text,
-    Color bgColor,
-    Color textColor,
-    VoidCallback onTap,
-  ) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(
-          text,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: textColor,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
   }
 
   void _showErrorSnackbar(String message) {
