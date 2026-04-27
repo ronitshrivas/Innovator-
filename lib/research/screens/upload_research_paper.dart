@@ -6,24 +6,24 @@ import 'package:innovator/research/provider/research_provider.dart';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
-const _kBlue       = Color(0xFF185FA5);
-const _kBlueMid    = Color(0xFF378ADD);
-const _kBlueSoft   = Color(0xFFE6F1FB);
+const _kBlue = Color(0xFF185FA5);
+const _kBlueMid = Color(0xFF378ADD);
+const _kBlueSoft = Color(0xFFE6F1FB);
 const _kBlueBorder = Color(0xFFB5D4F4);
 
-const _kRed        = Color(0xFFA32D2D);
-const _kRedSoft    = Color(0xFFFCEBEB);
-const _kRedBorder  = Color(0xFFF7C1C1);
+const _kRed = Color(0xFFA32D2D);
+const _kRedSoft = Color(0xFFFCEBEB);
+const _kRedBorder = Color(0xFFF7C1C1);
 
-const _kGreen      = Color(0xFF3B6D11);
+const _kGreen = Color(0xFF3B6D11);
 
-const _kText       = Color(0xFF1C1C1E);
-const _kTextSub    = Color(0xFF555555);
-const _kTextMuted  = Color(0xFF8A8A8E);
-const _kTextHint   = Color(0xFFBBBBBB);
-const _kSurface    = Color(0xFFF7F8FA);
-const _kBorder     = Color(0xFFE2E4E8);
-const _kCard       = Color(0xFFFFFFFF);
+const _kText = Color(0xFF1C1C1E);
+const _kTextSub = Color(0xFF555555);
+const _kTextMuted = Color(0xFF8A8A8E);
+const _kTextHint = Color(0xFFBBBBBB);
+const _kSurface = Color(0xFFF7F8FA);
+const _kBorder = Color(0xFFE2E4E8);
+const _kCard = Color(0xFFFFFFFF);
 
 const double _kMaxFileSizeBytes = 10 * 1024 * 1024;
 
@@ -49,17 +49,18 @@ class UploadResearchPaperSheet extends ConsumerStatefulWidget {
 
 class _UploadResearchPaperSheetState
     extends ConsumerState<UploadResearchPaperSheet> {
-  final _formKey              = GlobalKey<FormState>();
-  final _emailCtrl            = TextEditingController();
-  final _titleCtrl            = TextEditingController();
-  final _descCtrl             = TextEditingController();
-  final _priceCtrl            = TextEditingController();
-  final _researcherNamesCtrl  = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final _emailCtrl = TextEditingController();
+  final _titleCtrl = TextEditingController();
+  final _descCtrl = TextEditingController();
+  final _priceCtrl = TextEditingController();
+  final _researcherNamesCtrl = TextEditingController();
 
-  String        _type         = 'free';
+  String _type = 'free';
   PlatformFile? _paperFile;
   PlatformFile? _researcherFile;
 
+  @override
   @override
   void dispose() {
     _emailCtrl.dispose();
@@ -67,9 +68,7 @@ class _UploadResearchPaperSheetState
     _descCtrl.dispose();
     _priceCtrl.dispose();
     _researcherNamesCtrl.dispose();
-    Future.microtask(
-      () => ref.read(uploadResearchPaperProvider.notifier).reset(),
-    );
+    ref.read(uploadResearchPaperProvider.notifier).reset();
     super.dispose();
   }
 
@@ -111,31 +110,34 @@ class _UploadResearchPaperSheetState
       return;
     }
 
-    final names = _researcherNamesCtrl.text
-        .split(',')
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
+    final names =
+        _researcherNamesCtrl.text
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
 
     if (!mounted) return;
 
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => ProviderScope(
-        parent: ProviderScope.containerOf(context),
-        child: _UploadProgressDialog(fileName: _paperFile!.name),
-      ),
+      builder:
+          (_) => ProviderScope(
+            parent: ProviderScope.containerOf(context),
+            child: _UploadProgressDialog(fileName: _paperFile!.name),
+          ),
     );
 
-    final ok = await ref.read(uploadResearchPaperProvider.notifier).upload(
+    final ok = await ref
+        .read(uploadResearchPaperProvider.notifier)
+        .upload(
           email: _emailCtrl.text.trim(),
           title: _titleCtrl.text.trim(),
           description: _descCtrl.text.trim(),
           type: _type,
-          price: _type == 'paid'
-              ? double.tryParse(_priceCtrl.text.trim())
-              : null,
+          price:
+              _type == 'paid' ? double.tryParse(_priceCtrl.text.trim()) : null,
           researcherNames: names.isEmpty ? null : names,
           paperFile: _paperFile!,
           researcherFile: _researcherFile,
@@ -152,12 +154,14 @@ class _UploadResearchPaperSheetState
 
   void _snack(String msg, {bool isError = true}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg, style: const TextStyle(color: Colors.white)),
-      backgroundColor: isError ? _kRed : _kGreen,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg, style: const TextStyle(color: Colors.white)),
+        backgroundColor: isError ? _kRed : _kGreen,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 
   @override
@@ -196,16 +200,20 @@ class _UploadResearchPaperSheetState
                     color: _kBlueSoft,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.upload_file_rounded,
-                      color: _kBlue, size: 20),
+                  child: const Icon(
+                    Icons.upload_file_rounded,
+                    color: _kBlue,
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 const Text(
                   'Upload Research Paper',
                   style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: _kText),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: _kText,
+                  ),
                 ),
                 const Spacer(),
                 GestureDetector(
@@ -218,8 +226,11 @@ class _UploadResearchPaperSheetState
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: _kBorder),
                     ),
-                    child: const Icon(Icons.close_rounded,
-                        size: 16, color: _kTextMuted),
+                    child: const Icon(
+                      Icons.close_rounded,
+                      size: 16,
+                      color: _kTextMuted,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -233,7 +244,9 @@ class _UploadResearchPaperSheetState
           Flexible(
             child: SingleChildScrollView(
               padding: EdgeInsets.fromLTRB(
-                20, 20, 20,
+                20,
+                20,
+                20,
                 MediaQuery.of(context).viewInsets.bottom + 24,
               ),
               child: Form(
@@ -262,10 +275,11 @@ class _UploadResearchPaperSheetState
                       controller: _titleCtrl,
                       hint: 'Research paper title',
                       prefixIcon: Icons.title_rounded,
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty)
-                              ? 'Title is required'
-                              : null,
+                      validator:
+                          (v) =>
+                              (v == null || v.trim().isEmpty)
+                                  ? 'Title is required'
+                                  : null,
                     ),
                     const SizedBox(height: 16),
 
@@ -280,10 +294,11 @@ class _UploadResearchPaperSheetState
                     _FieldLabel('Type', required: true),
                     _TypeSelector(
                       selected: _type,
-                      onChanged: (v) => setState(() {
-                        _type = v;
-                        if (v == 'free') _priceCtrl.clear();
-                      }),
+                      onChanged:
+                          (v) => setState(() {
+                            _type = v;
+                            if (v == 'free') _priceCtrl.clear();
+                          }),
                     ),
                     const SizedBox(height: 16),
 
@@ -295,12 +310,13 @@ class _UploadResearchPaperSheetState
                         keyboardType: TextInputType.number,
                         prefixIcon: Icons.currency_rupee_rounded,
                         inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly
+                          FilteringTextInputFormatter.digitsOnly,
                         ],
-                        validator: (v) =>
-                            (v == null || v.trim().isEmpty)
-                                ? 'Price is required for paid papers'
-                                : null,
+                        validator:
+                            (v) =>
+                                (v == null || v.trim().isEmpty)
+                                    ? 'Price is required for paid papers'
+                                    : null,
                       ),
                       const SizedBox(height: 16),
                     ],
@@ -316,14 +332,16 @@ class _UploadResearchPaperSheetState
                     const Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.info_outline_rounded,
-                            size: 13, color: _kTextHint),
+                        Icon(
+                          Icons.info_outline_rounded,
+                          size: 13,
+                          color: _kTextHint,
+                        ),
                         SizedBox(width: 5),
                         Expanded(
                           child: Text(
                             'For multiple researchers, separate names with a comma.',
-                            style: TextStyle(
-                                fontSize: 12, color: _kTextMuted),
+                            style: TextStyle(fontSize: 12, color: _kTextMuted),
                           ),
                         ),
                       ],
@@ -377,16 +395,20 @@ class _UploadResearchPaperSheetState
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.error_outline_rounded,
-                                color: _kRed, size: 18),
+                            const Icon(
+                              Icons.error_outline_rounded,
+                              color: _kRed,
+                              size: 18,
+                            ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
                                 _friendlyError(uploadState.error!),
                                 style: const TextStyle(
-                                    color: _kRed,
-                                    fontSize: 13,
-                                    height: 1.4),
+                                  color: _kRed,
+                                  fontSize: 13,
+                                  height: 1.4,
+                                ),
                               ),
                             ),
                           ],
@@ -413,15 +435,19 @@ class _UploadResearchPaperSheetState
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.cloud_upload_rounded,
-                                size: 20, color: Colors.white),
+                            Icon(
+                              Icons.cloud_upload_rounded,
+                              size: 20,
+                              color: Colors.white,
+                            ),
                             SizedBox(width: 8),
                             Text(
                               'Upload Paper',
                               style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
                             ),
                           ],
                         ),
@@ -472,30 +498,27 @@ class _UploadProgressDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(uploadResearchPaperProvider);
-    final pct   = (state.progress * 100).round();
+    final pct = (state.progress * 100).round();
 
     return PopScope(
       canPop: false,
       child: Dialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         backgroundColor: _kCard,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(28, 32, 28, 28),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _AnimatedProgressRing(
-                  progress: state.progress, color: _kBlue),
+              _AnimatedProgressRing(progress: state.progress, color: _kBlue),
               const SizedBox(height: 22),
               Text(
-                state.progress == 0
-                    ? 'Preparing upload…'
-                    : 'Uploading — $pct%',
+                state.progress == 0 ? 'Preparing upload…' : 'Uploading — $pct%',
                 style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: _kText),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: _kText,
+                ),
               ),
               const SizedBox(height: 4),
               const Text(
@@ -510,15 +533,13 @@ class _UploadProgressDialog extends ConsumerWidget {
                   value: state.progress == 0 ? null : state.progress,
                   minHeight: 6,
                   backgroundColor: _kBlueSoft,
-                  valueColor:
-                      const AlwaysStoppedAnimation<Color>(_kBlue),
+                  valueColor: const AlwaysStoppedAnimation<Color>(_kBlue),
                 ),
               ),
               const SizedBox(height: 10),
               Text(
                 fileName,
-                style: const TextStyle(
-                    fontSize: 11, color: _kTextHint),
+                style: const TextStyle(fontSize: 11, color: _kTextHint),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
@@ -536,12 +557,10 @@ class _UploadProgressDialog extends ConsumerWidget {
 class _AnimatedProgressRing extends StatefulWidget {
   final double progress;
   final Color color;
-  const _AnimatedProgressRing(
-      {required this.progress, required this.color});
+  const _AnimatedProgressRing({required this.progress, required this.color});
 
   @override
-  State<_AnimatedProgressRing> createState() =>
-      _AnimatedProgressRingState();
+  State<_AnimatedProgressRing> createState() => _AnimatedProgressRingState();
 }
 
 class _AnimatedProgressRingState extends State<_AnimatedProgressRing>
@@ -556,8 +575,10 @@ class _AnimatedProgressRingState extends State<_AnimatedProgressRing>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..repeat(reverse: true);
-    _pulseAnim = Tween<double>(begin: 0.93, end: 1.07).animate(
-        CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
+    _pulseAnim = Tween<double>(
+      begin: 0.93,
+      end: 1.07,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
   }
 
   @override
@@ -571,10 +592,11 @@ class _AnimatedProgressRingState extends State<_AnimatedProgressRing>
     final pct = (widget.progress * 100).round();
     return AnimatedBuilder(
       animation: _pulseAnim,
-      builder: (_, child) => Transform.scale(
-        scale: widget.progress == 0 ? _pulseAnim.value : 1.0,
-        child: child,
-      ),
+      builder:
+          (_, child) => Transform.scale(
+            scale: widget.progress == 0 ? _pulseAnim.value : 1.0,
+            child: child,
+          ),
       child: SizedBox(
         width: 110,
         height: 110,
@@ -586,14 +608,14 @@ class _AnimatedProgressRingState extends State<_AnimatedProgressRing>
                 tween: Tween(begin: 0, end: widget.progress),
                 duration: const Duration(milliseconds: 400),
                 curve: Curves.easeOut,
-                builder: (_, value, __) => CircularProgressIndicator(
-                  value: widget.progress == 0 ? null : value,
-                  strokeWidth: 9,
-                  backgroundColor: _kBlueSoft,
-                  valueColor:
-                      AlwaysStoppedAnimation<Color>(widget.color),
-                  strokeCap: StrokeCap.round,
-                ),
+                builder:
+                    (_, value, __) => CircularProgressIndicator(
+                      value: widget.progress == 0 ? null : value,
+                      strokeWidth: 9,
+                      backgroundColor: _kBlueSoft,
+                      valueColor: AlwaysStoppedAnimation<Color>(widget.color),
+                      strokeCap: StrokeCap.round,
+                    ),
               ),
             ),
             SizedBox(
@@ -606,18 +628,18 @@ class _AnimatedProgressRingState extends State<_AnimatedProgressRing>
                     child: Text(
                       widget.progress == 0 ? '···' : '$pct%',
                       style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          color: widget.color,
-                          height: 1),
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: widget.color,
+                        height: 1,
+                      ),
                     ),
                   ),
                   if (widget.progress > 0) ...[
                     const SizedBox(height: 2),
                     const Text(
                       'uploaded',
-                      style: TextStyle(
-                          fontSize: 10, color: _kTextMuted),
+                      style: TextStyle(fontSize: 10, color: _kTextMuted),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -644,17 +666,23 @@ class _FieldLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
-          Text(text,
-              style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: _kText)),
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: _kText,
+            ),
+          ),
           if (required)
-            const Text(' *',
-                style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: _kRed)),
+            const Text(
+              ' *',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: _kRed,
+              ),
+            ),
         ],
       ),
     );
@@ -693,15 +721,17 @@ class _AppField extends StatelessWidget {
       style: const TextStyle(fontSize: 14, color: _kText),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle:
-            const TextStyle(fontSize: 14, color: _kTextHint),
-        prefixIcon: prefixIcon != null
-            ? Icon(prefixIcon, size: 18, color: _kTextMuted)
-            : null,
+        hintStyle: const TextStyle(fontSize: 14, color: _kTextHint),
+        prefixIcon:
+            prefixIcon != null
+                ? Icon(prefixIcon, size: 18, color: _kTextMuted)
+                : null,
         filled: true,
         fillColor: _kSurface,
         contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14, vertical: 13),
+          horizontal: 14,
+          vertical: 13,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: _kBorder),
@@ -712,8 +742,7 @@ class _AppField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide:
-              const BorderSide(color: _kBlueMid, width: 1.5),
+          borderSide: const BorderSide(color: _kBlueMid, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
@@ -721,8 +750,7 @@ class _AppField extends StatelessWidget {
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide:
-              const BorderSide(color: _kRed, width: 1.5),
+          borderSide: const BorderSide(color: _kRed, width: 1.5),
         ),
       ),
     );
@@ -734,28 +762,29 @@ class _AppField extends StatelessWidget {
 class _TypeSelector extends StatelessWidget {
   final String selected;
   final ValueChanged<String> onChanged;
-  const _TypeSelector(
-      {required this.selected, required this.onChanged});
+  const _TypeSelector({required this.selected, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
-    return Row(children: [
-      _TypeTile(
-        label: 'Free',
-        subtitle: 'Open access',
-        icon: Icons.lock_open_rounded,
-        selected: selected == 'free',
-        onTap: () => onChanged('free'),
-      ),
-      const SizedBox(width: 12),
-      _TypeTile(
-        label: 'Paid',
-        subtitle: 'Restricted access',
-        icon: Icons.paid_rounded,
-        selected: selected == 'paid',
-        onTap: () => onChanged('paid'),
-      ),
-    ]);
+    return Row(
+      children: [
+        _TypeTile(
+          label: 'Free',
+          subtitle: 'Open access',
+          icon: Icons.lock_open_rounded,
+          selected: selected == 'free',
+          onTap: () => onChanged('free'),
+        ),
+        const SizedBox(width: 12),
+        _TypeTile(
+          label: 'Paid',
+          subtitle: 'Restricted access',
+          icon: Icons.paid_rounded,
+          selected: selected == 'paid',
+          onTap: () => onChanged('paid'),
+        ),
+      ],
+    );
   }
 }
 
@@ -781,8 +810,7 @@ class _TypeTile extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(
-              horizontal: 14, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: selected ? _kBlueSoft : _kSurface,
             borderRadius: BorderRadius.circular(10),
@@ -791,47 +819,50 @@ class _TypeTile extends StatelessWidget {
               width: selected ? 1.5 : 1,
             ),
           ),
-          child: Row(children: [
-            Icon(icon,
-                size: 20,
-                color: selected ? _kBlue : _kTextMuted),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label,
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: selected ? _kBlue : _kTextMuted),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
                     style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: selected ? _kBlue : _kText)),
-                Text(subtitle,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: selected ? _kBlue : _kText,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
                     style: TextStyle(
-                        fontSize: 11,
-                        color: selected
-                            ? _kBlueMid
-                            : _kTextMuted)),
-              ],
-            ),
-            const Spacer(),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: 18,
-              height: 18,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color:
-                    selected ? _kBlue : Colors.transparent,
-                border: Border.all(
-                  color: selected ? _kBlue : _kBorder,
-                  width: 2,
-                ),
+                      fontSize: 11,
+                      color: selected ? _kBlueMid : _kTextMuted,
+                    ),
+                  ),
+                ],
               ),
-              child: selected
-                  ? const Icon(Icons.check,
-                      size: 11, color: Colors.white)
-                  : null,
-            ),
-          ]),
+              const Spacer(),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: selected ? _kBlue : Colors.transparent,
+                  border: Border.all(
+                    color: selected ? _kBlue : _kBorder,
+                    width: 2,
+                  ),
+                ),
+                child:
+                    selected
+                        ? const Icon(Icons.check, size: 11, color: Colors.white)
+                        : null,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -871,71 +902,64 @@ class _FilePickerTile extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(
-            horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: has ? accentSoft : _kSurface,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: has
-                ? accent.withValues(alpha: 0.35)
-                : _kBorder,
+            color: has ? accent.withValues(alpha: 0.35) : _kBorder,
             width: has ? 1.5 : 1,
           ),
         ),
-        child: Row(children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: has
-                  ? accent.withValues(alpha: 0.12)
-                  : const Color(0xFFEEEEEE),
-              borderRadius: BorderRadius.circular(8),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color:
+                    has
+                        ? accent.withValues(alpha: 0.12)
+                        : const Color(0xFFEEEEEE),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 19, color: has ? accent : _kTextMuted),
             ),
-            child: Icon(icon,
-                size: 19,
-                color: has ? accent : _kTextMuted),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  has ? file!.name : emptyHint,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: has
-                        ? FontWeight.w600
-                        : FontWeight.w400,
-                    color: has ? _kText : _kTextMuted,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    has ? file!.name : emptyHint,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: has ? FontWeight.w600 : FontWeight.w400,
+                      color: has ? _kText : _kTextMuted,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  has
-                      ? _fmt(file!.size)
-                      : 'No file selected',
-                  style: TextStyle(
+                  Text(
+                    has ? _fmt(file!.size) : 'No file selected',
+                    style: TextStyle(
                       fontSize: 11,
-                      color: has
-                          ? _kTextSub
-                          : _kTextHint),
-                ),
-              ],
+                      color: has ? _kTextSub : _kTextHint,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Icon(
-            has
-                ? Icons.check_circle_rounded
-                : Icons.add_circle_outline_rounded,
-            color: has ? accent : _kTextHint,
-            size: 22,
-          ),
-        ]),
+            const SizedBox(width: 8),
+            Icon(
+              has
+                  ? Icons.check_circle_rounded
+                  : Icons.add_circle_outline_rounded,
+              color: has ? accent : _kTextHint,
+              size: 22,
+            ),
+          ],
+        ),
       ),
     );
   }

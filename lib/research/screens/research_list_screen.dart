@@ -4,37 +4,30 @@ import 'package:innovator/research/core/widget/research_card.dart';
 import 'package:innovator/research/provider/research_provider.dart';
 import 'package:innovator/research/screens/upload_research_paper.dart';
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
+ 
+const _kBlue = Color(0xFF185FA5);
+const _kBlueMid = Color(0xFF378ADD); 
+const _kRed = Color(0xFFA32D2D);
+const _kRedSoft = Color(0xFFFCEBEB);
 
-const _kBlue     = Color(0xFF185FA5);
-const _kBlueMid  = Color(0xFF378ADD);
-const _kBlueSoft = Color(0xFFE6F1FB);
-
-const _kRed      = Color(0xFFA32D2D);
-const _kRedSoft  = Color(0xFFFCEBEB);
-
-const _kText     = Color(0xFF1C1C1E);
-const _kTextSub  = Color(0xFF555555);
-const _kTextMuted= Color(0xFF8A8A8E);
-const _kSurface  = Color(0xFFF7F8FA);
-const _kBg       = Color(0xFFF2F4F7);
-const _kBorder   = Color(0xFFE2E4E8);
-const _kCard     = Color(0xFFFFFFFF);
-
-// ─── Screen ───────────────────────────────────────────────────────────────────
-
+const _kText = Color(0xFF1C1C1E);
+const _kTextSub = Color(0xFF555555);
+const _kTextMuted = Color(0xFF8A8A8E);
+const _kSurface = Color(0xFFF7F8FA);
+const _kBg = Color(0xFFF2F4F7);
+const _kBorder = Color(0xFFE2E4E8);
+const _kCard = Color(0xFFFFFFFF);
+ 
 class ResearchListScreen extends ConsumerStatefulWidget {
   const ResearchListScreen({super.key});
 
   @override
-  ConsumerState<ResearchListScreen> createState() =>
-      _ResearchListScreenState();
+  ConsumerState<ResearchListScreen> createState() => _ResearchListScreenState();
 }
 
-class _ResearchListScreenState
-    extends ConsumerState<ResearchListScreen> {
-  final _scrollCtrl  = ScrollController();
-  final _searchCtrl  = TextEditingController();
+class _ResearchListScreenState extends ConsumerState<ResearchListScreen> {
+  final _scrollCtrl = ScrollController();
+  final _searchCtrl = TextEditingController();
 
   String? _selType;
   String? _selStatus;
@@ -60,17 +53,21 @@ class _ResearchListScreenState
   }
 
   void _applyFilters() {
-    ref.read(researchListProvider.notifier).applyFilter(ResearchFilter(
-      search: _searchCtrl.text.trim().isEmpty
-          ? null
-          : _searchCtrl.text.trim(),
-      type: _selType,
-      status: _selStatus,
-    ));
+    ref
+        .read(researchListProvider.notifier)
+        .applyFilter(
+          ResearchFilter(
+            search:
+                _searchCtrl.text.trim().isEmpty
+                    ? null
+                    : _searchCtrl.text.trim(),
+            type: _selType,
+            status: _selStatus,
+          ),
+        );
   }
 
-  Future<void> _refresh() =>
-      ref.read(researchListProvider.notifier).refresh();
+  Future<void> _refresh() => ref.read(researchListProvider.notifier).refresh();
 
   @override
   Widget build(BuildContext context) {
@@ -85,9 +82,10 @@ class _ResearchListScreenState
         title: const Text(
           'Research Papers',
           style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: _kText),
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: _kText,
+          ),
         ),
         centerTitle: false,
         bottom: PreferredSize(
@@ -101,23 +99,25 @@ class _ResearchListScreenState
               onTap: () => UploadResearchPaperSheet.show(context),
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 8),
+                  horizontal: 14,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  color: _kBlue,
+                  color: Color.fromRGBO(244, 135, 6, 1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.upload_rounded,
-                        size: 16, color: Colors.white),
+                    Icon(Icons.upload_rounded, size: 16, color: Colors.white),
                     SizedBox(width: 6),
                     Text(
                       'Upload',
                       style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
                     ),
                   ],
                 ),
@@ -127,8 +127,7 @@ class _ResearchListScreenState
         ],
       ),
       body: Column(
-        children: [
-          // ── search + filters
+        children: [ 
           Container(
             color: _kCard,
             child: _SearchFilterBar(
@@ -150,45 +149,39 @@ class _ResearchListScreenState
               },
             ),
           ),
-
-          // ── count row
+ 
           if (!state.isLoading && state.papers.isNotEmpty)
             Container(
               color: _kBg,
-              padding:
-                  const EdgeInsets.fromLTRB(16, 10, 16, 4),
-              child: Row(children: [
-                Text(
-                  '${state.papers.length} paper${state.papers.length == 1 ? '' : 's'}',
-                  style: const TextStyle(
-                      fontSize: 12, color: _kTextMuted),
-                ),
-                if (!state.hasMore)
-                  const Text(
-                    ' · all loaded',
-                    style: TextStyle(
-                        fontSize: 12, color: _kTextMuted),
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+              child: Row(
+                children: [
+                  Text(
+                    '${state.papers.length} paper${state.papers.length == 1 ? '' : 's'}',
+                    style: const TextStyle(fontSize: 12, color: _kTextMuted),
                   ),
-              ]),
+                  if (!state.hasMore)
+                    const Text(
+                      ' · all loaded',
+                      style: TextStyle(fontSize: 12, color: _kTextMuted),
+                    ),
+                ],
+              ),
             ),
-
-          // ── body
+ 
           Expanded(child: _buildBody(state)),
         ],
       ),
     );
   }
 
-  Widget _buildBody(ResearchListState state) {
-    // Loading first page
+  Widget _buildBody(ResearchListState state) { 
     if (state.isLoading && state.papers.isEmpty) {
       return const Center(
-        child: CircularProgressIndicator(
-            color: _kBlue, strokeWidth: 2.5),
+        child: CircularProgressIndicator(color: _kBlue, strokeWidth: 2.5),
       );
     }
-
-    // Error with no data — pull to refresh works via RefreshIndicator
+ 
     if (state.error != null && state.papers.isEmpty) {
       return RefreshIndicator(
         onRefresh: _refresh,
@@ -198,20 +191,15 @@ class _ResearchListScreenState
           physics: const AlwaysScrollableScrollPhysics(),
           child: SizedBox(
             height: MediaQuery.of(context).size.height * 0.65,
-            child: _ErrorView(
-              message: state.error!,
-              onRetry: _refresh,
-            ),
+            child: _ErrorView(message: state.error!, onRetry: _refresh),
           ),
         ),
       );
     }
-
-    // Empty state — pull to refresh works
+ 
     if (state.papers.isEmpty) {
-      final hasFilters = _selType != null ||
-          _selStatus != null ||
-          _searchCtrl.text.isNotEmpty;
+      final hasFilters =
+          _selType != null || _selStatus != null || _searchCtrl.text.isNotEmpty;
 
       return RefreshIndicator(
         onRefresh: _refresh,
@@ -223,8 +211,7 @@ class _ResearchListScreenState
             height: MediaQuery.of(context).size.height * 0.65,
             child: _EmptyView(
               hasFilters: hasFilters,
-              onUpload: () =>
-                  UploadResearchPaperSheet.show(context),
+              onUpload: () => UploadResearchPaperSheet.show(context),
               onClearFilters: () {
                 setState(() {
                   _selType = null;
@@ -239,7 +226,7 @@ class _ResearchListScreenState
       );
     }
 
-    // Normal list
+   
     return RefreshIndicator(
       onRefresh: _refresh,
       color: _kBlue,
@@ -248,15 +235,13 @@ class _ResearchListScreenState
         controller: _scrollCtrl,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(top: 8, bottom: 28),
-        itemCount:
-            state.papers.length + (state.isLoadingMore ? 1 : 0),
+        itemCount: state.papers.length + (state.isLoadingMore ? 1 : 0),
         itemBuilder: (context, i) {
           if (i == state.papers.length) {
             return const Padding(
               padding: EdgeInsets.all(20),
               child: Center(
-                child: CircularProgressIndicator(
-                    color: _kBlue, strokeWidth: 2),
+                child: CircularProgressIndicator(color: _kBlue, strokeWidth: 2),
               ),
             );
           }
@@ -267,8 +252,7 @@ class _ResearchListScreenState
   }
 }
 
-// ─── Search + Filter bar ──────────────────────────────────────────────────────
-
+ 
 class _SearchFilterBar extends StatelessWidget {
   final TextEditingController searchCtrl;
   final String? selType;
@@ -292,93 +276,102 @@ class _SearchFilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-      child: Column(children: [
-        // Search field
-        TextField(
-          controller: searchCtrl,
-          onSubmitted: onSearchSubmitted,
-          textInputAction: TextInputAction.search,
-          style: const TextStyle(fontSize: 14, color: _kText),
-          decoration: InputDecoration(
-            hintText: 'Search papers...',
-            hintStyle:
-                const TextStyle(fontSize: 14, color: _kTextMuted),
-            prefixIcon: const Icon(Icons.search_rounded,
-                size: 20, color: _kTextMuted),
-            suffixIcon: searchCtrl.text.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear_rounded,
-                        size: 18, color: _kTextMuted),
-                    onPressed: onSearchCleared,
-                  )
-                : null,
-            filled: true,
-            fillColor: _kSurface,
-            contentPadding:
-                const EdgeInsets.symmetric(vertical: 0),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: _kBorder),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: _kBorder),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: _kBlueMid, width: 1.5),
+      child: Column(
+        children: [ 
+          TextField(
+            controller: searchCtrl,
+            onSubmitted: onSearchSubmitted,
+            textInputAction: TextInputAction.search,
+            style: const TextStyle(fontSize: 14, color: _kText),
+            decoration: InputDecoration(
+              hintText: 'Search papers...',
+              hintStyle: const TextStyle(fontSize: 14, color: _kTextMuted),
+              prefixIcon: const Icon(
+                Icons.search_rounded,
+                size: 20,
+                color: _kTextMuted,
+              ),
+              suffixIcon:
+                  searchCtrl.text.isNotEmpty
+                      ? IconButton(
+                        icon: const Icon(
+                          Icons.clear_rounded,
+                          size: 18,
+                          color: _kTextMuted,
+                        ),
+                        onPressed: onSearchCleared,
+                      )
+                      : null,
+              filled: true,
+              fillColor: _kSurface,
+              contentPadding: const EdgeInsets.symmetric(vertical: 0),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: _kBorder),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: _kBorder),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: _kBlueMid, width: 1.5),
+              ),
             ),
           ),
-        ),
 
-        const SizedBox(height: 10),
+          const SizedBox(height: 10),
 
-        // Filter chips row
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(children: [
-            _Chip(
-              label: 'All',
-              selected: selType == null && selStatus == null,
-              onTap: () {
-                onTypeChanged(null);
-                onStatusChanged(null);
-              },
+          // Filter chips row
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _Chip(
+                  label: 'All',
+                  selected: selType == null && selStatus == null,
+                  onTap: () {
+                    onTypeChanged(null);
+                    onStatusChanged(null);
+                  },
+                ),
+                const SizedBox(width: 8),
+                _Chip(
+                  label: 'Free',
+                  selected: selType == 'free',
+                  onTap: () => onTypeChanged(selType == 'free' ? null : 'free'),
+                ),
+                const SizedBox(width: 8),
+                _Chip(
+                  label: 'Paid',
+                  selected: selType == 'paid',
+                  onTap: () => onTypeChanged(selType == 'paid' ? null : 'paid'),
+                ),
+                const SizedBox(width: 12),
+                Container(width: 1, height: 20, color: _kBorder),
+                const SizedBox(width: 12),
+                _Chip(
+                  label: 'Active',
+                  selected: selStatus == 'active',
+                  onTap:
+                      () => onStatusChanged(
+                        selStatus == 'active' ? null : 'active',
+                      ),
+                ),
+                const SizedBox(width: 8),
+                _Chip(
+                  label: 'Pending',
+                  selected: selStatus == 'pending',
+                  onTap:
+                      () => onStatusChanged(
+                        selStatus == 'pending' ? null : 'pending',
+                      ),
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
-            _Chip(
-              label: 'Free',
-              selected: selType == 'free',
-              onTap: () => onTypeChanged(
-                  selType == 'free' ? null : 'free'),
-            ),
-            const SizedBox(width: 8),
-            _Chip(
-              label: 'Paid',
-              selected: selType == 'paid',
-              onTap: () => onTypeChanged(
-                  selType == 'paid' ? null : 'paid'),
-            ),
-            const SizedBox(width: 12),
-            Container(width: 1, height: 20, color: _kBorder),
-            const SizedBox(width: 12),
-            _Chip(
-              label: 'Active',
-              selected: selStatus == 'active',
-              onTap: () => onStatusChanged(
-                  selStatus == 'active' ? null : 'active'),
-            ),
-            const SizedBox(width: 8),
-            _Chip(
-              label: 'Pending',
-              selected: selStatus == 'pending',
-              onTap: () => onStatusChanged(
-                  selStatus == 'pending' ? null : 'pending'),
-            ),
-          ]),
-        ),
-      ]),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -401,13 +394,12 @@ class _Chip extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         height: 34,
-        padding:
-            const EdgeInsets.symmetric(horizontal: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: selected ? _kBlueSoft : Colors.transparent,
+          color: selected ? Color.fromRGBO(244, 135, 6, 1) : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected ? _kBlueMid : _kBorder,
+            color: selected ? Color.fromRGBO(244, 135, 6, 1) : _kBorder,
             width: selected ? 1.5 : 1,
           ),
         ),
@@ -416,9 +408,8 @@ class _Chip extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 13,
-            fontWeight:
-                selected ? FontWeight.w600 : FontWeight.w400,
-            color: selected ? _kBlue : _kTextMuted,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+            color: selected ? Colors.white : _kTextMuted,
           ),
         ),
       ),
@@ -426,13 +417,11 @@ class _Chip extends StatelessWidget {
   }
 }
 
-// ─── Error view ───────────────────────────────────────────────────────────────
-
+ 
 class _ErrorView extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
-  const _ErrorView(
-      {required this.message, required this.onRetry});
+  const _ErrorView({required this.message, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -449,30 +438,35 @@ class _ErrorView extends StatelessWidget {
                 color: _kRedSoft,
                 borderRadius: BorderRadius.circular(18),
               ),
-              child: const Icon(Icons.cloud_off_rounded,
-                  size: 34, color: _kRed),
+              child: const Icon(
+                Icons.cloud_off_rounded,
+                size: 34,
+                color: _kRed,
+              ),
             ),
             const SizedBox(height: 16),
             const Text(
               'Something went wrong',
               style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: _kText),
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: _kText,
+              ),
             ),
             const SizedBox(height: 6),
             const Text(
               'Unable to load research papers.\nPull down to refresh or tap retry.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: 13, color: _kTextMuted, height: 1.5),
+              style: TextStyle(fontSize: 13, color: _kTextMuted, height: 1.5),
             ),
             const SizedBox(height: 20),
             GestureDetector(
               onTap: onRetry,
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 20, vertical: 10),
+                  horizontal: 20,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: _kBlue,
                   borderRadius: BorderRadius.circular(10),
@@ -480,15 +474,15 @@ class _ErrorView extends StatelessWidget {
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.refresh_rounded,
-                        size: 18, color: Colors.white),
+                    Icon(Icons.refresh_rounded, size: 18, color: Colors.white),
                     SizedBox(width: 6),
                     Text(
                       'Try Again',
                       style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
                     ),
                   ],
                 ),
@@ -501,8 +495,7 @@ class _ErrorView extends StatelessWidget {
   }
 }
 
-// ─── Empty view ───────────────────────────────────────────────────────────────
-
+ 
 class _EmptyView extends StatelessWidget {
   final bool hasFilters;
   final VoidCallback onUpload;
@@ -531,22 +524,19 @@ class _EmptyView extends StatelessWidget {
                 border: Border.all(color: _kBorder),
               ),
               child: Icon(
-                hasFilters
-                    ? Icons.search_off_rounded
-                    : Icons.article_outlined,
+                hasFilters ? Icons.search_off_rounded : Icons.article_outlined,
                 size: 36,
                 color: _kTextMuted,
               ),
             ),
             const SizedBox(height: 16),
             Text(
-              hasFilters
-                  ? 'No results found'
-                  : 'No research papers yet',
+              hasFilters ? 'No results found' : 'No research papers yet',
               style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: _kText),
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: _kText,
+              ),
             ),
             const SizedBox(height: 6),
             Text(
@@ -555,25 +545,26 @@ class _EmptyView extends StatelessWidget {
                   : 'Be the first to upload a research paper.\nPull down to refresh.',
               textAlign: TextAlign.center,
               style: const TextStyle(
-                  fontSize: 13,
-                  color: _kTextMuted,
-                  height: 1.5),
+                fontSize: 13,
+                color: _kTextMuted,
+                height: 1.5,
+              ),
             ),
             const SizedBox(height: 24),
             GestureDetector(
-              onTap:
-                  hasFilters ? onClearFilters : onUpload,
+              onTap: hasFilters ? onClearFilters : onUpload,
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 20, vertical: 10),
+                  horizontal: 20,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
-                  color: hasFilters
-                      ? Colors.transparent
-                      : _kBlue,
+                  color:
+                      hasFilters
+                          ? Colors.transparent
+                          : Color.fromRGBO(244, 135, 6, 1),
                   borderRadius: BorderRadius.circular(10),
-                  border: hasFilters
-                      ? Border.all(color: _kBorder)
-                      : null,
+                  border: hasFilters ? Border.all(color: _kBorder) : null,
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -583,21 +574,16 @@ class _EmptyView extends StatelessWidget {
                           ? Icons.filter_alt_off_rounded
                           : Icons.upload_file_rounded,
                       size: 18,
-                      color: hasFilters
-                          ? _kTextSub
-                          : Colors.white,
+                      color: hasFilters ? _kTextSub : Colors.white,
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      hasFilters
-                          ? 'Clear Filters'
-                          : 'Upload Paper',
+                      hasFilters ? 'Clear Filters' : 'Upload Paper',
                       style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: hasFilters
-                              ? _kTextSub
-                              : Colors.white),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: hasFilters ? _kTextSub : Colors.white,
+                      ),
                     ),
                   ],
                 ),
