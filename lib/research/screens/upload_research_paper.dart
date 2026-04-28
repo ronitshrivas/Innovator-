@@ -4,8 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/research/provider/research_provider.dart';
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
-
 const _kBlue = Color(0xFF185FA5);
 const _kBlueMid = Color(0xFF378ADD);
 const _kBlueSoft = Color(0xFFE6F1FB);
@@ -26,8 +24,6 @@ const _kBorder = Color(0xFFE2E4E8);
 const _kCard = Color(0xFFFFFFFF);
 
 const double _kMaxFileSizeBytes = 10 * 1024 * 1024;
-
-// ─── Sheet ────────────────────────────────────────────────────────────────────
 
 class UploadResearchPaperSheet extends ConsumerStatefulWidget {
   const UploadResearchPaperSheet({super.key});
@@ -61,15 +57,13 @@ class _UploadResearchPaperSheetState
   PlatformFile? _researcherFile;
 
   @override
-  @override
   void dispose() {
     _emailCtrl.dispose();
     _titleCtrl.dispose();
     _descCtrl.dispose();
     _priceCtrl.dispose();
     _researcherNamesCtrl.dispose();
-    ref.read(uploadResearchPaperProvider.notifier).reset();
-    super.dispose();
+    super.dispose(); // No ref.read here - this fixes the crash
   }
 
   Future<void> _pickPaperFile() async {
@@ -144,9 +138,11 @@ class _UploadResearchPaperSheetState
         );
 
     if (mounted) {
-      Navigator.of(context, rootNavigator: true).pop();
+      Navigator.of(context, rootNavigator: true).pop(); // close progress dialog
+
       if (ok) {
-        Navigator.of(context).pop();
+        ref.read(uploadResearchPaperProvider.notifier).reset(); // safe reset
+        Navigator.of(context).pop(); // close bottom sheet
         _snack('Research paper uploaded successfully!', isError: false);
       }
     }
@@ -176,7 +172,6 @@ class _UploadResearchPaperSheetState
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ── drag handle
           const SizedBox(height: 14),
           Container(
             width: 36,
@@ -188,7 +183,6 @@ class _UploadResearchPaperSheetState
           ),
           const SizedBox(height: 4),
 
-          // ── header
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 10, 12, 10),
             child: Row(
@@ -217,7 +211,10 @@ class _UploadResearchPaperSheetState
                 ),
                 const Spacer(),
                 GestureDetector(
-                  onTap: () => Navigator.of(context).pop(),
+                  onTap: () {
+                    ref.read(uploadResearchPaperProvider.notifier).reset();
+                    Navigator.of(context).pop();
+                  },
                   child: Container(
                     width: 32,
                     height: 32,
@@ -240,7 +237,6 @@ class _UploadResearchPaperSheetState
 
           const Divider(height: 1, color: _kBorder),
 
-          // ── scrollable form
           Flexible(
             child: SingleChildScrollView(
               padding: EdgeInsets.fromLTRB(
@@ -259,11 +255,10 @@ class _UploadResearchPaperSheetState
                       controller: _emailCtrl,
                       hint: 'researcher@example.com',
                       keyboardType: TextInputType.emailAddress,
-                      prefixIcon: Icons.mail_outline_rounded,
+                      prefixIcon: Icon(Icons.mail_outline_rounded),
                       validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
+                        if (v == null || v.trim().isEmpty)
                           return 'Email is required';
-                        }
                         if (!v.contains('@')) return 'Enter a valid email';
                         return null;
                       },
@@ -274,7 +269,7 @@ class _UploadResearchPaperSheetState
                     _AppField(
                       controller: _titleCtrl,
                       hint: 'Research paper title',
-                      prefixIcon: Icons.title_rounded,
+                      prefixIcon: Icon(Icons.title_rounded),
                       validator:
                           (v) =>
                               (v == null || v.trim().isEmpty)
@@ -308,7 +303,11 @@ class _UploadResearchPaperSheetState
                         controller: _priceCtrl,
                         hint: 'e.g. 8000',
                         keyboardType: TextInputType.number,
-                        prefixIcon: Icons.currency_rupee_rounded,
+                        prefixIcon: Image.asset(
+                          'assets/icon/npr.png',
+                          width: 20,
+                          color: _kTextMuted,
+                        ),
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
                         ],
@@ -325,10 +324,9 @@ class _UploadResearchPaperSheetState
                     _AppField(
                       controller: _researcherNamesCtrl,
                       hint: 'e.g. Ram, Shyam, Hari',
-                      prefixIcon: Icons.people_outline_rounded,
+                      prefixIcon: Icon(Icons.people_outline_rounded),
                     ),
                     const SizedBox(height: 6),
-                    // Helper text strictly below the field, not inside
                     const Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -383,7 +381,6 @@ class _UploadResearchPaperSheetState
 
                     const SizedBox(height: 28),
 
-                    // ── error banner
                     if (uploadState.error != null) ...[
                       Container(
                         padding: const EdgeInsets.all(14),
@@ -417,7 +414,6 @@ class _UploadResearchPaperSheetState
                       const SizedBox(height: 16),
                     ],
 
-                    // ── submit button
                     SizedBox(
                       width: double.infinity,
                       height: 52,
@@ -446,7 +442,6 @@ class _UploadResearchPaperSheetState
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
-                                color: Colors.white,
                               ),
                             ),
                           ],
@@ -465,10 +460,7 @@ class _UploadResearchPaperSheetState
 
   String _friendlyError(String raw) {
     final lower = raw.toLowerCase();
-    if (lower.contains('413') ||
-        lower.contains('payload too large') ||
-        lower.contains('request entity too large') ||
-        lower.contains('function_payload_too_large')) {
+    if (lower.contains('413') || lower.contains('payload too large')) {
       return 'File is too large for the server. Please compress your PDF or upload a file under 5 MB.';
     }
     if (lower.contains('network') ||
@@ -476,9 +468,8 @@ class _UploadResearchPaperSheetState
         lower.contains('connection')) {
       return 'Network error. Please check your connection and try again.';
     }
-    if (lower.contains('timeout')) {
+    if (lower.contains('timeout'))
       return 'The request timed out. Please try again.';
-    }
     if (lower.contains('unauthorized') ||
         lower.contains('403') ||
         lower.contains('401')) {
@@ -489,7 +480,7 @@ class _UploadResearchPaperSheetState
   }
 }
 
-// ─── Upload Progress Dialog ───────────────────────────────────────────────────
+// ====================== Supporting Widgets ======================
 
 class _UploadProgressDialog extends ConsumerWidget {
   final String fileName;
@@ -551,8 +542,6 @@ class _UploadProgressDialog extends ConsumerWidget {
     );
   }
 }
-
-// ─── Animated ring ────────────────────────────────────────────────────────────
 
 class _AnimatedProgressRing extends StatefulWidget {
   final double progress;
@@ -640,7 +629,6 @@ class _AnimatedProgressRingState extends State<_AnimatedProgressRing>
                     const Text(
                       'uploaded',
                       style: TextStyle(fontSize: 10, color: _kTextMuted),
-                      textAlign: TextAlign.center,
                     ),
                   ],
                 ],
@@ -652,8 +640,6 @@ class _AnimatedProgressRingState extends State<_AnimatedProgressRing>
     );
   }
 }
-
-// ─── Field label ──────────────────────────────────────────────────────────────
 
 class _FieldLabel extends StatelessWidget {
   final String text;
@@ -689,8 +675,6 @@ class _FieldLabel extends StatelessWidget {
   }
 }
 
-// ─── Text field ───────────────────────────────────────────────────────────────
-
 class _AppField extends StatelessWidget {
   final TextEditingController controller;
   final String hint;
@@ -698,7 +682,7 @@ class _AppField extends StatelessWidget {
   final int maxLines;
   final String? Function(String?)? validator;
   final List<TextInputFormatter>? inputFormatters;
-  final IconData? prefixIcon;
+  final Widget? prefixIcon;
 
   const _AppField({
     required this.controller,
@@ -724,7 +708,7 @@ class _AppField extends StatelessWidget {
         hintStyle: const TextStyle(fontSize: 14, color: _kTextHint),
         prefixIcon:
             prefixIcon != null
-                ? Icon(prefixIcon, size: 18, color: _kTextMuted)
+                ? SizedBox(width: 48, child: Center(child: prefixIcon))
                 : null,
         filled: true,
         fillColor: _kSurface,
@@ -756,8 +740,6 @@ class _AppField extends StatelessWidget {
     );
   }
 }
-
-// ─── Type selector ────────────────────────────────────────────────────────────
 
 class _TypeSelector extends StatelessWidget {
   final String selected;
@@ -821,27 +803,37 @@ class _TypeTile extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(icon, size: 20, color: selected ? _kBlue : _kTextMuted),
+              Image.asset(
+                'assets/icon/npr.png',
+                width: 20,
+                color: selected ? _kBlue : _kTextMuted,
+              ),
               const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: selected ? _kBlue : _kText,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: selected ? _kBlue : _kText,
+                      ),
                     ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: selected ? _kBlueMid : _kTextMuted,
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: selected ? _kBlueMid : _kTextMuted,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const Spacer(),
               AnimatedContainer(
@@ -869,8 +861,6 @@ class _TypeTile extends StatelessWidget {
   }
 }
 
-// ─── File picker tile ─────────────────────────────────────────────────────────
-
 class _FilePickerTile extends StatelessWidget {
   final PlatformFile? file;
   final String emptyHint;
@@ -889,9 +879,7 @@ class _FilePickerTile extends StatelessWidget {
   });
 
   String _fmt(int bytes) {
-    if (bytes < 1024 * 1024) {
-      return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    }
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 

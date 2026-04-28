@@ -31,22 +31,22 @@ class ResearchPaperModel {
   bool get isActive => status == 'active';
   bool get isPaymentCompleted => paymentStatus == 'completed';
 
-  factory ResearchPaperModel.fromJson(Map<String, dynamic> json) {
-    return ResearchPaperModel(
-      id: json['id'] as int,
-      email: json['email'] as String,
-      title: json['title'] as String,
-      description: json['description'] as String? ?? '',
-      fileUrl: json['file_url'] as String,
-      type: json['type'] as String,
-      price: (json['price'] as num).toDouble(),
-      status: json['status'] as String,
-      paymentStatus: json['payment_status'] as String,
-      khaltiPidx: json['khalti_pidx'] as String?,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
-    );
-  }
+factory ResearchPaperModel.fromJson(Map<String, dynamic> json) {
+  return ResearchPaperModel(
+    id: json['id'] as int,
+    email: json['email'] as String? ?? '',
+    title: json['title'] as String? ?? '',
+    description: json['description'] as String? ?? '',
+    fileUrl: json['file_url'] as String? ?? '',
+    type: json['type'] as String? ?? 'free',
+    price: (json['price'] as num?)?.toDouble() ?? 0.0, // <-- null-safe
+    status: json['status'] as String? ?? '',
+    paymentStatus: json['payment_status'] as String? ?? '',
+    khaltiPidx: json['khalti_pidx'] as String?,
+    createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ?? DateTime.now(),
+    updatedAt: DateTime.tryParse(json['updated_at'] as String? ?? '') ?? DateTime.now(),
+  );
+}
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -75,13 +75,13 @@ class ResearchPaperResponseModel {
     required this.limit,
   });
 
-  factory ResearchPaperResponseModel.fromJson(Map<String, dynamic> json) {
-    return ResearchPaperResponseModel(
-      data: (json['data'] as List<dynamic>)
-          .map((e) => ResearchPaperModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      page: json['page'] as int,
-      limit: json['limit'] as int,
-    );
-  }
+factory ResearchPaperResponseModel.fromJson(Map<String, dynamic> json) {
+  return ResearchPaperResponseModel(
+    data: (json['data'] as List<dynamic>? ?? [])  // <-- null-safe
+        .map((e) => ResearchPaperModel.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    page: json['page'] as int? ?? 1,
+    limit: json['limit'] as int? ?? 20,
+  );
+}
 }

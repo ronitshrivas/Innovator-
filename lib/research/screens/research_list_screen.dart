@@ -4,9 +4,8 @@ import 'package:innovator/research/core/widget/research_card.dart';
 import 'package:innovator/research/provider/research_provider.dart';
 import 'package:innovator/research/screens/upload_research_paper.dart';
 
- 
 const _kBlue = Color(0xFF185FA5);
-const _kBlueMid = Color(0xFF378ADD); 
+const _kBlueMid = Color(0xFF378ADD);
 const _kRed = Color(0xFFA32D2D);
 const _kRedSoft = Color(0xFFFCEBEB);
 
@@ -17,7 +16,7 @@ const _kSurface = Color(0xFFF7F8FA);
 const _kBg = Color(0xFFF2F4F7);
 const _kBorder = Color(0xFFE2E4E8);
 const _kCard = Color(0xFFFFFFFF);
- 
+
 class ResearchListScreen extends ConsumerStatefulWidget {
   const ResearchListScreen({super.key});
 
@@ -31,6 +30,7 @@ class _ResearchListScreenState extends ConsumerState<ResearchListScreen> {
 
   String? _selType;
   String? _selStatus;
+  bool _isLoadMoreScheduled = false;
 
   @override
   void initState() {
@@ -46,10 +46,23 @@ class _ResearchListScreenState extends ConsumerState<ResearchListScreen> {
   }
 
   void _onScroll() {
-    if (_scrollCtrl.position.pixels >=
-        _scrollCtrl.position.maxScrollExtent - 200) {
-      ref.read(researchListProvider.notifier).loadMore();
-    }
+    if (_isLoadMoreScheduled) return;
+    if (_scrollCtrl.position.pixels <
+        _scrollCtrl.position.maxScrollExtent - 200)
+      return;
+
+    _isLoadMoreScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(researchListProvider.notifier).loadMore();
+      }
+      _isLoadMoreScheduled = false;
+    });
+  }
+
+  Future<void> _refresh() async {
+    _isLoadMoreScheduled = false;
+    return ref.read(researchListProvider.notifier).refresh();
   }
 
   void _applyFilters() {
@@ -67,8 +80,6 @@ class _ResearchListScreenState extends ConsumerState<ResearchListScreen> {
         );
   }
 
-  Future<void> _refresh() => ref.read(researchListProvider.notifier).refresh();
-
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(researchListProvider);
@@ -76,9 +87,16 @@ class _ResearchListScreenState extends ConsumerState<ResearchListScreen> {
     return Scaffold(
       backgroundColor: _kBg,
       appBar: AppBar(
+        scrolledUnderElevation: 0,
         backgroundColor: _kCard,
         elevation: 0,
-        scrolledUnderElevation: 0.5,
+        leading:
+            Navigator.canPop(context)
+                ? IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(Icons.arrow_back_ios),
+                )
+                : null,
         title: const Text(
           'Research Papers',
           style: TextStyle(
@@ -127,7 +145,7 @@ class _ResearchListScreenState extends ConsumerState<ResearchListScreen> {
         ],
       ),
       body: Column(
-        children: [ 
+        children: [
           Container(
             color: _kCard,
             child: _SearchFilterBar(
@@ -149,39 +167,26 @@ class _ResearchListScreenState extends ConsumerState<ResearchListScreen> {
               },
             ),
           ),
- 
+
           if (!state.isLoading && state.papers.isNotEmpty)
-            Container(
-              color: _kBg,
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
-              child: Row(
-                children: [
-                  Text(
-                    '${state.papers.length} paper${state.papers.length == 1 ? '' : 's'}',
-                    style: const TextStyle(fontSize: 12, color: _kTextMuted),
-                  ),
-                  if (!state.hasMore)
-                    const Text(
-                      ' · all loaded',
-                      style: TextStyle(fontSize: 12, color: _kTextMuted),
-                    ),
-                ],
-              ),
+            Text(
+              '${state.papers.length} paper${state.papers.length == 1 ? '' : 's'}',
+              style: const TextStyle(fontSize: 12, color: _kTextMuted),
             ),
- 
+
           Expanded(child: _buildBody(state)),
         ],
       ),
     );
   }
 
-  Widget _buildBody(ResearchListState state) { 
+  Widget _buildBody(ResearchListState state) {
     if (state.isLoading && state.papers.isEmpty) {
       return const Center(
         child: CircularProgressIndicator(color: _kBlue, strokeWidth: 2.5),
       );
     }
- 
+
     if (state.error != null && state.papers.isEmpty) {
       return RefreshIndicator(
         onRefresh: _refresh,
@@ -196,7 +201,7 @@ class _ResearchListScreenState extends ConsumerState<ResearchListScreen> {
         ),
       );
     }
- 
+
     if (state.papers.isEmpty) {
       final hasFilters =
           _selType != null || _selStatus != null || _searchCtrl.text.isNotEmpty;
@@ -226,7 +231,6 @@ class _ResearchListScreenState extends ConsumerState<ResearchListScreen> {
       );
     }
 
-   
     return RefreshIndicator(
       onRefresh: _refresh,
       color: _kBlue,
@@ -252,7 +256,6 @@ class _ResearchListScreenState extends ConsumerState<ResearchListScreen> {
   }
 }
 
- 
 class _SearchFilterBar extends StatelessWidget {
   final TextEditingController searchCtrl;
   final String? selType;
@@ -277,7 +280,7 @@ class _SearchFilterBar extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
       child: Column(
-        children: [ 
+        children: [
           TextField(
             controller: searchCtrl,
             onSubmitted: onSearchSubmitted,
@@ -417,7 +420,6 @@ class _Chip extends StatelessWidget {
   }
 }
 
- 
 class _ErrorView extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
@@ -495,7 +497,6 @@ class _ErrorView extends StatelessWidget {
   }
 }
 
- 
 class _EmptyView extends StatelessWidget {
   final bool hasFilters;
   final VoidCallback onUpload;

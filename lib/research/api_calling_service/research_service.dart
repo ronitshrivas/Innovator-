@@ -10,8 +10,8 @@ class ResearchService extends ResearchBaseApiService {
 
   Future<ResearchPaperResponseModel> getResearchPapers({
     String? search,
-    String? type,   // 'free' | 'paid'
-    String? status, // 'active' | 'pending'
+    String? type,    
+    String? status,  
     int page = 1,
     int limit = 20,
   }) async {
@@ -32,7 +32,7 @@ class ResearchService extends ResearchBaseApiService {
     required String email,
     required String title,
     String? description,
-    required String type,       // 'free' | 'paid'
+    required String type,      
     double? price,
     List<String>? researcherNames,
     required PlatformFile paperFile,
