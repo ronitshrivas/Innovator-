@@ -1,6 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/research/api_calling_service/research_service.dart';
+import 'package:innovator/research/model/research_detail_model.dart';
 import 'package:innovator/research/model/research_model.dart'; 
 // ─── Service Provider ─────────────────────────────────────────────────────────
 
@@ -235,4 +236,59 @@ class UploadNotifier extends StateNotifier<UploadState> {
 final uploadResearchPaperProvider =
     StateNotifierProvider<UploadNotifier, UploadState>(
   (ref) => UploadNotifier(ref.watch(researchServiceProvider), ref),
+);
+
+class ResearchDetailState {
+  final ResearchPaperDetailResponseModel? data;
+  final bool isLoading;
+  final String? error;
+ 
+  const ResearchDetailState({
+    this.data,
+    this.isLoading = false,
+    this.error,
+  });
+ 
+  ResearchDetailState copyWith({
+    ResearchPaperDetailResponseModel? data,
+    bool? isLoading,
+    String? error,
+    bool clearError = false,
+  }) {
+    return ResearchDetailState(
+      data: data ?? this.data,
+      isLoading: isLoading ?? this.isLoading,
+      error: clearError ? null : (error ?? this.error),
+    );
+  }
+}
+ 
+
+class ResearchDetailNotifier extends StateNotifier<ResearchDetailState> {
+  ResearchDetailNotifier(this._ref, this._paperId)
+      : super(const ResearchDetailState()) {
+    fetch();
+  }
+ 
+  final Ref _ref;
+  final int _paperId;
+ 
+  Future<void> fetch() async {
+    if (state.isLoading) return;
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final data = await _ref
+          .read(researchServiceProvider)
+          .getResearchPaperById(_paperId);
+      state = state.copyWith(data: data, isLoading: false);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+ 
+  Future<void> refresh() => fetch();
+}
+final researchDetailProvider = StateNotifierProvider.family<
+    ResearchDetailNotifier, ResearchDetailState, int>(
+  (ref, paperId) => ResearchDetailNotifier(ref, paperId),
 );

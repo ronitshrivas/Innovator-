@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/research/core/widget/research_card.dart';
 import 'package:innovator/research/provider/research_provider.dart';
+import 'package:innovator/research/screens/get_research_paper_byId.dart';
 import 'package:innovator/research/screens/upload_research_paper.dart';
 
 const _kBlue = Color(0xFF185FA5);
@@ -241,7 +242,18 @@ class _ResearchListScreenState extends ConsumerState<ResearchListScreen> {
               ),
             );
           }
-          return ResearchPaperCard(paper: state.papers[i]);
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (_) => ResearchDetailScreen(paperId: state.papers[i].id),
+                ),
+              );
+            },
+            child: ResearchPaperCard(paper: state.papers[i]),
+          );
         },
       ),
     );
