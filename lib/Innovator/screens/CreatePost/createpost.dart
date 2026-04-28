@@ -689,10 +689,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
       container.read(postUploadMessageProvider.notifier).state =
           'Error uploading post: $e';
     }
-  } catch (e) {
-    container.read(postUploadingProvider.notifier).state = false;
-    container.read(postUploadMessageProvider.notifier).state =
-        'Error uploading post';
   }
 
   void _clearForm() {
