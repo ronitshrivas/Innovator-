@@ -8,7 +8,6 @@ const _kBlue = Color(0xFF185FA5);
 const _kBlueMid = Color(0xFF378ADD);
 const _kRed = Color(0xFFA32D2D);
 const _kRedSoft = Color(0xFFFCEBEB);
-
 const _kText = Color(0xFF1C1C1E);
 const _kTextSub = Color(0xFF555555);
 const _kTextMuted = Color(0xFF8A8A8E);
@@ -167,13 +166,6 @@ class _ResearchListScreenState extends ConsumerState<ResearchListScreen> {
               },
             ),
           ),
-
-          if (!state.isLoading && state.papers.isNotEmpty)
-            Text(
-              '${state.papers.length} paper${state.papers.length == 1 ? '' : 's'}',
-              style: const TextStyle(fontSize: 12, color: _kTextMuted),
-            ),
-
           Expanded(child: _buildBody(state)),
         ],
       ),
