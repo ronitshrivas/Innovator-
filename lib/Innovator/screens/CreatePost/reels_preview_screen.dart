@@ -195,7 +195,7 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
         _showError(msg);
       }
     } catch (e) {
-      _showError('Upload error: $e');
+      _showError('Upload error');
     } finally {
       if (mounted) setState(() => _isUploading = false);
     }

@@ -113,10 +113,10 @@ class _NotificationTileState extends ConsumerState<_NotificationTile> {
         children: [
           CircleAvatar(
             radius: 22,
-            backgroundColor: colorScheme.primaryContainer,
+            backgroundColor: const Color.fromRGBO(244, 135, 6, 1),
             child: Icon(
               _iconForType(widget.notification.data.type),
-              color: colorScheme.primary,
+              color: Colors.white,
               size: 20,
             ),
           ),

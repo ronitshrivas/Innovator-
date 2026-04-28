@@ -312,7 +312,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
         _updateButtonState();
       }
     } catch (e) {
-      _showError('Error capturing image: $e');
+      _showError('Error capturing image ');
     }
   }
 
@@ -339,7 +339,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
         _updateButtonState();
       }
     } catch (e) {
-      _showError('Error picking images: $e');
+      _showError('Error picking images');
     }
   }
 
@@ -390,7 +390,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
         }
       }
     } catch (e) {
-      _showError('Error picking files: $e');
+      _showError('Error picking files');
     }
   }
 
@@ -409,7 +409,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
         );
       }
     } catch (e) {
-      _showError('Error recording video: $e');
+      _showError('Error recording video');
     }
   }
 
@@ -508,7 +508,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
       _showSuccess('Post enhanced by ELIZA AI)');
       _updateButtonState();
     } catch (e) {
-      _showError('ELIZA enhancement failed: $e');
+      _showError('ELIZA enhancement failed');
       setState(() => _isProcessingAI = false);
     }
   }
@@ -528,7 +528,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
       });
     } catch (e) {
       setState(() {
-        _errorMessage = 'Error: $e';
+        _errorMessage = 'Error';
         _isLoading = false;
       });
     }
@@ -689,6 +689,10 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
       container.read(postUploadMessageProvider.notifier).state =
           'Error uploading post: $e';
     }
+  } catch (e) {
+    container.read(postUploadingProvider.notifier).state = false;
+    container.read(postUploadMessageProvider.notifier).state =
+        'Error uploading post';
   }
 
   void _clearForm() {

@@ -107,8 +107,7 @@ class FileTypeHelper {
     }
   }
 }
-
-// CursorHelper — kept for compat (new API doesn't use cursors)
+ 
 class CursorHelper {
   static bool isValidObjectId(String? cursor) {
     if (cursor == null || cursor.isEmpty) return false;
@@ -130,10 +129,7 @@ class CursorHelper {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Feed API Service — GET http://36.253.137.34:8005/api/posts/
-// ─────────────────────────────────────────────────────────────────────────────
-
+ 
 class FeedApiResponse {
   final int status;
   final Map<String, dynamic> data;
@@ -171,22 +167,15 @@ class FeedApiService {
     };
   }
 
-  /// Fetch feed posts with cursor-based pagination.
-  ///
-  /// First call: [cursor] = null  → GET /api/posts/
-  /// Subsequent: [cursor] = full next URL returned by the server,
-  ///             e.g. http://…/api/posts/?cursor=cD0yMDI2…
-  ///
-  /// Response shape:
-  ///   { "next": "<url|null>", "previous": "<url|null>", "results": [...] }
+  
   static Future<ContentData> fetchContents({
-    String? cursor, // full "next" URL from previous response
-    int limit = 20, // ignored — server controls page size (10)
+    String? cursor,  
+    int limit = 20,  
     String contentType = 'normal',
     required BuildContext context,
   }) async {
     try {
-      // If we have a cursor it IS the full next URL; otherwise use base endpoint
+      
       final uri =
           cursor != null && cursor.isNotEmpty
               ? Uri.parse('http://36.253.137.34:8005/api/feed/?cursor=$cursor')
@@ -384,9 +373,7 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
 
   DateTime _lastLoadTime = DateTime.now();
   static const int _minimumLoadInterval = 500;
-  static List<FeedContent> _cachedContents = [];
-  static String? _cachedNextCursor;
-  static bool _cachedHasMore = false;
+ 
   final Map<String, bool> _reactionState = {};
 
   @override
@@ -622,18 +609,7 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
       _handleError('Failed to refresh feed');
     }
   }
-
-  // Future<void> _retryLoadWithDifferentParams() async {
-  //   setState(() {
-  //     _nextCursor = null;
-  //     _currentOffset = 0;
-  //     _hasMoreContent = true;
-  //     _hasError = false;
-  //     _useCursorPagination = true;
-  //   });
-  //   await _loadMoreContent();
-  // }
-
+ 
   void _handleError(String message) {
     if (mounted) {
       setState(() {
@@ -717,8 +693,7 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
     if (_hasError && _allContents.isEmpty) return _buildErrorState();
     return _buildInfiniteScrollList();
   }
-
-  Widget _buildInitialLoadingState() => _buildShimmerList();
+ 
   Widget _buildShimmerList() => const _ShimmerFeedList();
 
   Widget _buildErrorState() => Center(
@@ -1775,7 +1750,7 @@ class _FeedItemState extends State<FeedItem>
             CachedNetworkImage(
               imageUrl: url,
               fit: BoxFit.cover,
-              memCacheWidth: (MediaQuery.of(context).size.width * 0.6).toInt(),
+              filterQuality: FilterQuality.high,
               placeholder:
                   (_, __) => Container(
                     color: Colors.grey[200],
@@ -1846,142 +1821,7 @@ class _FeedItemState extends State<FeedItem>
       ),
     );
   }
-
-  Widget _buildSingleImage(String url) => GestureDetector(
-    onTap: () => _showMediaGallery(context, [url], 0),
-    child: Container(
-      width: double.infinity,
-      alignment: Alignment.center,
-      child: CachedNetworkImage(
-        filterQuality: FilterQuality.high,
-        imageUrl: url,
-        fit: BoxFit.contain,
-        memCacheWidth: (MediaQuery.of(context).size.width * 1.5).toInt(),
-        placeholder:
-            (_, __) => Container(
-              height: 250,
-              color: Colors.grey[300],
-              child: Center(
-                child: SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: Image.asset(
-                    'animation/IdeaBulb.gif',
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
-            ),
-        errorWidget:
-            (_, __, ___) => Container(
-              height: 250,
-              color: Colors.grey[300],
-              child: const Icon(Icons.error),
-            ),
-      ),
-    ),
-  );
-
-  Widget _buildImageGallery(List<String> urls) {
-    if (urls.length == 1) return _buildSingleImage(urls[0]);
-    if (urls.length == 2) {
-      return Row(
-        children: [
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(right: 2),
-              child: _buildGridImage(urls[0], 0, urls),
-            ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 2),
-              child: _buildGridImage(urls[1], 1, urls),
-            ),
-          ),
-        ],
-      );
-    }
-    return Container(
-      constraints: const BoxConstraints(maxHeight: 400),
-      child: GridView.builder(
-        physics: const NeverScrollableScrollPhysics(),
-        shrinkWrap: true,
-        padding: EdgeInsets.zero,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 4.0,
-          mainAxisSpacing: 4.0,
-          childAspectRatio: 1.0,
-        ),
-        itemCount: urls.length > 4 ? 4 : urls.length,
-        itemBuilder: (context, index) {
-          if (index == 3 && urls.length > 4) {
-            return GestureDetector(
-              onTap: () => _showMediaGallery(context, urls, index),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  _buildGridImage(urls[index], index, urls),
-                  Container(
-                    color: Colors.black.withAlpha(60),
-                    child: Center(
-                      child: Text(
-                        '+${urls.length - 4}',
-                        style: const TextStyle(
-                          color: AppColors.whitecolor,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-          return _buildGridImage(urls[index], index, urls);
-        },
-      ),
-    );
-  }
-
-  Widget _buildGridImage(String url, int index, List<String> allUrls) =>
-      GestureDetector(
-        onTap: () => _showMediaGallery(context, allUrls, index),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            width: double.infinity,
-            alignment: Alignment.center,
-            child: CachedNetworkImage(
-              imageUrl: url,
-              fit: BoxFit.contain,
-              memCacheWidth: (MediaQuery.of(context).size.width * 0.75).toInt(),
-              placeholder:
-                  (_, __) => Container(
-                    color: Colors.grey[300],
-                    child: Center(
-                      child: SizedBox(
-                        width: 30,
-                        height: 30,
-                        child: Image.asset(
-                          'animation/IdeaBulb.gif',
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    ),
-                  ),
-              errorWidget:
-                  (_, __, ___) => Container(
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.error, color: AppColors.whitecolor),
-                  ),
-            ),
-          ),
-        ),
-      );
-
+ 
   Widget _buildDocumentPreview(
     String fileUrl,
     String label,
@@ -3874,14 +3714,7 @@ class _ShimmerCardTextOnly extends StatelessWidget {
   }
 }
 
-class _ShimmerCardWithMedia extends StatelessWidget {
-  const _ShimmerCardWithMedia();
-
-  @override
-  Widget build(BuildContext context) {
-    return _ShimmerWrapper(child: _PostSkeleton(showMedia: true));
-  }
-}
+ 
 
 class _ShimmerWrapper extends StatelessWidget {
   final Widget child;
@@ -4037,7 +3870,7 @@ class _ShimmerFeedList extends StatelessWidget {
 
 typedef _ShimmerFeedCard = _ShimmerCardTextOnly;
 
-typedef _ShimmerFeedCardWithMedia = _ShimmerCardWithMedia;
+// typedef _ShimmerFeedCardWithMedia = _ShimmerCardWithMedia;
 
 class _FeedRefreshBar extends StatelessWidget {
   const _FeedRefreshBar();

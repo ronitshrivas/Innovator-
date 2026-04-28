@@ -13,6 +13,7 @@ import 'package:innovator/ecommerce/screens/Shop/Shop_Page.dart';
 import 'package:innovator/elearning/screens/course_list_screen.dart';
 import 'package:innovator/innovator_home.dart';
 import 'package:innovator/Innovator/screens/Search/Searchpage.dart';
+import 'package:innovator/research/screens/research_list_screen.dart';
 
 const double _kEdgeThreshold = 80.0;
 
@@ -92,7 +93,11 @@ class _FloatingMenuWidgetState extends ConsumerState<FloatingMenuWidget>
     {'icon': Icons.home, 'name': 'FEED', 'action': 'navigate_home'},
     {'icon': Icons.school, 'name': 'COURSE', 'action': 'open_course'},
     {'icon': Icons.add_a_photo, 'name': 'ADD POST', 'action': 'add_photo'},
-    {'icon': Icons.developer_mode, 'name': 'Events', 'action': 'show_events'},
+    {
+      'icon': Icons.menu_book_rounded,
+      'name': 'Reseach Paper',
+      'action': 'show_papers',
+    },
   ];
 
   final List<Map<String, dynamic>> _bottomIcons = [
@@ -238,8 +243,9 @@ class _FloatingMenuWidgetState extends ConsumerState<FloatingMenuWidget>
       case 'add_photo':
         _nav.push(MaterialPageRoute(builder: (_) => const CreatePostScreen()));
         break;
-      case 'show_events':
-        _nav.push(MaterialPageRoute(builder: (_) => EventsHomePage()));
+      case 'show_papers':
+        // _nav.push(MaterialPageRoute(builder: (_) => EventsHomePage()));
+        _nav.push(MaterialPageRoute(builder: (_) => ResearchListScreen()));
         break;
       case 'open_shop':
         _nav.push(MaterialPageRoute(builder: (_) => const ShopPage()));
