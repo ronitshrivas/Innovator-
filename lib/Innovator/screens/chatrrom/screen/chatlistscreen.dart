@@ -292,7 +292,16 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
         ref.read(mutualFriendsProvider.notifier).bumpToTop(friendId);
         ref.read(lastActiveFriendProvider.notifier).state = null;
       }
+      _refreshOrder();
     });
+  }
+
+  void _refreshOrder() {
+    final friendId = ref.read(lastActiveFriendProvider);
+    if (friendId != null) {
+      ref.read(mutualFriendsProvider.notifier).bumpToTop(friendId);
+      ref.read(lastActiveFriendProvider.notifier).state = null;
+    }
   }
 
   @override
@@ -449,7 +458,15 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
               isOnline: friend.onlineStatus,
             ),
       ),
-    );
+    ).then((_) {
+      if (context.mounted) {
+        final lastFriend = ref.read(lastActiveFriendProvider);
+        if (lastFriend != null) {
+          ref.read(mutualFriendsProvider.notifier).bumpToTop(lastFriend);
+          ref.read(lastActiveFriendProvider.notifier).state = null;
+        }
+      }
+    });
   }
 
   Widget _buildSectionHeader(String title, int count) {
@@ -550,47 +567,47 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
       ),
     );
   }
+}
 
-  Widget _buildEmpty(WidgetRef ref) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: const BoxDecoration(
-                color: _orangeLight,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.people_outline_rounded,
-                color: _orange,
-                size: 40,
-              ),
+Widget _buildEmpty(WidgetRef ref) {
+  return Center(
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: const BoxDecoration(
+              color: _orangeLight,
+              shape: BoxShape.circle,
             ),
-            const SizedBox(height: 20),
-            const Text(
-              'No mutual connections yet',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: Colors.black87,
-              ),
+            child: const Icon(
+              Icons.people_outline_rounded,
+              color: _orange,
+              size: 40,
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Start following people to see\nyour mutual connections here.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'No mutual connections yet',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Colors.black87,
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Start following people to see\nyour mutual connections here.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

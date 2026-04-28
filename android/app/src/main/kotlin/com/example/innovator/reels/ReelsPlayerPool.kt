@@ -138,6 +138,17 @@ class ReelsPlayerPool(private val context: Context) {
         }
     }
 
+    fun setOnFirstFrameListener(slot: Int, callback: () -> Unit) {
+        mainHandler.post {
+            players[slot]?.addListener(object : Player.Listener {
+                override fun onRenderedFirstFrame() {
+                    callback()
+                    players[slot]?.removeListener(this)
+                }
+            })
+        }
+    }
+
     /** Called when the SurfaceHolder is destroyed. */
     fun detachDisplaySurface() {
         displaySurface = null
@@ -165,10 +176,10 @@ class ReelsPlayerPool(private val context: Context) {
     private fun buildPlayer(url: String, token: String): ExoPlayer {
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                1_500,   // minBufferMs   — start fast
-                15_000,  // maxBufferMs   — buffer ahead
-                1_000,   // bufferForPlaybackMs
-                1_500    // bufferForPlaybackAfterRebufferMs
+                3_000,   // minBufferMs
+                20_000,  // maxBufferMs
+                1_500,   // bufferForPlaybackMs
+                3_000    // bufferForPlaybackAfterRebufferMs
             )
             .build()
 

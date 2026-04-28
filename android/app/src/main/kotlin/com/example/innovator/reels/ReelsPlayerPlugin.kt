@@ -14,6 +14,7 @@ class ReelsPlayerPlugin : FlutterPlugin, MethodCallHandler {
     private lateinit var channel: MethodChannel
     private lateinit var context: Context
     private lateinit var pool: ReelsPlayerPool
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         context = binding.applicationContext
@@ -81,6 +82,16 @@ class ReelsPlayerPlugin : FlutterPlugin, MethodCallHandler {
             "release" -> {
                 val slot = call.argument<Int>("slot") ?: return result.error("ARG", "slot missing", null)
                 pool.release(slot)
+                result.success(null)
+            }
+
+            "onFirstFrame" -> {
+                val slot = call.argument<Int>("slot") ?: return result.error("ARG", "slot missing", null)
+                pool.setOnFirstFrameListener(slot) {
+                    mainHandler.post {
+                        channel.invokeMethod("firstFrameReady", mapOf("slot" to slot))
+                    }
+                }
                 result.success(null)
             }
 

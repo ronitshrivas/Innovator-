@@ -180,6 +180,10 @@ class FeedApiService {
           cursor != null && cursor.isNotEmpty
               ? Uri.parse('http://36.253.137.34:8005/api/feed/?cursor=$cursor')
               : Uri.parse('http://36.253.137.34:8005/api/feed/');
+      // final uri =
+      //     cursor != null && cursor.startsWith('http')
+      //         ? Uri.parse(cursor) // full URL from "next" field
+      //         : Uri.parse('http://36.253.137.34:8005/api/feed/');
 
       developer.log('[Feed] GET $uri');
 
@@ -264,6 +268,10 @@ class ContentData {
         if (hasMore && rawCursor != null) {
           nextCursor = rawCursor.toString();
         }
+        // final rawNext = rawJson['next']; // full next URL
+        // if (hasMore && rawNext != null) {
+        //   nextCursor = rawNext.toString(); // store full URL
+        // }
 
         postList = rawJson['results'] as List? ?? [];
       }
@@ -1130,7 +1138,12 @@ class _FeedItemState extends State<FeedItem>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Padding(
-                        padding: const EdgeInsets.all(8.0),
+                        padding: const EdgeInsets.only(
+                          top: 2.0,
+                          right: 2.0,
+                          left: 2.0,
+                          bottom: 2.0,
+                        ),
                         child: Row(
                           children: [
                             Expanded(
@@ -1140,30 +1153,61 @@ class _FeedItemState extends State<FeedItem>
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Flexible(
-                                    child: Row(
-                                      children: [
-                                        Text(
-                                          widget.content.author.name,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 16.0,
-                                            fontFamily: 'InterThin',
+                                    child: LayoutBuilder(
+                                      // children: [
+                                      //   Text(
+                                      //     widget.content.author.name,
+                                      //     style: const TextStyle(
+                                      //       fontWeight: FontWeight.w700,
+                                      //       fontSize: 16.0,
+                                      //       fontFamily: 'InterThin',
+                                      //     ),
+                                      //     maxLines: 1,
+                                      //     overflow: TextOverflow.ellipsis,
+                                      //   ),
+                                      //   SizedBox(width: 5),
+                                      //   Container(
+                                      //     width: 4.0,
+                                      //     height: 4.0,
+                                      //     decoration: BoxDecoration(
+                                      //       color: _getTypeColor(
+                                      //         widget.content.type,
+                                      //       ),
+                                      //       shape: BoxShape.circle,
+                                      //     ),
+                                      //   ),
+                                      // ],
+                                      builder: (context, constraints) {
+                                        final nameStyle = const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 16.0,
+                                          fontFamily: 'InterThin',
+                                        );
+
+                                        // Measure how wide the name actually is
+                                        final tp = TextPainter(
+                                          text: TextSpan(
+                                            text: widget.content.author.name,
+                                            style: nameStyle,
                                           ),
                                           maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        SizedBox(width: 5),
-                                        Container(
-                                          width: 4.0,
-                                          height: 4.0,
-                                          decoration: BoxDecoration(
-                                            color: _getTypeColor(
-                                              widget.content.type,
-                                            ),
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                      ],
+                                          textDirection: TextDirection.ltr,
+                                        )..layout(maxWidth: double.infinity);
+
+                                        final nameWillOverflow =
+                                            tp.width > constraints.maxWidth;
+
+                                        return Text(
+                                          widget.content.author.name,
+                                          style: nameStyle,
+                                          overflow:
+                                              nameWillOverflow
+                                                  ? TextOverflow.ellipsis
+                                                  : TextOverflow.visible,
+                                          maxLines: 1,
+                                          softWrap: false,
+                                        );
+                                      },
                                     ),
                                   ),
 
@@ -1199,6 +1243,8 @@ class _FeedItemState extends State<FeedItem>
                                           }
                                         },
                                       ),
+                                      // maxLines: 1,
+                                      // overflow: TextOverflow.ellipsis,
                                     ),
                                 ],
                               ),
@@ -1367,6 +1413,7 @@ class _FeedItemState extends State<FeedItem>
                       initialLikeStatus: widget.content.isLiked,
                       likeService: likeService,
                       initialReactionType: widget.content.currentUserReaction,
+                      isReel: widget.content.isReel,
                       onLikeToggled: (isLiked) {
                         widget.onLikeToggled(isLiked);
                         SoundPlayer().playlikeSound();
@@ -2238,7 +2285,7 @@ class _FeedItemState extends State<FeedItem>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
-          duration: const Duration(seconds: 2),
+          duration: const Duration(milliseconds: 800),
         ),
       );
     } else {
@@ -2259,7 +2306,7 @@ class _FeedItemState extends State<FeedItem>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
-          duration: const Duration(seconds: 2),
+          duration: const Duration(milliseconds: 500),
         ),
       );
     }
@@ -2635,7 +2682,7 @@ class _FeedItemState extends State<FeedItem>
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
-              duration: const Duration(seconds: 3),
+              duration: Duration(seconds: 1),
             ),
           );
         }
@@ -2664,7 +2711,7 @@ class _FeedItemState extends State<FeedItem>
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
-              duration: const Duration(seconds: 3),
+              duration: const Duration(seconds: 1),
             ),
           );
         }
@@ -2684,7 +2731,7 @@ class _FeedItemState extends State<FeedItem>
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
-            duration: const Duration(seconds: 3),
+            duration: const Duration(seconds: 1),
           ),
         );
       }
@@ -2909,7 +2956,7 @@ class _FeedItemState extends State<FeedItem>
           backgroundColor: Colors.green,
           colorText: AppColors.whitecolor,
           icon: const Icon(Icons.block, color: AppColors.whitecolor),
-          duration: const Duration(seconds: 3),
+          duration: const Duration(seconds: 1),
         );
       } else if (response.statusCode == 401) {
         Navigator.pushAndRemoveUntil(

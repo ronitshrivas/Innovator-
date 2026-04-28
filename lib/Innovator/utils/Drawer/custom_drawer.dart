@@ -27,6 +27,7 @@ import 'package:innovator/Innovator/widget/FloatingMenuwidget.dart';
 import 'package:innovator/KMS/core/constants/service/auth_wrapper.dart';
 import 'package:innovator/ecommerce/screens/Shop/Shop_Page.dart';
 import 'package:innovator/elearning/provider/notificationProvider.dart';
+import 'package:innovator/elearning/screens/course_list_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -424,20 +425,21 @@ class _TrueInstantDrawerState extends ConsumerState<TrueInstantDrawer> {
             title: 'Profile',
             onTap: _goToProfile,
           ),
+
           _QuickMenuItem(
-            icon: Icons.psychology_rounded,
-            title: 'Eliza ChatBot',
-            onTap: _goToEliza,
+            icon: Icons.menu_book_rounded,
+            title: 'E-Learning',
+            onTap: _goToElearning,
           ),
-          // _QuickMenuItem(
-          //   icon: Icons.menu_book_rounded,
-          //   title: 'E-Learning',
-          //   onTap: _goToElearning,
-          // ),
           _QuickMenuItem(
             icon: Icons.shop,
             title: 'Shop',
             onTap: _goToEcommerce,
+          ),
+          _QuickMenuItem(
+            icon: Icons.psychology_rounded,
+            title: 'Eliza ChatBot',
+            onTap: _goToEliza,
           ),
           _QuickMenuItem(
             icon: Icons.event_available,
@@ -499,7 +501,7 @@ class _TrueInstantDrawerState extends ConsumerState<TrueInstantDrawer> {
   );
   void _goToEliza() => _quickNavigate(() => ElizaChatScreen());
   void _goToEvents() => _quickNavigate(() => EventsHomePage());
-  //void _goToElearning() => _quickNavigate(() => const HomeScreen());
+  void _goToElearning() => _quickNavigate(() => const CourseListScreen());
   void _goToEcommerce() => _quickNavigate(() => const ShopPage());
   void _goToPrivacy() =>
       _quickNavigate(() => const ProviderScope(child: PrivacyPolicy()));

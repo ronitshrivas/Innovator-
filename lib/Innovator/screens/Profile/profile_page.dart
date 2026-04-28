@@ -11,6 +11,7 @@ import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/models/Feed_Content_Model.dart';
 import 'package:innovator/Innovator/screens/Feed/Inner_Homepage.dart';
+import 'package:innovator/Innovator/screens/Feed/Optimize%20Media/full_screen_image_viewer.dart';
 import 'package:innovator/Innovator/screens/Feed/Video_Feed.dart';
 import 'package:innovator/Innovator/screens/Follow/follow_Button.dart';
 import 'package:innovator/Innovator/screens/Profile/Edit_Profile.dart';
@@ -641,26 +642,45 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                   Stack(
                     children: [
                       Obx(
-                        () => CircleAvatar(
-                          radius: 60,
-                          backgroundColor: const Color.fromRGBO(
-                            235,
-                            111,
-                            70,
-                            0.2,
+                        () => GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (_) => FullScreenImageViewer(
+                                      imageUrl:
+                                          _userController
+                                              .getFullProfilePicturePath() ??
+                                          profile.avatarUrl ??
+                                          '',
+                                      tag:
+                                          'profile_${_userController.profilePictureVersion.value}',
+                                    ),
+                              ),
+                            );
+                          },
+                          child: CircleAvatar(
+                            radius: 60,
+                            backgroundColor: const Color.fromRGBO(
+                              235,
+                              111,
+                              70,
+                              0.2,
+                            ),
+                            key: ValueKey(
+                              'profile_${_userController.profilePictureVersion.value}',
+                            ),
+                            backgroundImage: _resolveAvatarImage(profile),
+                            child:
+                                _shouldShowPlaceholder(profile)
+                                    ? const Icon(
+                                      Icons.person,
+                                      size: 60,
+                                      color: Color.fromRGBO(244, 135, 6, 1),
+                                    )
+                                    : null,
                           ),
-                          key: ValueKey(
-                            'profile_${_userController.profilePictureVersion.value}',
-                          ),
-                          backgroundImage: _resolveAvatarImage(profile),
-                          child:
-                              _shouldShowPlaceholder(profile)
-                                  ? const Icon(
-                                    Icons.person,
-                                    size: 60,
-                                    color: Color.fromRGBO(244, 135, 6, 1),
-                                  )
-                                  : null,
                         ),
                       ),
                       Positioned(
@@ -728,26 +748,26 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                             color: Colors.grey[600],
                           ),
                         ),
-                        if (profile.role.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color.fromRGBO(244, 135, 6, 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            margin: const EdgeInsets.only(top: 8),
-                            child: Text(
-                              profile.role.toUpperCase(),
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Color.fromRGBO(244, 135, 6, 1),
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
+                        // if (profile.role.isNotEmpty)
+                        //   Container(
+                        //     padding: const EdgeInsets.symmetric(
+                        //       horizontal: 8,
+                        //       vertical: 4,
+                        //     ),
+                        //     decoration: BoxDecoration(
+                        //       color: const Color.fromRGBO(244, 135, 6, 0.1),
+                        //       borderRadius: BorderRadius.circular(12),
+                        //     ),
+                        //     margin: const EdgeInsets.only(top: 8),
+                        //     child: Text(
+                        //       profile.role.toUpperCase(),
+                        //       style: const TextStyle(
+                        //         fontSize: 12,
+                        //         color: Color.fromRGBO(244, 135, 6, 1),
+                        //         fontWeight: FontWeight.bold,
+                        //       ),
+                        //     ),
+                        //   ),
                       ],
                     ),
                   ),
@@ -969,13 +989,13 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                                 value: profile.email,
                                 icon: Icons.email,
                               ),
-                              if (profile.bio != null &&
-                                  profile.bio!.isNotEmpty)
-                                ProfileInfoCard(
-                                  title: 'Bio',
-                                  value: profile.bio!,
-                                  icon: Icons.description,
-                                ),
+                              // if (profile.bio != null &&
+                              //     profile.bio!.isNotEmpty)
+                              //   ProfileInfoCard(
+                              //     title: 'Bio',
+                              //     value: profile.bio!,
+                              //     icon: Icons.description,
+                              //   ),
                               ProfileInfoCard(
                                 title: 'Member Since',
                                 value: _formatDate(profile.createdAt),

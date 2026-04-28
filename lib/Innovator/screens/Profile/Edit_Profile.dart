@@ -32,10 +32,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
   late AnimationController _animCtrl;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
-
   final _formKey = GlobalKey<FormState>();
-
-  // ── Controllers (new API field names) ────────────────────────────────────
   late TextEditingController _fullNameCtrl;
   late TextEditingController _phoneCtrl;
   late TextEditingController _addressCtrl;

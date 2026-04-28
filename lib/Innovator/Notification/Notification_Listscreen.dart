@@ -120,7 +120,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
       }
     } catch (e) {
       if (!mounted) return;
-      _showErrorSnackbar('Error fetching notifications');
+      // _showErrorSnackbar('Error fetching notifications');
     } finally {
       if (!mounted) return;
       setState(() => isLoading = false);
@@ -158,7 +158,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
       }
     } catch (e) {
       if (!mounted) return;
-      _showErrorSnackbar('Error fetching more notifications');
+      // _showErrorSnackbar('Error fetching more notifications');
     } finally {
       if (!mounted) return;
       setState(() => isLoadingMore = false);
@@ -191,7 +191,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
         );
       }
     } catch (e) {
-      _showErrorSnackbar('Error marking notification as read');
+      //_showErrorSnackbar('Error marking notification as read');
     }
   }
 
@@ -223,7 +223,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
         throw Exception('Failed to mark all as read: ${response.statusCode}');
       }
     } catch (e) {
-      _showErrorSnackbar('Error marking all notifications as read');
+      //_showErrorSnackbar('Error marking all notifications as read');
     }
   }
 
@@ -248,7 +248,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
         );
       }
     } catch (e) {
-      _showErrorSnackbar('Error deleting notification');
+      //_showErrorSnackbar('Error deleting notification');
     }
   }
 
@@ -274,6 +274,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
         }
         break;
 
+      // ← FIX 1: add 'chat_message' alongside 'message'
       case 'message':
       case 'chat_message':
       case 'new_message':
@@ -311,7 +312,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
 
   void _navigateToChat(NotificationModel notification) {
     if (notification.senderId == null || notification.senderId!.isEmpty) {
-      _showErrorSnackbar('Unable to open chat: sender not found');
+      //_showErrorSnackbar('Unable to open chat: sender not found');
       return;
     }
 
@@ -770,6 +771,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
+        duration: const Duration(milliseconds: 800),
       ),
     );
   }
@@ -845,6 +847,28 @@ class _NotificationListScreenState extends State<NotificationListScreen>
         return type;
     }
   }
+
+  // String _getNotificationTypeLabel(String type) {
+  //   switch (type.toLowerCase()) {
+  //     case 'message':
+  //     case 'chat_message': // ← ADD
+  //       return 'Message';
+  //     case 'comment':
+  //       return 'Comment';
+  //     case 'like':
+  //       return 'Like';
+  //     case 'friend_request':
+  //       return 'Friend Request';
+  //     case 'mention':
+  //       return 'Mention';
+  //     case 'share':
+  //       return 'Share';
+  //     case 'follow':
+  //       return 'Follow';
+  //     default:
+  //       return type;
+  //   }
+  // }
 }
 
 class NotificationModel {
