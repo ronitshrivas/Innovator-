@@ -99,9 +99,7 @@ class _NotificationTile extends ConsumerStatefulWidget {
 class _NotificationTileState extends ConsumerState<_NotificationTile> {
   @override
   ConsumerState<_NotificationTile> createState() => _NotificationTileState();
-}
 
-class _NotificationTileState extends ConsumerState<_NotificationTile> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);

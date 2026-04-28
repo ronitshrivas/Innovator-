@@ -11,6 +11,7 @@ import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/models/Feed_Content_Model.dart';
 import 'package:innovator/Innovator/screens/Feed/Inner_Homepage.dart';
+import 'package:innovator/Innovator/screens/Feed/Optimize%20Media/full_screen_image_viewer.dart';
 import 'package:innovator/Innovator/screens/Feed/Video_Feed.dart';
 import 'package:innovator/Innovator/screens/Follow/follow_Button.dart';
 import 'package:innovator/Innovator/screens/Profile/Edit_Profile.dart';
@@ -747,26 +748,26 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                             color: Colors.grey[600],
                           ),
                         ),
-                        if (profile.role.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color.fromRGBO(244, 135, 6, 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            margin: const EdgeInsets.only(top: 8),
-                            child: Text(
-                              profile.role.toUpperCase(),
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Color.fromRGBO(244, 135, 6, 1),
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
+                        // if (profile.role.isNotEmpty)
+                        //   Container(
+                        //     padding: const EdgeInsets.symmetric(
+                        //       horizontal: 8,
+                        //       vertical: 4,
+                        //     ),
+                        //     decoration: BoxDecoration(
+                        //       color: const Color.fromRGBO(244, 135, 6, 0.1),
+                        //       borderRadius: BorderRadius.circular(12),
+                        //     ),
+                        //     margin: const EdgeInsets.only(top: 8),
+                        //     child: Text(
+                        //       profile.role.toUpperCase(),
+                        //       style: const TextStyle(
+                        //         fontSize: 12,
+                        //         color: Color.fromRGBO(244, 135, 6, 1),
+                        //         fontWeight: FontWeight.bold,
+                        //       ),
+                        //     ),
+                        //   ),
                       ],
                     ),
                   ),

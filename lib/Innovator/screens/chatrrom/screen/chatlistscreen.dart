@@ -304,7 +304,6 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
     }
   }
 
-class _ChatListScreenState extends ConsumerState<ChatListScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(mutualFriendsProvider);
@@ -568,47 +567,47 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
       ),
     );
   }
+}
 
-  Widget _buildEmpty(WidgetRef ref) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: const BoxDecoration(
-                color: _orangeLight,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.people_outline_rounded,
-                color: _orange,
-                size: 40,
-              ),
+Widget _buildEmpty(WidgetRef ref) {
+  return Center(
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: const BoxDecoration(
+              color: _orangeLight,
+              shape: BoxShape.circle,
             ),
-            const SizedBox(height: 20),
-            const Text(
-              'No mutual connections yet',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: Colors.black87,
-              ),
+            child: const Icon(
+              Icons.people_outline_rounded,
+              color: _orange,
+              size: 40,
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Start following people to see\nyour mutual connections here.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'No mutual connections yet',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Colors.black87,
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Start following people to see\nyour mutual connections here.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -4939,7 +4939,18 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
               fit: StackFit.expand,
               children: [
                 // ── Single shared SurfaceView (never leaves the tree) ──────
-                const ReelsSurfaceWidget(),
+                const ColoredBox(color: Colors.black),
+
+                // Surface confined to natural video aspect ratio (9:16 for standard reels)
+                // FittedBox with contain means: fill the screen height, preserve ratio.
+                // For landscape clips this adds side bars; for portrait clips (standard)
+                // it fills edge-to-edge on a portrait phone — identical to Instagram Reels.
+                Center(
+                  child: AspectRatio(
+                    aspectRatio: 9 / 16,
+                    child: const ReelsSurfaceWidget(),
+                  ),
+                ),
 
                 // ── PageView: transparent, handles swipe + overlays ────────
                 // Each page renders its OWN reel's avatar/name/caption/buttons.

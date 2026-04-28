@@ -539,13 +539,16 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: true,
-      backgroundColor: _bg,
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        leading: IconButton(onPressed: () {}, icon: Icon(Icons.arrow_back_ios)),
-        title:  Text(
+        leading: IconButton(
+          onPressed: () {},
+          icon: Icon(Icons.arrow_back_ios, color: Colors.black),
+        ),
+        title: Text(
           'Change Password',
           style: TextStyle(
             color: Colors.black,

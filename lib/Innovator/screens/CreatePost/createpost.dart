@@ -19,7 +19,6 @@ import 'package:mime/mime.dart';
 import 'package:innovator/Innovator/App_data/App_data.dart';
 import 'package:path/path.dart' as path;
 import 'package:image_picker/image_picker.dart';
- 
 
 class CreatePostScreen extends ConsumerStatefulWidget {
   const CreatePostScreen({super.key});
@@ -605,92 +604,92 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
   // }
 
   Future<void> _createPost() async {
-  if (_descriptionController.text.trim().isEmpty && _selectedFiles.isEmpty) {
-    _showError('Please enter a description or select a file');
-    return;
-  }
-
-  // Capture everything BEFORE navigating (widget will be disposed)
-  final String content = _descriptionController.text.trim();
-  final String? categoryId = _selectedCategoryId;
-  final List<PlatformFile> filesToUpload = List.from(_selectedFiles);
-  final String? accessToken = _appData.accessToken;
-
-  // ✅ Get the ProviderContainer — survives navigation
-  final container = ProviderScope.containerOf(context);
-
-  // ✅ Set uploading true BEFORE navigating
-  container.read(postUploadingProvider.notifier).state = true;
-  container.read(postUploadMessageProvider.notifier).state = null;
-
-  // ✅ Navigate immediately
-  _clearForm();
-  Navigator.pushAndRemoveUntil(
-    context,
-    MaterialPageRoute(builder: (_) => const Homepage()),
-    (route) => false,
-  );
-
-  // ✅ Upload runs after navigation using container (not ref)
-  try {
-    final uri = Uri.parse(ApiConstants.createpost);
-    final request = http.MultipartRequest('POST', uri);
-
-    if (accessToken != null) {
-      request.headers['Authorization'] = 'Bearer $accessToken';
+    if (_descriptionController.text.trim().isEmpty && _selectedFiles.isEmpty) {
+      _showError('Please enter a description or select a file');
+      return;
     }
 
-    request.fields['content'] = content;
+    // Capture everything BEFORE navigating (widget will be disposed)
+    final String content = _descriptionController.text.trim();
+    final String? categoryId = _selectedCategoryId;
+    final List<PlatformFile> filesToUpload = List.from(_selectedFiles);
+    final String? accessToken = _appData.accessToken;
 
-    if (categoryId != null) {
-      request.fields['category_ids'] = categoryId;
-    }
+    // ✅ Get the ProviderContainer — survives navigation
+    final container = ProviderScope.containerOf(context);
 
-    for (final file in filesToUpload) {
-      if (file.path == null) continue;
-      final mimeType =
-          lookupMimeType(file.path!) ?? 'application/octet-stream';
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'uploaded_media',
-          file.path!,
-          contentType: MediaType.parse(mimeType),
-          filename: path.basename(file.path!),
-        ),
-      );
-    }
+    // ✅ Set uploading true BEFORE navigating
+    container.read(postUploadingProvider.notifier).state = true;
+    container.read(postUploadMessageProvider.notifier).state = null;
 
-    final streamed = await request.send().timeout(
-      const Duration(seconds: 60),
+    // ✅ Navigate immediately
+    _clearForm();
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const Homepage()),
+      (route) => false,
     );
-    final response = await http.Response.fromStream(streamed);
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
+    // ✅ Upload runs after navigation using container (not ref)
+    try {
+      final uri = Uri.parse(ApiConstants.createpost);
+      final request = http.MultipartRequest('POST', uri);
+
+      if (accessToken != null) {
+        request.headers['Authorization'] = 'Bearer $accessToken';
+      }
+
+      request.fields['content'] = content;
+
+      if (categoryId != null) {
+        request.fields['category_ids'] = categoryId;
+      }
+
+      for (final file in filesToUpload) {
+        if (file.path == null) continue;
+        final mimeType =
+            lookupMimeType(file.path!) ?? 'application/octet-stream';
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'uploaded_media',
+            file.path!,
+            contentType: MediaType.parse(mimeType),
+            filename: path.basename(file.path!),
+          ),
+        );
+      }
+
+      final streamed = await request.send().timeout(
+        const Duration(seconds: 60),
+      );
+      final response = await http.Response.fromStream(streamed);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        container.read(postUploadingProvider.notifier).state = false;
+        container.read(postUploadMessageProvider.notifier).state =
+            'Post published successfully! 🎉';
+      } else if (response.statusCode == 401) {
+        container.read(postUploadingProvider.notifier).state = false;
+        container.read(postUploadMessageProvider.notifier).state =
+            'Authentication failed. Please log in again.';
+      } else {
+        Map<String, dynamic> body = {};
+        try {
+          body = json.decode(response.body) as Map<String, dynamic>;
+        } catch (_) {}
+        final msg =
+            body['detail']?.toString() ??
+            body['message']?.toString() ??
+            'Failed to create post (${response.statusCode})';
+        container.read(postUploadingProvider.notifier).state = false;
+        container.read(postUploadMessageProvider.notifier).state = msg;
+      }
+    } catch (e) {
       container.read(postUploadingProvider.notifier).state = false;
       container.read(postUploadMessageProvider.notifier).state =
-          'Post published successfully! 🎉';
-    } else if (response.statusCode == 401) {
-      container.read(postUploadingProvider.notifier).state = false;
-      container.read(postUploadMessageProvider.notifier).state =
-          'Authentication failed. Please log in again.';
-    } else {
-      Map<String, dynamic> body = {};
-      try {
-        body = json.decode(response.body) as Map<String, dynamic>;
-      } catch (_) {}
-      final msg =
-          body['detail']?.toString() ??
-          body['message']?.toString() ??
-          'Failed to create post (${response.statusCode})';
-      container.read(postUploadingProvider.notifier).state = false;
-      container.read(postUploadMessageProvider.notifier).state = msg;
+          'Error uploading post: $e';
     }
-  } catch (e) {
-    container.read(postUploadingProvider.notifier).state = false;
-    container.read(postUploadMessageProvider.notifier).state =
-        'Error uploading post: $e';
   }
-}
 
   void _clearForm() {
     setState(() {

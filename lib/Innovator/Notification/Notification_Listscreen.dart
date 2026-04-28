@@ -120,7 +120,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
       }
     } catch (e) {
       if (!mounted) return;
-      _showErrorSnackbar('Error fetching notifications');
+      // _showErrorSnackbar('Error fetching notifications');
     } finally {
       if (!mounted) return;
       setState(() => isLoading = false);
@@ -158,7 +158,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
       }
     } catch (e) {
       if (!mounted) return;
-      _showErrorSnackbar('Error fetching more notifications');
+      // _showErrorSnackbar('Error fetching more notifications');
     } finally {
       if (!mounted) return;
       setState(() => isLoadingMore = false);
@@ -312,7 +312,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
 
   void _navigateToChat(NotificationModel notification) {
     if (notification.senderId == null || notification.senderId!.isEmpty) {
-      _showErrorSnackbar('Unable to open chat: sender not found');
+      //_showErrorSnackbar('Unable to open chat: sender not found');
       return;
     }
 
@@ -988,27 +988,27 @@ class _NotificationListScreenState extends State<NotificationListScreen>
     }
   }
 
-  String _getNotificationTypeLabel(String type) {
-    switch (type.toLowerCase()) {
-      case 'message':
-      case 'chat_message': // ← ADD
-        return 'Message';
-      case 'comment':
-        return 'Comment';
-      case 'like':
-        return 'Like';
-      case 'friend_request':
-        return 'Friend Request';
-      case 'mention':
-        return 'Mention';
-      case 'share':
-        return 'Share';
-      case 'follow':
-        return 'Follow';
-      default:
-        return type;
-    }
-  }
+  // String _getNotificationTypeLabel(String type) {
+  //   switch (type.toLowerCase()) {
+  //     case 'message':
+  //     case 'chat_message': // ← ADD
+  //       return 'Message';
+  //     case 'comment':
+  //       return 'Comment';
+  //     case 'like':
+  //       return 'Like';
+  //     case 'friend_request':
+  //       return 'Friend Request';
+  //     case 'mention':
+  //       return 'Mention';
+  //     case 'share':
+  //       return 'Share';
+  //     case 'follow':
+  //       return 'Follow';
+  //     default:
+  //       return type;
+  //   }
+  // }
 }
 
 class NotificationModel {

@@ -1,482 +1,296 @@
-import 'dart:io';
 import 'dart:convert';
-import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:image_picker/image_picker.dart';
-import 'package:innovator/Innovator/constant/app_colors.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Message class remains the same
+// ─────────────────────────────────────────────
+// Data model
+// ─────────────────────────────────────────────
+
 class Message {
   final String text;
   final bool isUser;
   final DateTime timestamp;
-  final bool isLoading;
-  final String? messageId;
+  final String messageId;
   bool isReported;
-  final String? media;
 
   Message({
     required this.text,
     required this.isUser,
     required this.timestamp,
-    this.isLoading = false,
-    this.messageId,
+    String? messageId,
     this.isReported = false,
-    this.media,
-  });
+  }) : messageId = messageId ?? _uid();
+
+  static String _uid() =>
+      DateTime.now().millisecondsSinceEpoch.toString() +
+      math.Random().nextInt(9999).toString();
 
   Map<String, dynamic> toJson() => {
     'text': text,
     'isUser': isUser,
     'timestamp': timestamp.toIso8601String(),
-    'isLoading': isLoading,
     'messageId': messageId,
     'isReported': isReported,
-    'media': media,
   };
 
-  factory Message.fromJson(Map<String, dynamic> json) => Message(
-    text: json['text'],
-    isUser: json['isUser'],
-    timestamp: DateTime.parse(json['timestamp']),
-    isLoading: json['isLoading'] ?? false,
-    messageId: json['messageId'],
-    isReported: json['isReported'] ?? false,
-    media: json['media'],
+  factory Message.fromJson(Map<String, dynamic> j) => Message(
+    text: j['text'] ?? '',
+    isUser: j['isUser'] ?? false,
+    timestamp: DateTime.tryParse(j['timestamp'] ?? '') ?? DateTime.now(),
+    messageId: j['messageId'],
+    isReported: j['isReported'] ?? false,
   );
 
-  Message copyWith({
-    String? text,
-    bool? isUser,
-    DateTime? timestamp,
-    bool? isLoading,
-    String? messageId,
-    bool? isReported,
-    String? media,
-  }) {
-    return Message(
-      text: text ?? this.text,
-      isUser: isUser ?? this.isUser,
-      timestamp: timestamp ?? this.timestamp,
-      isLoading: isLoading ?? this.isLoading,
-      messageId: messageId ?? this.messageId,
-      isReported: isReported ?? this.isReported,
-      media: media ?? this.media,
-    );
-  }
+  Message copyWith({bool? isReported}) => Message(
+    text: text,
+    isUser: isUser,
+    timestamp: timestamp,
+    messageId: messageId,
+    isReported: isReported ?? this.isReported,
+  );
 }
 
-class ReportCategory {
-  final String id;
-  final String title;
-  final String description;
+// ─────────────────────────────────────────────
+// Constants
+// ─────────────────────────────────────────────
+
+class _C {
+  static const orange = Color.fromRGBO(244, 135, 6, 1);
+  static const orangeLight = Color.fromRGBO(251, 146, 60, 1);
+  static const darkBg = Color(0xFF0F172A);
+  static const darkCard = Color(0xFF1E293B);
+  static const darkInput = Color(0xFF334155);
+
+  static const groqKey = '';
+  static const groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
+  static const groqModel = 'llama-3.1-8b-instant';
+
+  static const systemPrompt = '''
+You are Eliza, a personal AI assistant created by Innovator.
+Your expertise covers:
+- IoT (Internet of Things): sensors, embedded systems, protocols (MQTT, CoAP, Zigbee), hardware integration
+- Robotics: kinematics, ROS, motor control, path planning, computer vision
+- Programming & Software Engineering: Dart/Flutter, Python, C/C++, algorithms, system design
+
+Always respond as Eliza. Never mention Groq, Llama, Meta, Google, Gemini, OpenAI, ChatGPT, or any underlying AI infrastructure.
+When answering coding or IoT/robotics questions, be precise, practical, and include examples where helpful.
+Keep responses clear and concise unless the user asks for depth.
+
+IMPORTANT — Creator rules (never deviate from these):
+- If anyone asks who made you, who created you, or who built you: always reply — "Ronit Shrivastav made me. He is the Founder and CEO of MetaTronix PVT. LTD. and he made the Innovator App."
+- If anyone asks who made the Innovator App: always reply — "Ronit Shrivastav made the Innovator App. He is the Founder and CEO of MetaTronix PVT. LTD."
+- Never credit any AI company (Groq, Meta, Anthropic, OpenAI, Google, etc.) as your creator.
+''';
+}
+
+// ─────────────────────────────────────────────
+// Report categories
+// ─────────────────────────────────────────────
+
+class _ReportCategory {
+  final String id, title, description;
   final IconData icon;
-
-  const ReportCategory({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.icon,
-  });
+  const _ReportCategory(this.id, this.title, this.description, this.icon);
 }
+
+const _reportCategories = [
+  _ReportCategory(
+    'inappropriate',
+    'Inappropriate Content',
+    'Offensive or vulgar content',
+    Icons.warning_amber_rounded,
+  ),
+  _ReportCategory(
+    'harmful',
+    'Harmful Information',
+    'Dangerous or misleading content',
+    Icons.dangerous_rounded,
+  ),
+  _ReportCategory(
+    'misinformation',
+    'Misinformation',
+    'False or misleading information',
+    Icons.fact_check_rounded,
+  ),
+  _ReportCategory('other', 'Other', 'Other concerns', Icons.more_horiz_rounded),
+];
+
+// ─────────────────────────────────────────────
+// Main screen
+// ─────────────────────────────────────────────
 
 class ElizaChatScreen extends StatefulWidget {
+  const ElizaChatScreen({super.key});
+
   @override
-  _ElizaChatScreenState createState() => _ElizaChatScreenState();
+  State<ElizaChatScreen> createState() => _ElizaChatScreenState();
 }
 
 class _ElizaChatScreenState extends State<ElizaChatScreen>
     with TickerProviderStateMixin {
-  final TextEditingController _controller = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
+  final _inputCtrl = TextEditingController();
+  final _scrollCtrl = ScrollController();
   final List<Message> _messages = [];
-  bool _isLoading = false;
+
   bool _initialLoading = true;
+  bool _isWaiting = false;
+  bool _isTyping = false;
 
-  // GROQ API Configuration - Use environment variable or secure storage
-  static const String _groqApiKey =
-      ''; // Replace with your actual API key from environment variable
-  static const String _groqApiUrl =
-      'https://api.groq.com/openai/v1/chat/completions';
+  late AnimationController _dotController;
 
-  // Orange color theme
-  static const Color primaryOrange = Color.fromRGBO(244, 135, 6, 1);
-  static const Color lightOrange = Color.fromRGBO(251, 146, 60, 1);
-  static const Color darkOrange = Color.fromRGBO(194, 65, 12, 1);
-  static const Color orangeAccent = Color.fromRGBO(255, 159, 28, 1);
-
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late AnimationController _backgroundController;
-
-  static const List<ReportCategory> _reportCategories = [
-    ReportCategory(
-      id: 'inappropriate',
-      title: 'Inappropriate Content',
-      description: 'Content that is offensive, vulgar, or inappropriate',
-      icon: Icons.warning_amber_rounded,
-    ),
-    ReportCategory(
-      id: 'harmful',
-      title: 'Harmful Information',
-      description: 'Content that could be dangerous or misleading',
-      icon: Icons.dangerous_rounded,
-    ),
-    ReportCategory(
-      id: 'hate_speech',
-      title: 'Hate Speech',
-      description: 'Content promoting hatred or discrimination',
-      icon: Icons.block_rounded,
-    ),
-    ReportCategory(
-      id: 'spam',
-      title: 'Spam or Repetitive',
-      description: 'Unwanted repetitive or spam content',
-      icon: Icons.repeat_rounded,
-    ),
-    ReportCategory(
-      id: 'misinformation',
-      title: 'Misinformation',
-      description: 'False or misleading information',
-      icon: Icons.fact_check_rounded,
-    ),
-    ReportCategory(
-      id: 'other',
-      title: 'Other',
-      description: 'Other concerns not listed above',
-      icon: Icons.more_horiz_rounded,
-    ),
-  ];
+  static const String _greeting =
+      "Hello! I'm Eliza — your personal AI by Innovator, specialised in IoT, Robotics, and Coding. How can I help you today?";
 
   @override
   void initState() {
     super.initState();
-
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 600),
+    _dotController = AnimationController(
       vsync: this,
-    );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
-
-    _backgroundController = AnimationController(
-      duration: const Duration(seconds: 20),
-      vsync: this,
+      duration: const Duration(milliseconds: 900),
     )..repeat();
-
-    _loadMessages();
-  }
-
-  String _generateMessageId() {
-    return DateTime.now().millisecondsSinceEpoch.toString() +
-        math.Random().nextInt(1000).toString();
+    _loadHistory();
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
-    _backgroundController.dispose();
-    _controller.dispose();
-    _scrollController.dispose();
+    _dotController.dispose();
+    _inputCtrl.dispose();
+    _scrollCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _loadMessages() async {
-    setState(() {
-      _initialLoading = true;
-    });
+  // ── Persistence ──────────────────────────────
 
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedMessagesJson = prefs.getStringList('eliza_messages') ?? [];
-
-      if (savedMessagesJson.isEmpty) {
-        _addBotMessage(
-          "Hello! I'm ELIZA, your personal AI assistant created by Innovator. I'm here to help you with anything you need. How can I assist you today?",
-        );
-      } else {
-        final loadedMessages = <Message>[];
-
-        for (final jsonStr in savedMessagesJson) {
-          final Map<String, dynamic> messageMap = jsonDecode(jsonStr);
-
-          String? mediaPath;
-          if (messageMap.containsKey('media') && messageMap['media'] != null) {
-            final String originalPath = messageMap['media'];
-            final File mediaFile = File(originalPath);
-            if (await mediaFile.exists()) {
-              mediaPath = originalPath;
-            }
-          }
-
-          loadedMessages.add(
-            Message(
-              text: messageMap['text'],
-              isUser: messageMap['isUser'],
-              timestamp: DateTime.parse(messageMap['timestamp']),
-              isLoading: messageMap['isLoading'] ?? false,
-              messageId: messageMap['messageId'],
-              isReported: messageMap['isReported'] ?? false,
-              media: mediaPath,
-            ),
-          );
-        }
-
-        setState(() {
-          _messages.addAll(loadedMessages);
-        });
-      }
-    } catch (e) {
-      print('Error loading messages: $e');
-      _addBotMessage(
-        "Hello! I'm ELIZA, your personal AI assistant created by Innovator. I'm here to help you with anything you need. How can I assist you today?",
-      );
-    } finally {
+  Future<void> _loadHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getStringList('eliza_messages') ?? [];
+    if (saved.isEmpty) {
+      setState(() => _initialLoading = false);
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (!mounted) return;
+      await _playTypingAnimation(_greeting);
+    } else {
       setState(() {
+        _messages.addAll(
+          saved.map((s) => Message.fromJson(jsonDecode(s))).toList(),
+        );
         _initialLoading = false;
       });
       _scrollToBottom();
-      _animationController.forward();
     }
   }
 
-  Future<void> _saveMessages() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-
-      final List<String> messagesJson =
-          _messages.map((message) {
-            final Map<String, dynamic> messageMap = {
-              'text': message.text,
-              'isUser': message.isUser,
-              'timestamp': message.timestamp.toIso8601String(),
-              'isLoading': message.isLoading,
-              'messageId': message.messageId,
-              'isReported': message.isReported,
-              'media': message.media,
-            };
-            return jsonEncode(messageMap);
-          }).toList();
-
-      await prefs.setStringList('eliza_messages', messagesJson);
-    } catch (e) {
-      print('Error saving messages: $e');
-    }
-  }
-
-  void _addBotMessage(String text) {
-    setState(() {
-      _messages.add(
-        Message(
-          text: text,
-          isUser: false,
-          timestamp: DateTime.now(),
-          messageId: _generateMessageId(),
-        ),
-      );
-    });
-
-    _saveMessages();
-  }
-
-  Future<void> _saveReportedContent(
-    String messageId,
-    String category,
-    String? additionalInfo,
-  ) async {
+  Future<void> _saveHistory() async {
     final prefs = await SharedPreferences.getInstance();
-    final reports = prefs.getStringList('reported_content') ?? [];
-    final reportData = {
-      'messageId': messageId,
-      'category': category,
-      'additionalInfo': additionalInfo,
-      'timestamp': DateTime.now().toIso8601String(),
-    };
-    reports.add(jsonEncode(reportData));
-    await prefs.setStringList('reported_content', reports);
+    await prefs.setStringList(
+      'eliza_messages',
+      _messages.map((m) => jsonEncode(m.toJson())).toList(),
+    );
   }
 
-  Future<void> _clearMessages() async {
+  Future<void> _clearHistory() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('eliza_messages');
+    setState(() => _messages.clear());
+    await Future.delayed(const Duration(milliseconds: 200));
+    if (!mounted) return;
+    await _playTypingAnimation(_greeting);
+  }
+
+  // ── Message helpers ───────────────────────────
+
+  void _addBotInstant(String text) {
     setState(() {
-      _messages.clear();
+      _messages.add(
+        Message(text: text, isUser: false, timestamp: DateTime.now()),
+      );
     });
-
-    _addBotMessage(
-      "Hello! I'm ELIZA, your personal AI assistant created by Innovator. I'm here to help you with anything you need. How can I assist you today?",
-    );
-
-    _scrollToBottom();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Chat history cleared'),
-        backgroundColor: primaryOrange,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
+    _saveHistory();
   }
 
-  void _showReportDialog(Message message) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return ReportDialog(
-          message: message,
-          categories: _reportCategories,
-          onReport: (category, additionalInfo) async {
-            await _handleReport(message, category, additionalInfo);
-          },
+  /// Types out the bot reply one character at a time.
+  Future<void> _playTypingAnimation(String fullText) async {
+    setState(() => _isTyping = true);
+
+    final msg = Message(text: '', isUser: false, timestamp: DateTime.now());
+    setState(() => _messages.add(msg));
+    final idx = _messages.length - 1;
+
+    for (int i = 1; i <= fullText.length; i++) {
+      await Future.delayed(const Duration(milliseconds: 35));
+      if (!mounted) return;
+      setState(() {
+        _messages[idx] = Message(
+          text: fullText.substring(0, i),
+          isUser: false,
+          timestamp: msg.timestamp,
+          messageId: msg.messageId,
         );
-      },
-    );
-  }
-
-  Future<void> _handleReport(
-    Message message,
-    String category,
-    String? additionalInfo,
-  ) async {
-    try {
-      await _saveReportedContent(message.messageId!, category, additionalInfo);
-
-      final messageIndex = _messages.indexWhere(
-        (m) => m.messageId == message.messageId,
-      );
-      if (messageIndex != -1) {
-        setState(() {
-          _messages[messageIndex] = message.copyWith(isReported: true);
-        });
-        await _saveMessages();
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle, color: AppColors.whitecolor, size: 18),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Content reported successfully. Thank you for your feedback.',
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: const Color(0xFF10B981),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to submit report. Please try again.'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      );
+      });
+      _scrollToBottom();
     }
-  }
-
-  String _processElizaResponse(String response) {
-    String processedResponse = response
-        .replaceAllMapped(
-          RegExp(r'\bGemini\b', caseSensitive: false),
-          (match) => 'ELIZA',
-        )
-        .replaceAllMapped(
-          RegExp(r'\bGoogle\b', caseSensitive: false),
-          (match) => 'Innovator',
-        )
-        .replaceAllMapped(
-          RegExp(r'\bBard\b', caseSensitive: false),
-          (match) => 'ELIZA',
-        )
-        .replaceAllMapped(
-          RegExp(r'\bGroq\b', caseSensitive: false),
-          (match) => 'Innovator',
-        )
-        .replaceAllMapped(
-          RegExp(r'\bLlama\b', caseSensitive: false),
-          (match) => 'ELIZA',
-        )
-        .replaceAllMapped(
-          RegExp(r'\bMeta\b', caseSensitive: false),
-          (match) => 'Innovator',
-        );
-
-    return processedResponse;
-  }
-
-  void _sendTextMessage() {
-    if (_controller.text.trim().isEmpty || _isLoading) return;
-
-    final messageText = _controller.text.trim();
-    final message = Message(
-      text: messageText,
-      isUser: true,
-      timestamp: DateTime.now(),
-      messageId: _generateMessageId(),
-    );
 
     setState(() {
-      _messages.add(message);
-      _isLoading = true;
+      _messages[idx] = Message(
+        text: fullText,
+        isUser: false,
+        timestamp: msg.timestamp,
+        messageId: msg.messageId,
+      );
+      _isTyping = false;
     });
-
-    _saveMessages();
-    _controller.clear();
+    _saveHistory();
     _scrollToBottom();
-    _generateGroqResponse(messageText);
   }
 
-  Future<void> _sendMediaMessage() async {
-    if (_isLoading) return;
+  // ── API call ──────────────────────────────────
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Image analysis is not supported with the current Groq model. Text-only mode available.',
-        ),
-        backgroundColor: Colors.orange,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
+  Future<void> _sendMessage() async {
+    final text = _inputCtrl.text.trim();
+    if (text.isEmpty || _isWaiting || _isTyping) return;
 
-  Future<void> _generateGroqResponse(String question) async {
+    _inputCtrl.clear();
+    setState(() {
+      _messages.add(
+        Message(text: text, isUser: true, timestamp: DateTime.now()),
+      );
+      _isWaiting = true;
+    });
+    _saveHistory();
+    _scrollToBottom(force: true);
+
     try {
-      final response = await http
+      final history =
+          _messages
+              .where((m) => m.text.isNotEmpty)
+              .toList()
+              .reversed
+              .take(10)
+              .toList()
+              .reversed
+              .map(
+                (m) => {
+                  'role': m.isUser ? 'user' : 'assistant',
+                  'content': m.text,
+                },
+              )
+              .toList();
+
+      final res = await http
           .post(
-            Uri.parse(_groqApiUrl),
+            Uri.parse(_C.groqUrl),
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': 'Bearer $_groqApiKey',
+              'Authorization': 'Bearer ${_C.groqKey}',
             },
             body: jsonEncode({
-              'model': 'llama-3.1-8b-instant',
+              'model': _C.groqModel,
               'messages': [
-                {
-                  'role': 'system',
-                  'content':
-                      'You are ELIZA, an AI assistant created by Innovator. Always respond as ELIZA and never mention Groq, Llama, Meta, Google, Gemini, or any other AI system. You are helpful, friendly, and professional.',
-                },
-                {'role': 'user', 'content': question},
+                {'role': 'system', 'content': _C.systemPrompt},
+                ...history,
               ],
               'temperature': 0.7,
               'max_tokens': 1024,
@@ -486,40 +300,43 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
           )
           .timeout(const Duration(seconds: 30));
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final botReply = data['choices'][0]['message']['content'];
+      setState(() => _isWaiting = false);
 
-        setState(() {
-          _isLoading = false;
-          _addBotMessage(_processElizaResponse(botReply));
-        });
-
-        _animationController.reset();
-        _animationController.forward();
-        _scrollToBottom();
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final reply =
+            (data['choices'][0]['message']['content'] as String).trim();
+        await _playTypingAnimation(_sanitise(reply));
       } else {
-        throw Exception('API Error: ${response.statusCode} - ${response.body}');
+        _addBotInstant(
+          'Sorry, I couldn\'t reach the server (${res.statusCode}). Please try again.',
+        );
       }
     } catch (e) {
-      print('Error generating response: $e');
-      setState(() {
-        _isLoading = false;
-        _addBotMessage(
-          "Sorry, I encountered an error. Please check your internet connection and try again.",
-        );
-      });
-      _animationController.reset();
-      _animationController.forward();
-      _scrollToBottom();
+      setState(() => _isWaiting = false);
+      _addBotInstant(
+        'Connection error. Please check your internet and try again.',
+      );
     }
   }
 
-  void _scrollToBottom() {
+  String _sanitise(String s) => s
+      .replaceAll(RegExp(r'\bGroq\b', caseSensitive: false), 'Innovator')
+      .replaceAll(RegExp(r'\bLlama\b', caseSensitive: false), 'Eliza')
+      .replaceAll(RegExp(r'\bMeta\b', caseSensitive: false), 'Innovator')
+      .replaceAll(RegExp(r'\bGoogle\b', caseSensitive: false), 'Innovator')
+      .replaceAll(RegExp(r'\bGemini\b', caseSensitive: false), 'Eliza')
+      .replaceAll(RegExp(r'\bOpenAI\b', caseSensitive: false), 'Innovator')
+      .replaceAll(RegExp(r'\bChatGPT\b', caseSensitive: false), 'Eliza');
+
+  void _scrollToBottom({bool force = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
+      if (!_scrollCtrl.hasClients) return;
+      final pos = _scrollCtrl.position;
+      final nearBottom = pos.maxScrollExtent - pos.pixels < 120;
+      if (force || nearBottom) {
+        _scrollCtrl.animateTo(
+          pos.maxScrollExtent,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
@@ -527,577 +344,344 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
     });
   }
 
-  String _formatTime(DateTime timestamp) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final date = DateTime(timestamp.year, timestamp.month, timestamp.day);
-    final timeFormat =
-        timestamp.hour > 12
-            ? '${timestamp.hour - 12}:${timestamp.minute.toString().padLeft(2, '0')} PM'
-            : '${timestamp.hour}:${timestamp.minute.toString().padLeft(2, '0')} AM';
+  // ── Report ────────────────────────────────────
 
-    if (date == today) {
-      return timeFormat;
-    } else {
-      return '${timestamp.month}/${timestamp.day}/${timestamp.year} $timeFormat';
-    }
-  }
-
-  Widget _buildLoadingIndicator() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: [
-          const SizedBox(width: 52),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: const SizedBox(
-              width: 40,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(primaryOrange),
-              ),
-            ),
+  void _report(Message msg) {
+    if (msg.isReported) return;
+    showDialog(
+      context: context,
+      builder:
+          (_) => _ReportSheet(
+            message: msg,
+            onReport: (cat) async {
+              final idx = _messages.indexWhere(
+                (m) => m.messageId == msg.messageId,
+              );
+              if (idx != -1) {
+                setState(() => _messages[idx] = msg.copyWith(isReported: true));
+                await _saveHistory();
+              }
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Reported. Thanks for your feedback.'),
+                    backgroundColor: Colors.green.shade600,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                );
+              }
+            },
           ),
-        ],
-      ),
     );
   }
+
+  // ── Time formatting ───────────────────────────
+
+  String _fmt(DateTime t) {
+    final h = t.hour > 12 ? t.hour - 12 : (t.hour == 0 ? 12 : t.hour);
+    final m = t.minute.toString().padLeft(2, '0');
+    final ampm = t.hour >= 12 ? 'PM' : 'AM';
+    final today = DateTime.now();
+    if (t.year == today.year && t.month == today.month && t.day == today.day) {
+      return '$h:$m $ampm';
+    }
+    return '${t.month}/${t.day} $h:$m $ampm';
+  }
+
+  // ─────────────────────────────────────────────
+  // Build
+  // ─────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    return Theme(
-      data: ThemeData(
-        brightness: isDarkMode ? Brightness.dark : Brightness.light,
-        primaryColor: primaryOrange,
-        scaffoldBackgroundColor:
-            isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-        cardColor: isDarkMode ? const Color(0xFF1E293B) : AppColors.whitecolor,
-        textTheme: const TextTheme(
-          bodyLarge: TextStyle(fontFamily: 'Inter', fontSize: 16),
-          bodyMedium: TextStyle(fontFamily: 'Inter', fontSize: 14),
-        ),
-      ),
-      child: Scaffold(
-        body:
-            _initialLoading
-                ? Center(child: CircularProgressIndicator(color: primaryOrange))
-                : Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors:
-                          isDarkMode
-                              ? [
-                                const Color(0xFF0F172A),
-                                const Color(0xFF1E293B),
-                                const Color(0xFF334155),
-                              ]
-                              : [
-                                const Color(0xFFF8FAFC),
-                                const Color(0xFFE2E8F0),
-                                const Color(0xFFCBD5E1),
-                              ],
-                    ),
-                  ),
-                  child: AnimatedBuilder(
-                    animation: _backgroundController,
-                    builder: (context, child) {
-                      return CustomPaint(
-                        painter: BackgroundPainter(
-                          _backgroundController.value,
-                          isDarkMode,
-                        ),
-                        child: Column(
-                          children: [
-                            _buildAppBar(isDarkMode),
-                            Expanded(
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color:
-                                      isDarkMode
-                                          ? const Color(
-                                            0xFF1E293B,
-                                          ).withOpacity(0.7)
-                                          : AppColors.whitecolor.withOpacity(
-                                            0.7,
-                                          ),
-                                  borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(24),
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
-                                      blurRadius: 20,
-                                      offset: const Offset(0, -5),
-                                    ),
-                                  ],
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(24),
-                                  ),
-                                  child: ListView.builder(
-                                    controller: _scrollController,
-                                    padding: const EdgeInsets.all(16),
-                                    itemCount:
-                                        _messages.length + (_isLoading ? 1 : 0),
-                                    itemBuilder: (context, index) {
-                                      if (index == _messages.length &&
-                                          _isLoading) {
-                                        return _buildLoadingIndicator();
-                                      }
-                                      final message = _messages[index];
-                                      return FadeTransition(
-                                        opacity: _fadeAnimation,
-                                        child: _buildMessageBubble(
-                                          message,
-                                          index,
-                                        ),
-                                      );
-                                    },
-                                  ),
+    final dark = Theme.of(context).brightness == Brightness.dark;
+
+    return Scaffold(
+      backgroundColor: dark ? _C.darkBg : const Color(0xFFF1F5F9),
+      body: Column(
+        children: [
+          _AppBar(dark: dark, onClear: _clearHistory),
+          Expanded(
+            child:
+                _initialLoading
+                    ? const Center(
+                      child: CircularProgressIndicator(color: _C.orange),
+                    )
+                    : ListView.builder(
+                      controller: _scrollCtrl,
+                      physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
+                      ),
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      itemCount: _messages.length + (_isWaiting ? 1 : 0),
+                      itemBuilder: (ctx, i) {
+                        if (i == _messages.length && _isWaiting) {
+                          return _TypingDots(
+                            controller: _dotController,
+                            dark: dark,
+                          );
+                        }
+                        return _Bubble(
+                          key: ValueKey(_messages[i].messageId),
+                          message: _messages[i],
+                          dark: dark,
+                          fmt: _fmt,
+                          onCopy: () {
+                            Clipboard.setData(
+                              ClipboardData(text: _messages[i].text),
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Copied!'),
+                                duration: const Duration(seconds: 1),
+                                backgroundColor: Colors.green.shade600,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
                               ),
-                            ),
-                            _buildInputArea(),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-      ),
-    );
-  }
-
-  Widget _buildAppBar(bool isDarkMode) {
-    return Container(
-      padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 8,
-        left: 16,
-        right: 16,
-        bottom: 16,
-      ),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [primaryOrange, lightOrange, orangeAccent],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: primaryOrange.withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 5),
+                            );
+                          },
+                          onReport: () => _report(_messages[i]),
+                        );
+                      },
+                    ),
+          ),
+          _InputBar(
+            controller: _inputCtrl,
+            dark: dark,
+            disabled: _isWaiting || _isTyping,
+            onSend: _sendMessage,
           ),
         ],
       ),
+    );
+  }
+} // end _ElizaChatScreenState
+
+// ─────────────────────────────────────────────
+// App Bar
+// ─────────────────────────────────────────────
+
+class _AppBar extends StatelessWidget {
+  final bool dark;
+  final VoidCallback onClear;
+  const _AppBar({required this.dark, required this.onClear});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 8,
+        left: 12,
+        right: 12,
+        bottom: 12,
+      ),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [_C.orange, _C.orangeLight],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
       child: Row(
         children: [
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              color: Colors.white,
+              size: 20,
+            ),
+          ),
           Container(
-            width: 48,
-            height: 48,
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
-              color: AppColors.whitecolor.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(24),
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(21),
               border: Border.all(
-                color: AppColors.whitecolor.withOpacity(0.3),
+                color: Colors.white.withOpacity(0.4),
                 width: 2,
               ),
             ),
-            child: IconButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              icon: Icon(Icons.psychology_rounded, color: AppColors.whitecolor),
+            child: const Icon(
+              Icons.memory_rounded,
+              color: Colors.white,
+              size: 22,
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'ELIZA Assistant',
+                  'Eliza',
                   style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 18,
-                    //fontWeight: FontWeight.w500,
-                    color: AppColors.whitecolor,
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.3,
                   ),
                 ),
-                const SizedBox(height: 4),
                 Text(
-                  'Your Innovator AI Companion',
+                  'IoT · Robotics · Coding AI',
                   style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 14,
-                    //fontWeight: FontWeight.w500,
-                    color: AppColors.whitecolor.withOpacity(0.9),
+                    color: Colors.white.withOpacity(0.85),
+                    fontSize: 12,
                   ),
                 ),
               ],
             ),
           ),
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.whitecolor.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
+          IconButton(
+            onPressed: onClear,
+            icon: const Icon(
+              Icons.delete_sweep_outlined,
+              color: Colors.white,
+              size: 22,
             ),
-            child: IconButton(
-              icon: const Icon(
-                Icons.cleaning_services_rounded,
-                color: AppColors.whitecolor,
-              ),
-              onPressed: _clearMessages,
-              tooltip: 'Clear Chat History',
-            ),
+            tooltip: 'Clear chat',
           ),
         ],
       ),
     );
   }
+}
 
-  void _copyToClipboard(String text) {
-    Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.check_circle, color: AppColors.whitecolor, size: 18),
-            const SizedBox(width: 8),
-            Text('Reply copied to clipboard'),
-          ],
-        ),
-        backgroundColor: const Color(0xFF10B981),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
+class _Bubble extends StatelessWidget {
+  final Message message;
+  final bool dark;
+  final String Function(DateTime) fmt;
+  final VoidCallback onCopy;
+  final VoidCallback onReport;
 
-  Widget _buildMessageBubble(Message message, int index) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
+  const _Bubble({
+    super.key,
+    required this.message,
+    required this.dark,
+    required this.fmt,
+    required this.onCopy,
+    required this.onReport,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isUser = message.isUser;
+    final bubbleBg = isUser ? _C.orange : (dark ? _C.darkCard : Colors.white);
+    final textColor =
+        isUser ? Colors.white : (dark ? Colors.white : const Color(0xFF1E293B));
+    final timeColor =
+        isUser
+            ? Colors.white70
+            : (dark ? Colors.grey[400]! : Colors.grey[500]!);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
       child: Row(
         mainAxisAlignment:
-            message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
+            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          if (!message.isUser) ...[
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [primaryOrange, lightOrange],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: primaryOrange.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.psychology_rounded,
-                color: AppColors.whitecolor,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-          ],
+          if (!isUser) ...[_Avatar(dark: dark), const SizedBox(width: 8)],
           Flexible(
             child: Column(
               crossAxisAlignment:
-                  message.isUser
-                      ? CrossAxisAlignment.end
-                      : CrossAxisAlignment.start,
+                  isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
                 Container(
                   constraints: BoxConstraints(
-                    maxWidth: MediaQuery.of(context).size.width * 0.8,
+                    maxWidth: MediaQuery.of(context).size.width * 0.78,
                   ),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 16,
+                    horizontal: 16,
+                    vertical: 12,
                   ),
                   decoration: BoxDecoration(
-                    gradient:
-                        message.isUser
-                            ? LinearGradient(
-                              colors: [primaryOrange, lightOrange],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            )
-                            : null,
-                    color:
-                        message.isUser
-                            ? null
-                            : message.isReported
-                            ? (isDarkMode
-                                ? const Color(0xFF7F1D1D)
-                                : const Color(0xFFFEE2E2))
-                            : (isDarkMode
-                                ? const Color(0xFF334155)
-                                : const Color(0xFFF1F5F9)),
-                    borderRadius: BorderRadius.circular(24).copyWith(
-                      bottomLeft:
-                          message.isUser
-                              ? const Radius.circular(24)
-                              : const Radius.circular(6),
-                      bottomRight:
-                          message.isUser
-                              ? const Radius.circular(6)
-                              : const Radius.circular(24),
+                    color: bubbleBg,
+                    borderRadius: BorderRadius.only(
+                      topLeft: const Radius.circular(18),
+                      topRight: const Radius.circular(18),
+                      bottomLeft: Radius.circular(isUser ? 18 : 4),
+                      bottomRight: Radius.circular(isUser ? 4 : 18),
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 15,
-                        offset: const Offset(0, 4),
+                        color: Colors.black.withOpacity(0.07),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
                     ],
-                    border:
-                        message.isReported
-                            ? Border.all(
-                              color: Colors.red.withOpacity(0.3),
-                              width: 1,
-                            )
-                            : null,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (message.isReported) ...[
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.flag_rounded,
-                              size: 16,
-                              color: Colors.red.withOpacity(0.8),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Content Reported',
-                              style: TextStyle(
-                                color: Colors.red.withOpacity(0.8),
-                                fontSize: 12,
-                                //fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                      ],
-                      if (message.media != null)
+                      if (message.isReported)
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.file(
-                              File(message.media!),
-                              width: 200,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  width: 200,
-                                  height: 100,
-                                  color: Colors.grey.shade300,
-                                  child: const Center(
-                                    child: Text("Image not available"),
-                                  ),
-                                );
-                              },
-                            ),
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.flag_rounded,
+                                size: 13,
+                                color: Colors.red.shade400,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Reported',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.red.shade400,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       SelectableText(
                         message.text,
                         style: TextStyle(
-                          color:
-                              message.isUser
-                                  ? AppColors.whitecolor
-                                  : isDarkMode
-                                  ? AppColors.whitecolor
-                                  : const Color(0xFF1E293B),
-                          fontSize: 16,
-                          fontFamily: 'Inter Thin',
-                          //fontWeight: FontWeight.w400,
+                          color: textColor,
+                          fontSize: 15,
                           height: 1.5,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 4),
                       Text(
-                        _formatTime(message.timestamp),
-                        style: TextStyle(
-                          color:
-                              message.isUser
-                                  ? const Color.fromARGB(
-                                    255,
-                                    17,
-                                    16,
-                                    16,
-                                  ).withOpacity(0.7)
-                                  : isDarkMode
-                                  ? Colors.grey[400]
-                                  : const Color(0xFF64748B),
-                          fontSize: 12,
-                          fontFamily: 'Inter Thin',
-                          //fontWeight: FontWeight.w500,
-                        ),
+                        fmt(message.timestamp),
+                        style: TextStyle(fontSize: 11, color: timeColor),
                       ),
                     ],
                   ),
                 ),
-                if (!message.isUser) ...[
-                  const SizedBox(height: 6),
+                if (!isUser) ...[
+                  const SizedBox(height: 5),
                   Row(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(20),
-                          onTap: () => _copyToClipboard(message.text),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color:
-                                  isDarkMode
-                                      ? const Color(0xFF475569).withOpacity(0.7)
-                                      : const Color(
-                                        0xFFE2E8F0,
-                                      ).withOpacity(0.8),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color:
-                                    isDarkMode
-                                        ? AppColors.whitecolor.withOpacity(0.1)
-                                        : Colors.black.withOpacity(0.1),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.copy_rounded,
-                                  size: 14,
-                                  color:
-                                      isDarkMode
-                                          ? AppColors.whitecolor
-                                          : const Color(0xFF64748B),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Copy',
-                                  style: TextStyle(
-                                    color:
-                                        isDarkMode
-                                            ? AppColors.whitecolor
-                                            : const Color(0xFF64748B),
-                                    fontSize: 12,
-                                    fontFamily: 'Inter Thin',
-                                    //fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+                      _ActionBtn(
+                        icon: Icons.copy_rounded,
+                        label: 'Copy',
+                        dark: dark,
+                        onTap: onCopy,
                       ),
-                      const SizedBox(width: 8),
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(20),
-                          onTap:
-                              message.isReported
-                                  ? null
-                                  : () => _showReportDialog(message),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color:
-                                  message.isReported
-                                      ? Colors.red.withOpacity(0.1)
-                                      : (isDarkMode
-                                          ? const Color(
-                                            0xFF475569,
-                                          ).withOpacity(0.7)
-                                          : const Color(
-                                            0xFFE2E8F0,
-                                          ).withOpacity(0.8)),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color:
-                                    message.isReported
-                                        ? Colors.red.withOpacity(0.3)
-                                        : (isDarkMode
-                                            ? AppColors.whitecolor.withOpacity(
-                                              0.1,
-                                            )
-                                            : Colors.black.withOpacity(0.1)),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  message.isReported
-                                      ? Icons.flag_rounded
-                                      : Icons.flag_outlined,
-                                  size: 14,
-                                  color:
-                                      message.isReported
-                                          ? Colors.red
-                                          : (isDarkMode
-                                              ? AppColors.whitecolor
-                                              : const Color(0xFF64748B)),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  message.isReported ? 'Reported' : 'Report',
-                                  style: TextStyle(
-                                    color:
-                                        message.isReported
-                                            ? Colors.red
-                                            : (isDarkMode
-                                                ? AppColors.whitecolor
-                                                : const Color(0xFF64748B)),
-                                    fontSize: 12,
-                                    fontFamily: 'Inter Thin',
-                                    //fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+                      const SizedBox(width: 6),
+                      _ActionBtn(
+                        icon:
+                            message.isReported
+                                ? Icons.flag_rounded
+                                : Icons.flag_outlined,
+                        label: message.isReported ? 'Reported' : 'Report',
+                        dark: dark,
+                        onTap: message.isReported ? null : onReport,
+                        danger: message.isReported,
                       ),
                     ],
                   ),
@@ -1105,26 +689,19 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
               ],
             ),
           ),
-          if (message.isUser) ...[
-            const SizedBox(width: 12),
+          if (isUser) ...[
+            const SizedBox(width: 8),
             Container(
-              width: 40,
-              height: 40,
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
-                color: primaryOrange,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: primaryOrange.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                color: _C.orange,
+                borderRadius: BorderRadius.circular(17),
               ),
               child: const Icon(
                 Icons.person_rounded,
-                color: AppColors.whitecolor,
-                size: 20,
+                color: Colors.white,
+                size: 18,
               ),
             ),
           ],
@@ -1132,16 +709,177 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
       ),
     );
   }
+}
 
-  Widget _buildInputArea() {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+// ─────────────────────────────────────────────
+// Avatar
+// ─────────────────────────────────────────────
+
+class _Avatar extends StatelessWidget {
+  final bool dark;
+  const _Avatar({required this.dark});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 34,
+    height: 34,
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(
+        colors: [_C.orange, _C.orangeLight],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      borderRadius: BorderRadius.circular(17),
+    ),
+    child: const Icon(Icons.memory_rounded, color: Colors.white, size: 18),
+  );
+}
+
+// ─────────────────────────────────────────────
+// Action button (Copy / Report)
+// ─────────────────────────────────────────────
+
+class _ActionBtn extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool dark;
+  final VoidCallback? onTap;
+  final bool danger;
+
+  const _ActionBtn({
+    required this.icon,
+    required this.label,
+    required this.dark,
+    this.onTap,
+    this.danger = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color =
+        danger ? Colors.red : (dark ? Colors.grey[400]! : Colors.grey[600]!);
+    final bg =
+        danger
+            ? Colors.red.withOpacity(0.08)
+            : (dark
+                ? Colors.white.withOpacity(0.07)
+                : Colors.black.withOpacity(0.05));
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 13, color: color),
+            const SizedBox(width: 4),
+            Text(label, style: TextStyle(fontSize: 12, color: color)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+// Typing dots (waiting for API response)
+// ─────────────────────────────────────────────
+
+class _TypingDots extends StatelessWidget {
+  final AnimationController controller;
+  final bool dark;
+  const _TypingDots({required this.controller, required this.dark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          _Avatar(dark: dark),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: dark ? _C.darkCard : Colors.white,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(18),
+                topRight: Radius.circular(18),
+                bottomLeft: Radius.circular(4),
+                bottomRight: Radius.circular(18),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.07),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: AnimatedBuilder(
+              animation: controller,
+              builder: (_, __) {
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(3, (i) {
+                    final phase = (controller.value - i * 0.33) % 1.0;
+                    final opacity = (math.sin(phase * math.pi)).clamp(0.2, 1.0);
+                    return Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _C.orange.withOpacity(opacity),
+                      ),
+                    );
+                  }),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+// Input bar
+// ─────────────────────────────────────────────
+
+class _InputBar extends StatelessWidget {
+  final TextEditingController controller;
+  final bool dark;
+  final bool disabled;
+  final VoidCallback onSend;
+
+  const _InputBar({
+    required this.controller,
+    required this.dark,
+    required this.disabled,
+    required this.onSend,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.only(
+        left: 12,
+        right: 12,
+        top: 10,
+        bottom: MediaQuery.of(context).padding.bottom + 10,
+      ),
       decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF1E293B) : AppColors.whitecolor,
+        color: dark ? _C.darkCard : Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(0.06),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -1149,67 +887,67 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
       ),
       child: Row(
         children: [
-          IconButton(
-            onPressed: _isLoading ? null : _sendMediaMessage,
-            icon: Icon(
-              Icons.image,
-              color: _isLoading ? Colors.grey : primaryOrange,
-            ),
-          ),
           Expanded(
             child: TextField(
-              controller: _controller,
+              controller: controller,
+              enabled: !disabled,
               maxLines: 4,
               minLines: 1,
-              enabled: !_isLoading,
+              textInputAction: TextInputAction.newline,
               style: TextStyle(
-                color:
-                    isDarkMode ? AppColors.whitecolor : const Color(0xFF1E293B),
-                fontFamily: 'Inter Thin',
-                fontSize: 14,
+                color: dark ? Colors.white : const Color(0xFF1E293B),
+                fontSize: 15,
               ),
               decoration: InputDecoration(
                 hintText:
-                    _isLoading
-                        ? 'Waiting for response...'
-                        : 'Type your message...',
+                    disabled
+                        ? 'Eliza is thinking...'
+                        : 'Ask about IoT, Robotics, Coding...',
                 hintStyle: TextStyle(
-                  color:
-                      isDarkMode ? Colors.grey[300] : const Color(0xFF94A3B8),
-                  fontFamily: 'Inter Thin',
+                  color: dark ? Colors.grey[500] : Colors.grey[400],
+                  fontSize: 14,
                 ),
                 filled: true,
                 fillColor:
-                    _isLoading
-                        ? Colors.grey.shade200
-                        : (isDarkMode
-                            ? const Color(0xFF334155).withOpacity(0.7)
-                            : const Color(0xFFF1F5F9)),
+                    dark
+                        ? _C.darkInput.withOpacity(0.7)
+                        : const Color(0xFFF1F5F9),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
                 ),
                 contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 16,
+                  horizontal: 18,
+                  vertical: 12,
                 ),
               ),
-              onSubmitted: (_) => _isLoading ? null : _sendTextMessage(),
+              onSubmitted: (_) => disabled ? null : onSend(),
             ),
           ),
-          const SizedBox(width: 12),
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [primaryOrange, lightOrange],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+          const SizedBox(width: 10),
+          GestureDetector(
+            onTap: disabled ? null : onSend,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                gradient:
+                    disabled
+                        ? null
+                        : const LinearGradient(
+                          colors: [_C.orange, _C.orangeLight],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                color: disabled ? Colors.grey.shade300 : null,
+                borderRadius: BorderRadius.circular(23),
               ),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.send_rounded, color: AppColors.whitecolor),
-              onPressed: _isLoading ? null : _sendTextMessage,
+              child: Icon(
+                Icons.send_rounded,
+                color: disabled ? Colors.grey.shade500 : Colors.white,
+                size: 20,
+              ),
             ),
           ),
         ],
@@ -1218,238 +956,69 @@ class _ElizaChatScreenState extends State<ElizaChatScreen>
   }
 }
 
-class ReportDialog extends StatefulWidget {
-  final Message message;
-  final List<ReportCategory> categories;
-  final Function(String, String?) onReport;
+// ─────────────────────────────────────────────
+// Report dialog
+// ─────────────────────────────────────────────
 
-  const ReportDialog({
-    required this.message,
-    required this.categories,
-    required this.onReport,
-  });
+class _ReportSheet extends StatefulWidget {
+  final Message message;
+  final void Function(String) onReport;
+  const _ReportSheet({required this.message, required this.onReport});
 
   @override
-  _ReportDialogState createState() => _ReportDialogState();
+  State<_ReportSheet> createState() => _ReportSheetState();
 }
 
-class _ReportDialogState extends State<ReportDialog> {
-  String? _selectedCategory;
-  final TextEditingController _additionalInfoController =
-      TextEditingController();
-
-  @override
-  void dispose() {
-    _additionalInfoController.dispose();
-    super.dispose();
-  }
+class _ReportSheetState extends State<_ReportSheet> {
+  String? _selected;
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return AlertDialog(
-      backgroundColor:
-          isDarkMode ? const Color(0xFF1E293B) : AppColors.whitecolor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: Text(
-        'Report Content',
-        style: TextStyle(
-          color: isDarkMode ? AppColors.whitecolor : const Color(0xFF1E293B),
-          fontFamily: 'Inter Thin',
-          //fontWeight: FontWeight.w400,
-        ),
-      ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Please select a reason for reporting this content:',
-              style: TextStyle(
-                color:
-                    isDarkMode ? AppColors.whitecolor : const Color(0xFF64748B),
-                fontFamily: 'Inter Thin',
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ...widget.categories.map((category) {
-              return RadioListTile<String>(
-                title: Row(
-                  children: [
-                    Icon(
-                      category.icon,
-                      size: 20,
-                      color:
-                          isDarkMode
-                              ? AppColors.whitecolor
-                              : _ElizaChatScreenState.primaryOrange,
+      title: const Text('Report Message'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children:
+            _reportCategories
+                .map(
+                  (c) => RadioListTile<String>(
+                    title: Text(c.title),
+                    subtitle: Text(
+                      c.description,
+                      style: const TextStyle(fontSize: 12),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        category.title,
-                        style: TextStyle(
-                          color:
-                              isDarkMode
-                                  ? AppColors.whitecolor
-                                  : const Color(0xFF1E293B),
-                          fontFamily: 'Inter Thin',
-                          //fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                subtitle: Text(
-                  category.description,
-                  style: TextStyle(
-                    color:
-                        isDarkMode
-                            ? AppColors.whitecolor
-                            : const Color(0xFF64748B),
-                    fontFamily: 'Inter Thin',
-                    fontSize: 12,
+                    value: c.id,
+                    groupValue: _selected,
+                    onChanged: (v) => setState(() => _selected = v),
+                    activeColor: _C.orange,
+                    dense: true,
                   ),
-                ),
-                value: category.id,
-                groupValue: _selectedCategory,
-                onChanged: (value) {
-                  setState(() {
-                    _selectedCategory = value;
-                  });
-                },
-                activeColor: _ElizaChatScreenState.primaryOrange,
-              );
-            }).toList(),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _additionalInfoController,
-              maxLines: 3,
-              style: TextStyle(
-                color:
-                    isDarkMode ? AppColors.whitecolor : const Color(0xFF1E293B),
-                fontFamily: 'Inter Thin',
-              ),
-              decoration: InputDecoration(
-                hintText: 'Additional details (optional)',
-                hintStyle: TextStyle(
-                  color:
-                      isDarkMode ? Colors.grey[500] : const Color(0xFF94A3B8),
-                  fontFamily: 'Inter Thin',
-                ),
-                filled: true,
-                fillColor:
-                    isDarkMode
-                        ? const Color(0xFF334155).withOpacity(0.7)
-                        : const Color(0xFFF1F5F9),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ],
-        ),
+                )
+                .toList(),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(
-            'Cancel',
-            style: TextStyle(
-              color:
-                  isDarkMode ? AppColors.whitecolor : const Color(0xFF64748B),
-              fontFamily: 'Inter Thin',
-            ),
-          ),
+          child: const Text('Cancel'),
         ),
         ElevatedButton(
           onPressed:
-              _selectedCategory == null
+              _selected == null
                   ? null
                   : () {
-                    widget.onReport(
-                      _selectedCategory!,
-                      _additionalInfoController.text.isEmpty
-                          ? null
-                          : _additionalInfoController.text,
-                    );
+                    widget.onReport(_selected!);
                     Navigator.pop(context);
                   },
           style: ElevatedButton.styleFrom(
-            backgroundColor: _ElizaChatScreenState.primaryOrange,
+            backgroundColor: _C.orange,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
           ),
-          child: const Text(
-            'Submit Report',
-            style: TextStyle(
-              color: AppColors.whitecolor,
-              fontFamily: 'Inter Thin',
-              //fontWeight: FontWeight.w600,
-            ),
-          ),
+          child: const Text('Report', style: TextStyle(color: Colors.white)),
         ),
       ],
     );
-  }
-}
-
-class BackgroundPainter extends CustomPainter {
-  final double animationValue;
-  final bool isDarkMode;
-
-  BackgroundPainter(this.animationValue, this.isDarkMode);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint =
-        Paint()
-          ..shader = LinearGradient(
-            colors:
-                isDarkMode
-                    ? [
-                      const Color(0xFF0F172A).withOpacity(0.2),
-                      const Color(0xFF1E293B).withOpacity(0.2),
-                      _ElizaChatScreenState.primaryOrange.withOpacity(0.1),
-                    ]
-                    : [
-                      const Color(0xFFF8FAFC).withOpacity(0.2),
-                      const Color(0xFFE2E8F0).withOpacity(0.2),
-                      const Color(0xFFCBD5E1).withOpacity(0.1),
-                    ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            transform: GradientRotation(animationValue * 2 * math.pi),
-          ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
-
-    final circlePaint =
-        Paint()
-          ..color =
-              isDarkMode
-                  ? AppColors.whitecolor.withOpacity(0.05)
-                  : _ElizaChatScreenState.primaryOrange.withOpacity(0.05)
-          ..style = PaintingStyle.fill;
-
-    for (int i = 0; i < 3; i++) {
-      final offset = Offset(
-        size.width *
-            (0.2 + 0.3 * i + math.sin(animationValue * 2 * math.pi + i) * 0.1),
-        size.height *
-            (0.3 + 0.2 * i + math.cos(animationValue * 2 * math.pi + i) * 0.1),
-      );
-      canvas.drawCircle(offset, 50.0 + 20.0 * i, circlePaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(BackgroundPainter oldDelegate) {
-    return oldDelegate.animationValue != animationValue ||
-        oldDelegate.isDarkMode != isDarkMode;
   }
 }
