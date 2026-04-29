@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/research/core/widget/research_card.dart';
+import 'package:innovator/research/core/widget/research_card_skeleton.dart';
 import 'package:innovator/research/provider/research_provider.dart';
 import 'package:innovator/research/screens/get_research_paper_byId.dart';
 import 'package:innovator/research/screens/upload_research_paper.dart';
@@ -35,8 +36,17 @@ class _ResearchListScreenState extends ConsumerState<ResearchListScreen> {
   @override
   void initState() {
     super.initState();
-    ref.refresh(researchListProvider);
     _scrollCtrl.addListener(_onScroll);
+  }
+
+  Future<void> _openDetail(int paperId) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => ResearchDetailScreen(paperId: paperId)),
+    );
+    if (mounted) {
+      ref.read(researchListProvider.notifier).refresh();
+    }
   }
 
   @override
@@ -175,9 +185,18 @@ class _ResearchListScreenState extends ConsumerState<ResearchListScreen> {
   }
 
   Widget _buildBody(ResearchListState state) {
+    // if (state.isLoading && state.papers.isEmpty) {
+    //   return const Center(
+    //     child: CircularProgressIndicator(color: _kBlue, strokeWidth: 2.5),
+    //   );
+    // }
+
     if (state.isLoading && state.papers.isEmpty) {
-      return const Center(
-        child: CircularProgressIndicator(color: _kBlue, strokeWidth: 2.5),
+      return ListView.builder(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(top: 8, bottom: 28),
+        itemCount: 6,
+        itemBuilder: (_, __) => const ResearchCardSkeleton(),
       );
     }
 
@@ -244,15 +263,16 @@ class _ResearchListScreenState extends ConsumerState<ResearchListScreen> {
             );
           }
           return GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder:
-                      (_) => ResearchDetailScreen(paperId: state.papers[i].id),
-                ),
-              );
-            },
+            // onTap: () {
+            //   Navigator.push(
+            //     context,
+            //     MaterialPageRoute(
+            //       builder:
+            //           (_) => ResearchDetailScreen(paperId: state.papers[i].id),
+            //     ),
+            //   );
+            // },
+            onTap: () => _openDetail(state.papers[i].id),
             child: ResearchPaperCard(paper: state.papers[i]),
           );
         },

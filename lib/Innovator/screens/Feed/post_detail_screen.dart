@@ -9,7 +9,7 @@ import 'package:innovator/Innovator/screens/Feed/Inner_Homepage.dart';
 
 class NewFeedPostDetailScreen extends StatefulWidget {
   final String postId;
-  final String? highlightAction; // 'like', 'comment', 'repost'
+  final String? highlightAction;  
 
   const NewFeedPostDetailScreen({
     Key? key,

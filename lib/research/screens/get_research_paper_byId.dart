@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:innovator/research/core/widget/research_detail_skeleton.dart';
 import 'package:innovator/research/model/research_detail_model.dart';
 import 'package:innovator/research/provider/research_provider.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
@@ -81,10 +82,14 @@ class ResearchDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     ResearchDetailState state,
   ) {
+    // if (state.isLoading && state.data == null) {
+    //   return const Center(
+    //     child: CircularProgressIndicator(color: _kBlue, strokeWidth: 2.5),
+    //   );
+    // }
+
     if (state.isLoading && state.data == null) {
-      return const Center(
-        child: CircularProgressIndicator(color: _kBlue, strokeWidth: 2.5),
-      );
+      return const ResearchDetailSkeleton();
     }
 
     if (state.error != null && state.data == null) {
