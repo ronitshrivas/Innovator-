@@ -1,8 +1,4 @@
-// comment_section.dart
-// Inline comment section used inside feed cards.
-// Features: list comments, add comment, reply to comment, edit, delete.
-// All API calls updated to http://36.253.137.34:8005
-
+ 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:innovator/Innovator/App_data/App_data.dart';
@@ -17,6 +13,7 @@ class CommentSection extends StatefulWidget {
   // final VoidCallback? onCommentAdded;
   final bool isReel;
   final void Function(int delta)? onCommentCountChanged;
+  
 
   // const CommentSection({Key? key, required this.contentId, this.onCommentAdded})
   //   : super(key: key);

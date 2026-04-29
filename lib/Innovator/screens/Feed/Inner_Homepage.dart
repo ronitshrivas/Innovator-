@@ -1515,6 +1515,7 @@ class _FeedItemState extends State<FeedItem>
                       padding: const EdgeInsets.all(16.0),
                       child: CommentSection(
                         contentId: widget.content.id,
+                          isReel: widget.content.isReel,
                         onCommentCountChanged: (delta) {
                           setState(
                             () =>

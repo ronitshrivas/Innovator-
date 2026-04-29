@@ -35,6 +35,7 @@ class _ResearchListScreenState extends ConsumerState<ResearchListScreen> {
   @override
   void initState() {
     super.initState();
+    ref.refresh(researchListProvider);
     _scrollCtrl.addListener(_onScroll);
   }
 

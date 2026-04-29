@@ -2,19 +2,17 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/research/api_calling_service/research_service.dart';
 import 'package:innovator/research/model/research_detail_model.dart';
-import 'package:innovator/research/model/research_model.dart'; 
-// ─── Service Provider ─────────────────────────────────────────────────────────
+import 'package:innovator/research/model/research_model.dart';  
 
 final researchServiceProvider = Provider<ResearchService>(
   (_) => ResearchService(),
 );
-
-// ─── Filter State ─────────────────────────────────────────────────────────────
+ 
 
 class ResearchFilter {
   final String? search;
-  final String? type;   // null | 'free' | 'paid'
-  final String? status; // null | 'active' | 'pending'
+  final String? type;   
+  final String? status;  
 
   const ResearchFilter({this.search, this.type, this.status});
 
@@ -33,8 +31,7 @@ class ResearchFilter {
   static const _sentinel = Object();
 }
 
-// ─── List State ───────────────────────────────────────────────────────────────
-
+ 
 class ResearchListState {
   final List<ResearchPaperModel> papers;
   final bool isLoading;
@@ -76,8 +73,7 @@ class ResearchListState {
   }
 }
 
-// ─── List Notifier ────────────────────────────────────────────────────────────
-
+ 
 class ResearchListNotifier extends StateNotifier<ResearchListState> {
   final ResearchService _service;
   static const _pageSize = 20;
@@ -154,11 +150,10 @@ final researchListProvider =
   (ref) => ResearchListNotifier(ref.watch(researchServiceProvider)),
 );
 
-// ─── Upload State ─────────────────────────────────────────────────────────────
-
+ 
 class UploadState {
   final bool isUploading;
-  final double progress; // 0.0 – 1.0
+  final double progress; 
   final bool isSuccess;
   final String? error;
 
@@ -185,8 +180,7 @@ class UploadState {
   }
 }
 
-// ─── Upload Notifier ──────────────────────────────────────────────────────────
-
+ 
 class UploadNotifier extends StateNotifier<UploadState> {
   final ResearchService _service;
   final Ref _ref;
@@ -220,8 +214,7 @@ class UploadNotifier extends StateNotifier<UploadState> {
         },
       );
 
-      state = const UploadState(isSuccess: true);
-      // Refresh the list after a successful upload
+      state = const UploadState(isSuccess: true); 
       _ref.read(researchListProvider.notifier).refresh();
       return true;
     } catch (e) {
