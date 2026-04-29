@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:innovator/research/core/constants/api_constants.dart';
 import 'package:innovator/research/core/constants/network/base_api_service.dart';
 import 'package:innovator/research/core/constants/network/dio_client.dart';
+import 'package:innovator/research/model/research_detail_model.dart';
 import 'package:innovator/research/model/research_model.dart'; 
 
 class ResearchService extends ResearchBaseApiService {
@@ -64,5 +65,14 @@ class ResearchService extends ResearchBaseApiService {
       formData,
       onSendProgress: onSendProgress,
     );
+  }
+
+
+    Future<ResearchPaperDetailResponseModel> getResearchPaperById(
+      int id) async {
+    final data = await get<Map<String, dynamic>>( 
+      ResearchApi.getResearchPaperById(id)
+    );
+    return ResearchPaperDetailResponseModel.fromJson(data);
   }
 }

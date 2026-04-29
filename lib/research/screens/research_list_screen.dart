@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/research/core/widget/research_card.dart';
 import 'package:innovator/research/provider/research_provider.dart';
+import 'package:innovator/research/screens/get_research_paper_byId.dart';
 import 'package:innovator/research/screens/upload_research_paper.dart';
 
 const _kBlue = Color(0xFF185FA5);
 const _kBlueMid = Color(0xFF378ADD);
 const _kRed = Color(0xFFA32D2D);
 const _kRedSoft = Color(0xFFFCEBEB);
-
 const _kText = Color(0xFF1C1C1E);
 const _kTextSub = Color(0xFF555555);
 const _kTextMuted = Color(0xFF8A8A8E);
@@ -35,6 +35,7 @@ class _ResearchListScreenState extends ConsumerState<ResearchListScreen> {
   @override
   void initState() {
     super.initState();
+    ref.refresh(researchListProvider);
     _scrollCtrl.addListener(_onScroll);
   }
 
@@ -167,13 +168,6 @@ class _ResearchListScreenState extends ConsumerState<ResearchListScreen> {
               },
             ),
           ),
-
-          if (!state.isLoading && state.papers.isNotEmpty)
-            Text(
-              '${state.papers.length} paper${state.papers.length == 1 ? '' : 's'}',
-              style: const TextStyle(fontSize: 12, color: _kTextMuted),
-            ),
-
           Expanded(child: _buildBody(state)),
         ],
       ),
@@ -249,7 +243,18 @@ class _ResearchListScreenState extends ConsumerState<ResearchListScreen> {
               ),
             );
           }
-          return ResearchPaperCard(paper: state.papers[i]);
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (_) => ResearchDetailScreen(paperId: state.papers[i].id),
+                ),
+              );
+            },
+            child: ResearchPaperCard(paper: state.papers[i]),
+          );
         },
       ),
     );

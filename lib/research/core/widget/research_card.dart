@@ -10,8 +10,8 @@ class ResearchPaperCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-
     return Card(
+      color: Colors.white,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -59,9 +59,9 @@ class ResearchPaperCard extends StatelessWidget {
                 ),
               ],
             ),
-
+    
             const SizedBox(height: 6),
-
+    
             Row(
               children: [
                 Icon(
@@ -78,7 +78,7 @@ class ResearchPaperCard extends StatelessWidget {
                 ),
               ],
             ),
-
+    
             if (paper.description.isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(
@@ -90,11 +90,11 @@ class ResearchPaperCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ],
-
+    
             const SizedBox(height: 12),
             const Divider(height: 1),
             const SizedBox(height: 12),
-
+    
             Row(
               children: [
       
