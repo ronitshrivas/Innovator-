@@ -107,7 +107,7 @@ class FileTypeHelper {
     }
   }
 }
- 
+
 class CursorHelper {
   static bool isValidObjectId(String? cursor) {
     if (cursor == null || cursor.isEmpty) return false;
@@ -129,7 +129,6 @@ class CursorHelper {
   }
 }
 
- 
 class FeedApiResponse {
   final int status;
   final Map<String, dynamic> data;
@@ -167,15 +166,13 @@ class FeedApiService {
     };
   }
 
-  
   static Future<ContentData> fetchContents({
-    String? cursor,  
-    int limit = 20,  
+    String? cursor,
+    int limit = 20,
     String contentType = 'normal',
     required BuildContext context,
   }) async {
     try {
-      
       final uri =
           cursor != null && cursor.isNotEmpty
               ? Uri.parse('http://36.253.137.34:8005/api/feed/?cursor=$cursor')
@@ -373,7 +370,7 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
 
   DateTime _lastLoadTime = DateTime.now();
   static const int _minimumLoadInterval = 500;
- 
+
   final Map<String, bool> _reactionState = {};
 
   @override
@@ -609,7 +606,7 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
       _handleError('Failed to refresh feed');
     }
   }
- 
+
   void _handleError(String message) {
     if (mounted) {
       setState(() {
@@ -693,7 +690,7 @@ class _Inner_HomePageState extends ConsumerState<Inner_HomePage> {
     if (_hasError && _allContents.isEmpty) return _buildErrorState();
     return _buildInfiniteScrollList();
   }
- 
+
   Widget _buildShimmerList() => const _ShimmerFeedList();
 
   Widget _buildErrorState() => Center(
@@ -1822,7 +1819,7 @@ class _FeedItemState extends State<FeedItem>
       ),
     );
   }
- 
+
   Widget _buildDocumentPreview(
     String fileUrl,
     String label,
@@ -3714,8 +3711,6 @@ class _ShimmerCardTextOnly extends StatelessWidget {
     return _ShimmerWrapper(child: _PostSkeleton(showMedia: false));
   }
 }
-
- 
 
 class _ShimmerWrapper extends StatelessWidget {
   final Widget child;

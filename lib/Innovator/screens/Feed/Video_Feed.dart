@@ -4826,21 +4826,51 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
 
   // ── Feed init ─────────────────────────────────────────────────────────────
 
+  // void _onFeedReady(List<ReelModel> reels) {
+  //   if (_feedReady || reels.isEmpty) return;
+  //   _feedReady = true;
+
+  //   // Initial slot assignment:
+  //   //   curSlot  (0) = page 0 (first reel)
+  //   //   nextSlot (1) = page 1 (second reel, pre-buffering)
+  //   //   prevSlot (2) = empty  (no previous reel yet)
+  //   _prepareIndex(0, reels, _slots.curSlot);
+  //   if (reels.length > 1) _prepareIndex(1, reels, _slots.nextSlot);
+
+  //   // Wait for SurfaceView to be created, then connect + play
+  //   Future.delayed(const Duration(milliseconds: 400), () {
+  //     if (!mounted) return;
+  //     ReelsPlayer.switchSurface(_slots.curSlot);
+  //     Future.delayed(const Duration(milliseconds: 60), () {
+  //       if (!mounted) return;
+  //       ReelsPlayer.play(_slots.curSlot);
+  //       ReelsApiService.recordView(reels[0].id);
+  //     });
+  //   });
+  // }
+
   void _onFeedReady(List<ReelModel> reels) {
     if (_feedReady || reels.isEmpty) return;
     _feedReady = true;
 
-    // Initial slot assignment:
-    //   curSlot  (0) = page 0 (first reel)
-    //   nextSlot (1) = page 1 (second reel, pre-buffering)
-    //   prevSlot (2) = empty  (no previous reel yet)
     _prepareIndex(0, reels, _slots.curSlot);
     if (reels.length > 1) _prepareIndex(1, reels, _slots.nextSlot);
 
-    // Wait for SurfaceView to be created, then connect + play
-    Future.delayed(const Duration(milliseconds: 400), () {
+    // Wait for the SurfaceView's surfaceCreated() callback, then hand the
+    // surface to slot 0 and start playing.
+    Future.delayed(const Duration(milliseconds: 300), () {
       if (!mounted) return;
       ReelsPlayer.switchSurface(_slots.curSlot);
+
+      // Hide loading overlay only when the FIRST real frame is decoded.
+      // listenFirstFrame fires onRenderedFirstFrame() from ExoPlayer.
+      ReelsPlayer.listenFirstFrame(_slots.curSlot, () {
+        if (mounted)
+          setState(() {
+            /* triggers overlay fade-out */
+          });
+      });
+
       Future.delayed(const Duration(milliseconds: 60), () {
         if (!mounted) return;
         ReelsPlayer.play(_slots.curSlot);
@@ -4850,14 +4880,55 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
   }
 
   /// Prepare a specific physical slot with the reel at [reelIndex].
+  // void _prepareIndex(int reelIndex, List<ReelModel> reels, int physicalSlot) {
+  //   if (reelIndex < 0 || reelIndex >= reels.length) return;
+  //   final url = reels[reelIndex].bestVideoUrl;
+  //   if (url == null || url.isEmpty) return;
+  //   developer.log(
+  //     '[Reels] prepare slot=$physicalSlot for reelIndex=$reelIndex (${reels[reelIndex].username})',
+  //   );
+  //   ReelsPlayer.prepare(physicalSlot, url, _token);
+  // }
+
+  // void _prepareIndex(int reelIndex, List<ReelModel> reels, int physicalSlot) {
+  //   if (reelIndex < 0 || reelIndex >= reels.length) return;
+  //   final reel = reels[reelIndex];
+  //   final url = reel.bestVideoUrl; // HLS preferred
+  //   if (url == null || url.isEmpty) return;
+
+  //   // fallbackUrl = direct .mp4, used when HLS codec is unsupported on device
+  //   final fallbackUrl =
+  //       (reel.videoUrl != null &&
+  //               reel.videoUrl!.isNotEmpty &&
+  //               reel.videoUrl != url)
+  //           ? reel.videoUrl
+  //           : null;
+
+  //   developer.log(
+  //     '[Reels] prepare slot=$physicalSlot for reelIndex=$reelIndex'
+  //     ' (${reel.username}) hls=${url.contains(".m3u8")}'
+  //     ' fallback=${fallbackUrl != null}',
+  //   );
+
+  //   ReelsPlayer.prepare(
+  //     physicalSlot,
+  //     url,
+  //     _token,
+  //     fallbackUrl: fallbackUrl, // <── new param
+  //   );
+  // }
+
   void _prepareIndex(int reelIndex, List<ReelModel> reels, int physicalSlot) {
     if (reelIndex < 0 || reelIndex >= reels.length) return;
     final url = reels[reelIndex].bestVideoUrl;
     if (url == null || url.isEmpty) return;
+
     developer.log(
-      '[Reels] prepare slot=$physicalSlot for reelIndex=$reelIndex (${reels[reelIndex].username})',
+      '[Reels] prepare slot=$physicalSlot '
+      'reelIndex=$reelIndex (${reels[reelIndex].username})',
     );
-    ReelsPlayer.prepare(physicalSlot, url, _token);
+
+    ReelsPlayer.prepare(physicalSlot, url, _token); // no fallbackUrl needed
   }
 
   // ── Page change ───────────────────────────────────────────────────────────
