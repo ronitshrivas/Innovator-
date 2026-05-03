@@ -9,7 +9,8 @@ import 'package:innovator/Innovator/screens/show_Specific_Profile/Show_Specific_
 
 class reeactionsheet extends StatefulWidget {
   final String postId;
-  const reeactionsheet({required this.postId});
+  final bool isreel;
+  const reeactionsheet({required this.postId, this.isreel = false});
 
   @override
   State<reeactionsheet> createState() => _reeactionsheetState();
@@ -40,10 +41,15 @@ class _reeactionsheetState extends State<reeactionsheet> {
   Future<void> _fetchReactions() async {
     try {
       final token = AppData().accessToken ?? '';
+
+      final baseUrl =
+          widget.isreel
+              ? ApiConstants
+                  .fetchreelreactions // → /api/reels/
+              : ApiConstants.fetchreactions;
+
       final res = await http.get(
-        Uri.parse(
-          '${ApiConstants.fetchreactions}${widget.postId}/reactions-list/',
-        ),
+        Uri.parse('$baseUrl${widget.postId}/reactions-list/'),
         headers: {
           'Authorization': 'Bearer $token',
           'Accept': 'application/json',

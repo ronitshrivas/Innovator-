@@ -13,6 +13,9 @@ class ApiConstants {
   //Auth Username Checkusername
   static const String checkusername = '$feedBase/users/check-username/';
 
+  //
+  static const String fetchreelreactions = '$feedBase/reels/';
+
   //Auth Endpoints
   static const String tokenRefresh = '$authBase/token/refresh/';
 

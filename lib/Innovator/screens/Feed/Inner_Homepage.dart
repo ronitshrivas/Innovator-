@@ -1512,7 +1512,7 @@ class _FeedItemState extends State<FeedItem>
                       padding: const EdgeInsets.all(16.0),
                       child: CommentSection(
                         contentId: widget.content.id,
-                          isReel: widget.content.isReel,
+                        isReel: widget.content.isReel,
                         onCommentCountChanged: (delta) {
                           setState(
                             () =>
@@ -1537,7 +1537,11 @@ class _FeedItemState extends State<FeedItem>
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => reeactionsheet(postId: widget.content.id),
+      builder:
+          (_) => reeactionsheet(
+            postId: widget.content.id,
+            isreel: widget.content.isReel,
+          ),
     );
   }
 

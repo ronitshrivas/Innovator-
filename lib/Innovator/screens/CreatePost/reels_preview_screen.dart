@@ -15,7 +15,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:innovator/Innovator/provider/reels_provider.dart';
+import 'package:innovator/Innovator/provider/upload_provider.dart';
 import 'package:innovator/Innovator/screens/CreatePost/reels_adjusts_screen.dart';
+import 'package:innovator/innovator_home.dart';
 import 'package:mime/mime.dart';
 import 'package:path/path.dart' as p;
 import 'package:video_player/video_player.dart';
@@ -124,42 +126,135 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
   // The backend merges the audio server-side, or stores them separately.
   // This approach avoids ALL ffmpeg dependencies.
   // ─────────────────────────────────────────────────────────────────────────
+  // Future<void> _uploadReel() async {
+  //   if (_isUploading) return;
+  //   setState(() => _isUploading = true);
+
+  //   // Stop music before uploading
+  //   await _musicPlayer?.stop();
+  //   setState(() => _musicPlaying = false);
+
+  //   try {
+  //     final appData = AppData();
+  //     final request = http.MultipartRequest('POST', Uri.parse(_reelsApi));
+
+  //     if (appData.accessToken != null) {
+  //       request.headers['Authorization'] = 'Bearer ${appData.accessToken}';
+  //     }
+
+  //     // Caption
+  //     final caption = _captionCtrl.text.trim();
+  //     if (caption.isNotEmpty) request.fields['caption'] = caption;
+
+  //     // FIX: Send selected music URL as a field so backend can merge/store it
+  //     final selectedMusic = ref.read(reelsProvider).selectedMusic;
+  //     if (selectedMusic != null && selectedMusic.audioUrl.isNotEmpty) {
+  //       request.fields['music_url'] = selectedMusic.audioUrl;
+  //       request.fields['music_title'] = selectedMusic.title;
+  //       request.fields['music_artist'] = selectedMusic.artist;
+  //     }
+
+  //     // Video file
+  //     final mimeType = lookupMimeType(widget.videoPath) ?? 'video/mp4';
+  //     request.files.add(
+  //       await http.MultipartFile.fromPath(
+  //         'video',
+  //         widget.videoPath,
+  //         contentType: MediaType.parse(mimeType),
+  //         filename: p.basename(widget.videoPath),
+  //       ),
+  //     );
+
+  //     final streamed = await request.send().timeout(
+  //       const Duration(seconds: 120),
+  //     );
+  //     final response = await http.Response.fromStream(streamed);
+
+  //     if (response.statusCode == 200 || response.statusCode == 201) {
+  //       if (mounted) {
+  //         // Reset provider state
+  //         ref.read(reelsProvider.notifier).reset();
+  //         ScaffoldMessenger.of(context).showSnackBar(
+  //           SnackBar(
+  //             content: const Text('🎉 Reel published successfully!'),
+  //             backgroundColor: Colors.green.shade600,
+  //           ),
+  //         );
+  //         await Future.delayed(const Duration(seconds: 1));
+  //         if (mounted) {
+  //           Navigator.of(context).popUntil((r) => r.isFirst);
+  //         }
+  //       }
+  //     } else {
+  //       Map<String, dynamic> body = {};
+  //       try {
+  //         body = json.decode(response.body) as Map<String, dynamic>;
+  //       } catch (_) {}
+  //       final msg =
+  //           body['detail']?.toString() ??
+  //           body['message']?.toString() ??
+  //           'Upload failed (${response.statusCode})';
+  //       _showError(msg);
+  //     }
+  //   } catch (e) {
+  //     _showError('Upload error');
+  //   } finally {
+  //     if (mounted) setState(() => _isUploading = false);
+  //   }
+  // }
+
   Future<void> _uploadReel() async {
     if (_isUploading) return;
-    setState(() => _isUploading = true);
 
-    // Stop music before uploading
+    // Capture everything BEFORE navigating (widget will be disposed)
+    final String captionText = _captionCtrl.text.trim();
+    final String videoPath = widget.videoPath;
+    final String? accessToken = AppData().accessToken;
+    final ReelsMusicTrack? selectedMusic =
+        ref.read(reelsProvider).selectedMusic;
+
+    // ✅ Get the ProviderContainer — survives navigation
+    final container = ProviderScope.containerOf(context);
+
+    // ✅ Stop music before navigating
     await _musicPlayer?.stop();
-    setState(() => _musicPlaying = false);
 
+    // ✅ Set uploading true BEFORE navigating
+    container.read(postUploadingProvider.notifier).state = true;
+    container.read(postUploadMessageProvider.notifier).state = null;
+
+    // ✅ Reset reels state and navigate immediately
+    ref.read(reelsProvider.notifier).reset();
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const Homepage()),
+      (route) => false,
+    );
+
+    // ✅ Upload runs after navigation using container (not ref)
     try {
-      final appData = AppData();
       final request = http.MultipartRequest('POST', Uri.parse(_reelsApi));
 
-      if (appData.accessToken != null) {
-        request.headers['Authorization'] = 'Bearer ${appData.accessToken}';
+      if (accessToken != null) {
+        request.headers['Authorization'] = 'Bearer $accessToken';
       }
 
-      // Caption
-      final caption = _captionCtrl.text.trim();
-      if (caption.isNotEmpty) request.fields['caption'] = caption;
+      if (captionText.isNotEmpty) {
+        request.fields['caption'] = captionText;
+      }
 
-      // FIX: Send selected music URL as a field so backend can merge/store it
-      final selectedMusic = ref.read(reelsProvider).selectedMusic;
       if (selectedMusic != null && selectedMusic.audioUrl.isNotEmpty) {
         request.fields['music_url'] = selectedMusic.audioUrl;
         request.fields['music_title'] = selectedMusic.title;
         request.fields['music_artist'] = selectedMusic.artist;
       }
 
-      // Video file
-      final mimeType = lookupMimeType(widget.videoPath) ?? 'video/mp4';
+      final mimeType = lookupMimeType(videoPath) ?? 'video/mp4';
       request.files.add(
         await http.MultipartFile.fromPath(
           'video',
-          widget.videoPath,
+          videoPath,
           contentType: MediaType.parse(mimeType),
-          filename: p.basename(widget.videoPath),
+          filename: p.basename(videoPath),
         ),
       );
 
@@ -169,20 +264,9 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
       final response = await http.Response.fromStream(streamed);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        if (mounted) {
-          // Reset provider state
-          ref.read(reelsProvider.notifier).reset();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('🎉 Reel published successfully!'),
-              backgroundColor: Colors.green.shade600,
-            ),
-          );
-          await Future.delayed(const Duration(seconds: 1));
-          if (mounted) {
-            Navigator.of(context).popUntil((r) => r.isFirst);
-          }
-        }
+        container.read(postUploadingProvider.notifier).state = false;
+        container.read(postUploadMessageProvider.notifier).state =
+            'Reel published successfully! 🎉';
       } else {
         Map<String, dynamic> body = {};
         try {
@@ -192,12 +276,13 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
             body['detail']?.toString() ??
             body['message']?.toString() ??
             'Upload failed (${response.statusCode})';
-        _showError(msg);
+        container.read(postUploadingProvider.notifier).state = false;
+        container.read(postUploadMessageProvider.notifier).state = msg;
       }
     } catch (e) {
-      _showError('Upload error');
-    } finally {
-      if (mounted) setState(() => _isUploading = false);
+      container.read(postUploadingProvider.notifier).state = false;
+      container.read(postUploadMessageProvider.notifier).state =
+          'Error uploading reel: $e';
     }
   }
 
