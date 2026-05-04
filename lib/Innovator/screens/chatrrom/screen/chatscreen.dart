@@ -5996,7 +5996,7 @@ class _MessageBubble extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: _kOrange.withOpacity(0.25),
+              color: _kOrange.withAlpha(25),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),

@@ -1,9 +1,9 @@
 import 'dart:developer';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';  
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_update/in_app_update.dart';
 import 'package:innovator/Innovator/provider/notification_provider.dart';
-import 'package:innovator/Innovator/provider/upload_provider.dart'; 
+import 'package:innovator/Innovator/provider/upload_provider.dart';
 import 'package:innovator/Innovator/screens/Feed/Inner_Homepage.dart';
 import 'package:innovator/Innovator/screens/Feed/Video_Feed.dart';
 import 'package:innovator/Innovator/widget/FloatingMenuwidget.dart';
@@ -76,7 +76,7 @@ class _HomepageState extends ConsumerState<Homepage>
         log('Update available!');
         if (info.immediateUpdateAllowed) {
           _performImmediateUpdate();
-        } else if (info.flexibleUpdateAllowed) { 
+        } else if (info.flexibleUpdateAllowed) {
           _performFlexibleUpdate();
         }
       } else {
@@ -166,51 +166,50 @@ class _HomepageState extends ConsumerState<Homepage>
   //   );
   // }
 
-
   @override
-Widget build(BuildContext context) {
-  final isUploading = ref.watch(postUploadingProvider);
-  final uploadMessage = ref.watch(postUploadMessageProvider);
+  Widget build(BuildContext context) {
+    final isUploading = ref.watch(postUploadingProvider);
+    final uploadMessage = ref.watch(postUploadMessageProvider);
 
-  // Auto-clear success/error message after 3 seconds
-  if (uploadMessage != null) {
-    Future.microtask(() async {
-      await Future.delayed(const Duration(seconds: 3));
-      ref.read(postUploadMessageProvider.notifier).state = null;
-    });
-  }
+    // Auto-clear success/error message after 3 seconds
+    if (uploadMessage != null) {
+      Future.microtask(() async {
+        await Future.delayed(const Duration(seconds: 3));
+        ref.read(postUploadMessageProvider.notifier).state = null;
+      });
+    }
 
-  return Scaffold(
-    key: _scaffoldKey,
-    body: Column(
-      children: [
-        // ✅ Upload banner at the very top
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 400),
-          child: isUploading
-              ? _UploadingBanner()                     
-              : uploadMessage != null
-                  ? _UploadResultBanner(message: uploadMessage)  
-                  : const SizedBox.shrink(),               
-        ),
- 
-        Expanded(
-          child: GestureDetector(
-            onHorizontalDragEnd: (DragEndDetails details) {
-              if (details.primaryVelocity! < -200) {
-                _navigateToVideoFeed();
-              }
-            },
-            child: Inner_HomePage(),
+    return Scaffold(
+      key: _scaffoldKey,
+      body: Column(
+        children: [
+          // ✅ Upload banner at the very top
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 400),
+            child:
+                isUploading
+                    ? _UploadingBanner()
+                    : uploadMessage != null
+                    ? _UploadResultBanner(message: uploadMessage)
+                    : const SizedBox.shrink(),
           ),
-        ),
-      ],
-    ),
-  );
-}
+
+          Expanded(
+            child: GestureDetector(
+              onHorizontalDragEnd: (DragEndDetails details) {
+                if (details.primaryVelocity! < -200) {
+                  _navigateToVideoFeed();
+                }
+              },
+              child: Inner_HomePage(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
- 
 class _UploadingBanner extends StatefulWidget {
   @override
   State<_UploadingBanner> createState() => _UploadingBannerState();
@@ -241,7 +240,7 @@ class _UploadingBannerState extends State<_UploadingBanner>
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      color: const Color(0xFF1877F2),  
+      color: const Color(0xFF1877F2),
       child: SafeArea(
         bottom: false,
         child: Padding(
@@ -249,7 +248,7 @@ class _UploadingBannerState extends State<_UploadingBanner>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
-            children: [ 
+            children: [
               Row(
                 children: [
                   const SizedBox(
@@ -270,7 +269,7 @@ class _UploadingBannerState extends State<_UploadingBanner>
                         fontSize: 13,
                       ),
                     ),
-                  ), 
+                  ),
                   AnimatedBuilder(
                     animation: _controller,
                     builder: (_, __) {
@@ -287,20 +286,21 @@ class _UploadingBannerState extends State<_UploadingBanner>
                   ),
                 ],
               ),
-              const SizedBox(height: 8), 
+              const SizedBox(height: 8),
               AnimatedBuilder(
                 animation: _animation,
-                builder: (_, __) => ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: null,  
-                    minHeight: 4,
-                    backgroundColor: Colors.white.withOpacity(0.25),
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Colors.white.withOpacity(0.9),
+                builder:
+                    (_, __) => ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: null,
+                        minHeight: 4,
+                        backgroundColor: Colors.white.withAlpha(25),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Colors.white.withAlpha(90),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
               ),
             ],
           ),
@@ -308,7 +308,8 @@ class _UploadingBannerState extends State<_UploadingBanner>
       ),
     );
   }
-} 
+}
+
 class _UploadResultBanner extends StatelessWidget {
   final String message;
   const _UploadResultBanner({required this.message});

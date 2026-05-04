@@ -103,7 +103,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: _orange.withOpacity(0.1),
+                    color: _orange.withAlpha(10),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.lock_open, color: _orange, size: 22),
@@ -327,7 +327,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
           width: 96,
           height: 96,
           decoration: BoxDecoration(
-            color: _orange.withOpacity(0.1),
+            color: _orange.withAlpha(10),
             shape: BoxShape.circle,
           ),
           child: const Icon(Icons.block, size: 48, color: _orange),
@@ -455,7 +455,7 @@ class _BlockedUserCard extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: _orange.withOpacity(0.1),
+                            color: _orange.withAlpha(10),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -545,10 +545,10 @@ class _BlockedUserCard extends StatelessWidget {
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: _orange.withOpacity(0.1),
+                      color: _orange.withAlpha(10),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: _orange.withOpacity(0.4),
+                        color: _orange.withAlpha(40),
                         width: 1,
                       ),
                     ),
@@ -619,7 +619,7 @@ class _StatChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withAlpha(8),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(

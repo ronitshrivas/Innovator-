@@ -34,6 +34,7 @@ class SuggestedUser {
   final String? avatar;
   final String? bio;
   final bool isFollowing;
+  final bool followsMe;
   final int mutualCount;
   final int affinityScore;
   final List<String> sharedTags;
@@ -46,6 +47,7 @@ class SuggestedUser {
     this.avatar,
     this.bio,
     required this.isFollowing,
+    required this.followsMe,
     required this.mutualCount,
     required this.affinityScore,
     required this.sharedTags,
@@ -60,6 +62,7 @@ class SuggestedUser {
       avatar: json['avatar'] as String?,
       bio: json['bio'] as String?,
       isFollowing: json['is_following'] as bool? ?? false,
+      followsMe: json['follows_me'] as bool? ?? false,
       mutualCount: json['mutual_count'] as int? ?? 0,
       affinityScore: json['affinity_score'] as int? ?? 0,
       sharedTags:
@@ -83,10 +86,9 @@ class SuggestedUser {
     'shared_tags': sharedTags,
     'reason': reason,
   };
- 
+
   String get displayName => fullName.isNotEmpty ? fullName : username;
 
- 
   bool get hasAvatar => avatar != null && avatar!.isNotEmpty;
 
   @override

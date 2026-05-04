@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:innovator/Innovator/screens/Follow/follow-Service.dart';
 import 'package:innovator/Innovator/screens/Follow/follow_Button.dart';
 import 'package:innovator/Innovator/screens/show_Specific_Profile/Show_Specific_Profile.dart';
 
@@ -166,9 +167,32 @@ class _AnimatedCardState extends State<_AnimatedCard>
   );
 }
 
-class _UserCard extends StatelessWidget {
+class _UserCard extends StatefulWidget {
   final SuggestedUser user;
   const _UserCard({required this.user});
+
+  @override
+  State<_UserCard> createState() => _UserCardState();
+}
+
+class _UserCardState extends State<_UserCard> {
+  late bool _isFollowing;
+
+  @override
+  void initState() {
+    super.initState();
+    // Start with what backend says
+    _isFollowing = widget.user.isFollowing;
+    // Then verify against local cache
+    _checkLocalFollowStatus();
+  }
+
+  Future<void> _checkLocalFollowStatus() async {
+    final status = await FollowService.checkFollowStatus(widget.user.userId);
+    if (mounted && status != _isFollowing) {
+      setState(() => _isFollowing = status);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -193,18 +217,19 @@ class _UserCard extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => SpecificUserProfilePage(userId: user.userId),
+              builder:
+                  (_) => SpecificUserProfilePage(userId: widget.user.userId),
             ),
           );
         },
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _Avatar(user: user),
+            _Avatar(user: widget.user),
             const SizedBox(height: 10),
 
             Text(
-              user.displayName,
+              widget.user.displayName,
               style: const TextStyle(
                 color: _P.textPrimary,
                 fontSize: 13,
@@ -216,7 +241,7 @@ class _UserCard extends StatelessWidget {
             ),
             const SizedBox(height: 5),
 
-            if (user.mutualCount > 0)
+            if (widget.user.mutualCount > 0)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -233,7 +258,7 @@ class _UserCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 3),
                     Text(
-                      '${user.mutualCount} mutual',
+                      '${widget.user.mutualCount} mutual',
                       style: const TextStyle(
                         color: _P.orange,
                         fontSize: 10,
@@ -245,7 +270,10 @@ class _UserCard extends StatelessWidget {
               ),
 
             const Spacer(),
-            FollowButton(targetUserId: user.userId),
+            FollowButton(
+              targetUserId: widget.user.userId,
+              initialFollowStatus: widget.user.followsMe,
+            ),
           ],
         ),
       ),

@@ -957,14 +957,12 @@ class _SuggestionChipState extends State<_SuggestionChip> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color:
-              _pressed
-                  ? widget.preciseGreen
-                  : widget.preciseGreen.withOpacity(0.08),
+              _pressed ? widget.preciseGreen : widget.preciseGreen.withAlpha(8),
           border: Border.all(
             color:
                 _pressed
                     ? widget.preciseGreen
-                    : widget.preciseGreen.withOpacity(0.4),
+                    : widget.preciseGreen.withAlpha(40),
             width: 1.2,
           ),
           borderRadius: BorderRadius.circular(20),
