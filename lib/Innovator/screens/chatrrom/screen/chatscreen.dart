@@ -4043,7 +4043,6 @@
 //     );
 //   }
 // }
-
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
@@ -4077,29 +4076,23 @@ const _kReceivedBubble = Color(0xFFFFFFFF);
 const _kBaseUrl = 'ws://36.253.137.34:8005';
 const _kHttpBase = 'http://36.253.137.34:8005';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
 String _inferAttachmentType(String url) {
   final lower = url.toLowerCase();
   if (lower.endsWith('.jpg') ||
       lower.endsWith('.jpeg') ||
       lower.endsWith('.png') ||
       lower.endsWith('.gif') ||
-      lower.endsWith('.webp')) {
+      lower.endsWith('.webp'))
     return 'image';
-  }
   if (lower.endsWith('.mp4') ||
       lower.endsWith('.mov') ||
-      lower.endsWith('.avi')) {
+      lower.endsWith('.avi'))
     return 'video';
-  }
   return 'file';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ChatNotifier
+// ChatNotifier  — FIX 1: offline message queue
 // ─────────────────────────────────────────────────────────────────────────────
 
 class ChatNotifier extends StateNotifier<ChatState> {
@@ -4114,7 +4107,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
   StreamSubscription? _sub;
   Timer? _reconnectTimer;
   int _reconnectAttempts = 0;
-  static const _maxReconnects = 5;
+  static const _maxReconnects = 99; // keep retrying forever silently
+
+  /// ── FIX 1: offline queue ─────────────────────────────────────────────────
+  final List<Map<String, dynamic>> _pendingQueue = [];
 
   String get _myId => AppData().currentUserId ?? '';
   String get _token => AppData().accessToken ?? '';
@@ -4133,13 +4129,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
   Future<void> _fetchHistory() async {
     if (_token.isEmpty) return;
     state = state.copyWith(isLoadingHistory: true, error: null);
-
     try {
       final uri = Uri.parse('$_kHttpBase/api/chats/?with_user=$otherUserId');
       final response = await http
           .get(uri, headers: _authHeaders)
           .timeout(const Duration(seconds: 15));
-
       if (response.statusCode == 200) {
         final list = json.decode(response.body) as List<dynamic>;
         final messages =
@@ -4147,15 +4141,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
                 .whereType<Map<String, dynamic>>()
                 .map((m) => ChatMessage.fromHistory(m, _myId))
                 .toList();
-
-        developer.log('[Chat] Loaded ${messages.length} history messages');
         state = state.copyWith(messages: messages, isLoadingHistory: false);
       } else {
-        developer.log('[Chat] History error: ${response.statusCode}');
         state = state.copyWith(isLoadingHistory: false);
       }
     } catch (e) {
-      developer.log('[Chat] fetchHistory error: $e');
       state = state.copyWith(isLoadingHistory: false);
     }
   }
@@ -4165,10 +4155,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     try {
       _channel!.sink.add(json.encode({'type': 'mark_as_read'}));
       _ref.read(perFriendUnreadProvider.notifier).reset(otherUserId);
-      developer.log('[WS] Sent mark_as_read');
-    } catch (e) {
-      developer.log('[WS] markAsRead error: $e');
-    }
+    } catch (_) {}
   }
 
   void markAsRead() => _markAsRead();
@@ -4178,24 +4165,14 @@ class ChatNotifier extends StateNotifier<ChatState> {
     _markAsRead();
   }
 
-  void setReply(ChatMessage msg) {
-    state = state.copyWith(replyingTo: msg);
-  }
-
-  void clearReply() {
-    state = state.copyWith(clearReply: true);
-  }
+  void setReply(ChatMessage msg) => state = state.copyWith(replyingTo: msg);
+  void clearReply() => state = state.copyWith(clearReply: true);
 
   void _connect() {
-    if (_token.isEmpty || otherUserId.isEmpty) {
-      state = state.copyWith(
-        wsStatus: WsStatus.error,
-        error: 'Authentication required',
-      );
-      return;
-    }
+    if (_token.isEmpty || otherUserId.isEmpty) return;
 
-    state = state.copyWith(wsStatus: WsStatus.connecting, error: null);
+    // ── FIX 1: Don't update wsStatus to show UI banner ─────────────────────
+    // We connect silently — no "Reconnecting…" banner.
     developer.log('[WS] Connecting to $otherUserId...');
 
     try {
@@ -4205,31 +4182,48 @@ class ChatNotifier extends StateNotifier<ChatState> {
         pingInterval: const Duration(seconds: 20),
       );
 
-      state = state.copyWith(wsStatus: WsStatus.connected);
+      // Mark connected ONLY internally; don't surface errors to UI
+      state = state.copyWith(wsStatus: WsStatus.connected, error: null);
       _reconnectAttempts = 0;
       developer.log('[WS] Connected ✓');
       _markAsRead();
 
+      // Flush any queued messages
+      _flushQueue();
+
       _sub = _channel!.stream.listen(
         _onMessage,
-        onError: _onError,
+        onError: (_) => _onDone(),
         onDone: _onDone,
         cancelOnError: false,
       );
     } catch (e) {
       developer.log('[WS] Connect error: $e');
-      state = state.copyWith(
-        wsStatus: WsStatus.error,
-        error: 'Connection failed',
-      );
+      // Silently schedule reconnect — no UI state change
+      state = state.copyWith(wsStatus: WsStatus.disconnected);
       _scheduleReconnect();
+    }
+  }
+
+  /// Flush queued messages once WS is back online
+  void _flushQueue() {
+    if (_pendingQueue.isEmpty) return;
+    final copy = List<Map<String, dynamic>>.from(_pendingQueue);
+    _pendingQueue.clear();
+    for (final payload in copy) {
+      try {
+        _channel!.sink.add(json.encode(payload));
+        developer.log('[WS] Flushed queued message');
+      } catch (e) {
+        _pendingQueue.insert(0, payload); // put back on failure
+        break;
+      }
     }
   }
 
   void _onMessage(dynamic raw) {
     try {
       final data = json.decode(raw.toString()) as Map<String, dynamic>;
-      developer.log('[WS] Received: $data');
 
       if (data['type'] == 'messages_read') {
         final senderId = data['sender_id']?.toString() ?? '';
@@ -4267,7 +4261,6 @@ class ChatNotifier extends StateNotifier<ChatState> {
           data['content']?.toString() ??
           data['text']?.toString() ??
           '';
-
       final attachmentUrl = data['attachment']?.toString();
       final hasContent =
           msgText.isNotEmpty ||
@@ -4282,13 +4275,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       final isMine = senderId == _myId;
       final serverId = data['id']?.toString();
 
-      if (!isMine && senderId != otherUserId) {
-        developer.log(
-          '[WS] Ignored stray msg from $senderId in chat with $otherUserId',
-        );
-        return;
-      }
-
+      if (!isMine && senderId != otherUserId) return;
       if (serverId != null && state.messages.any((m) => m.id == serverId)) {
         return;
       }
@@ -4342,44 +4329,34 @@ class ChatNotifier extends StateNotifier<ChatState> {
         _ref.read(lastActiveFriendProvider.notifier).state = otherUserId;
       }
     } catch (e) {
-      developer.log('[WS] Parse error: $e  raw=$raw');
+      developer.log('[WS] Parse error: $e');
     }
-  }
-
-  void _onError(dynamic error) {
-    developer.log('[WS] Error: $error');
-    state = state.copyWith(wsStatus: WsStatus.error, error: 'Connection error');
-    _scheduleReconnect();
   }
 
   void _onDone() {
-    developer.log('[WS] Connection closed');
-    if (state.wsStatus == WsStatus.connected) {
-      state = state.copyWith(wsStatus: WsStatus.disconnected);
-      _scheduleReconnect();
-    }
+    developer.log('[WS] Connection closed — scheduling silent reconnect');
+    state = state.copyWith(wsStatus: WsStatus.disconnected);
+    _scheduleReconnect();
   }
 
   void _scheduleReconnect() {
-    if (_reconnectAttempts >= _maxReconnects) {
-      state = state.copyWith(error: 'Could not reconnect. Pull to retry.');
-      return;
-    }
+    _subs?.cancel();
+    _channels?.sink.close();
     _reconnectAttempts++;
-    final delay = Duration(seconds: _reconnectAttempts * 2);
-    developer.log(
-      '[WS] Reconnecting in ${delay.inSeconds}s (attempt $_reconnectAttempts)...',
-    );
+    // Exponential backoff capped at 30 s, but never give up
+    final delay = Duration(seconds: (_reconnectAttempts * 2).clamp(2, 30));
+    developer.log('[WS] Reconnecting in ${delay.inSeconds}s...');
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(delay, _connect);
   }
 
+  // ignore unused field warnings from renaming
+  WebSocketChannel? get _channels => _channel;
+  StreamSubscription? get _subs => _sub;
+
+  // ── Send text — queue if offline ──────────────────────────────────────────
   void sendMessage(String text) {
     if (text.trim().isEmpty) return;
-    if (state.wsStatus != WsStatus.connected) {
-      _connect();
-      return;
-    }
 
     final replyingTo = state.replyingTo;
     final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
@@ -4391,9 +4368,6 @@ class ChatNotifier extends StateNotifier<ChatState> {
       status: MessageStatus.sending,
       parentId: replyingTo?.id,
       repliedToText: replyingTo?.text,
-      // FIX: store 'You' for own messages, keep existing name for received
-      // The null case (replying to other person's fresh message) is handled
-      // in _replyPreview by falling back to otherName.
       repliedToSenderName:
           replyingTo == null
               ? null
@@ -4406,41 +4380,58 @@ class ChatNotifier extends StateNotifier<ChatState> {
       clearReply: true,
     );
 
-    try {
-      final payload = <String, dynamic>{'message': text.trim()};
-      if (replyingTo != null) {
-        payload['type'] = 'reply';
-        payload['parent_id'] = replyingTo.id;
+    final payload = <String, dynamic>{'message': text.trim()};
+    if (replyingTo != null) {
+      payload['type'] = 'reply';
+      payload['parent_id'] = replyingTo.id;
+    }
+
+    if (state.wsStatus == WsStatus.connected) {
+      try {
+        _channel!.sink.add(json.encode(payload));
+        _ref.read(friendActivityProvider.notifier).markActivity(otherUserId);
+        _ref.read(lastActiveFriendProvider.notifier).state = otherUserId;
+        _ref.read(mutualFriendsProvider.notifier).bumpToTop(otherUserId);
+        final updated =
+            state.messages.map((m) {
+              if (m.id == tempId) m.status = MessageStatus.sent;
+              return m;
+            }).toList();
+        state = state.copyWith(messages: updated, isSending: false);
+      } catch (e) {
+        // ── FIX 1: queue instead of fail ─────────────────────────────────
+        developer.log('[WS] Send failed, queuing message');
+        _pendingQueue.add(payload);
+        final updated =
+            state.messages.map((m) {
+              if (m.id == tempId)
+                m.status = MessageStatus.sending; // keep pending
+              return m;
+            }).toList();
+        state = state.copyWith(messages: updated, isSending: false);
+        _scheduleReconnect();
       }
-      _channel!.sink.add(json.encode(payload));
-
-      _ref.read(friendActivityProvider.notifier).markActivity(otherUserId);
-      _ref.read(lastActiveFriendProvider.notifier).state = otherUserId;
-      _ref.read(mutualFriendsProvider.notifier).bumpToTop(otherUserId);
-
+    } else {
+      // ── FIX 1: offline — add to queue silently ──────────────────────────
+      developer.log('[WS] Offline, queuing message');
+      _pendingQueue.add(payload);
       final updated =
           state.messages.map((m) {
-            if (m.id == tempId) m.status = MessageStatus.sent;
+            if (m.id == tempId) m.status = MessageStatus.sending;
             return m;
           }).toList();
       state = state.copyWith(messages: updated, isSending: false);
-    } catch (e) {
-      developer.log('[WS] Send error: $e');
-      final updated =
-          state.messages.map((m) {
-            if (m.id == tempId) m.status = MessageStatus.failed;
-            return m;
-          }).toList();
-      state = state.copyWith(messages: updated, isSending: false);
+      // Make sure reconnect is in progress
+      if (_reconnectTimer == null || !_reconnectTimer!.isActive) {
+        _connect();
+      }
     }
   }
 
   Future<void> sendAttachment(File file) async {
     if (_token.isEmpty) return;
-
     final tempId = 'temp_att_${DateTime.now().millisecondsSinceEpoch}';
     final attachmentType = _inferAttachmentType(file.path);
-
     final tempMsg = ChatMessage(
       id: tempId,
       text: '',
@@ -4450,12 +4441,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
       attachmentUrl: file.path,
       attachmentType: attachmentType,
     );
-
     state = state.copyWith(
       messages: [...state.messages, tempMsg],
       isSending: true,
     );
-
     try {
       final uri = Uri.parse('$_kHttpBase/api/chats/');
       final request =
@@ -4465,17 +4454,14 @@ class ChatNotifier extends StateNotifier<ChatState> {
             ..files.add(
               await http.MultipartFile.fromPath('attachment', file.path),
             );
-
       final streamed = await request.send().timeout(
         const Duration(seconds: 30),
       );
       final response = await http.Response.fromStream(streamed);
-
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = json.decode(response.body) as Map<String, dynamic>;
         final serverId = data['id']?.toString() ?? tempId;
         final serverUrl = data['attachment']?.toString() ?? file.path;
-
         final updated =
             state.messages.map((m) {
               if (m.id == tempId) {
@@ -4491,20 +4477,14 @@ class ChatNotifier extends StateNotifier<ChatState> {
               }
               return m;
             }).toList();
-
         state = state.copyWith(messages: updated, isSending: false);
         _ref.read(friendActivityProvider.notifier).markActivity(otherUserId);
         _ref.read(lastActiveFriendProvider.notifier).state = otherUserId;
         _ref.read(mutualFriendsProvider.notifier).bumpToTop(otherUserId);
-        developer.log('[Chat] Attachment sent: $serverId');
       } else {
-        developer.log(
-          '[Chat] Attachment upload failed: ${response.statusCode} ${response.body}',
-        );
         _markAttachmentFailed(tempId);
       }
     } catch (e) {
-      developer.log('[Chat] sendAttachment error: $e');
       _markAttachmentFailed(tempId);
     }
   }
@@ -4516,24 +4496,6 @@ class ChatNotifier extends StateNotifier<ChatState> {
           return m;
         }).toList();
     state = state.copyWith(messages: updated, isSending: false);
-  }
-
-  Future<String?> fetchAttachmentUrl(String messageId) async {
-    try {
-      final uri = Uri.parse('$_kHttpBase/api/chats/$messageId/attachment/');
-      final response = await http
-          .get(uri, headers: _authHeaders)
-          .timeout(const Duration(seconds: 10));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body) as Map<String, dynamic>;
-        return data['attachment']?.toString() ??
-            data['url']?.toString() ??
-            data['attachment_url']?.toString();
-      }
-    } catch (e) {
-      developer.log('[Chat] fetchAttachmentUrl($messageId) error: $e');
-    }
-    return null;
   }
 
   void sendTyping(bool isTyping) {
@@ -4558,16 +4520,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
             body: json.encode({'delete_type': deleteType}),
           )
           .timeout(const Duration(seconds: 10));
-
       if (response.statusCode == 200) {
         final updated = state.messages.where((m) => m.id != messageId).toList();
         state = state.copyWith(messages: updated);
-        developer.log('[Chat] Message $messageId deleted ($deleteType)');
         return true;
       }
       return false;
     } catch (e) {
-      developer.log('[Chat] deleteMessage error: $e');
       return false;
     }
   }
@@ -4585,8 +4544,6 @@ class ChatNotifier extends StateNotifier<ChatState> {
     super.dispose();
   }
 }
-
-// ── Provider ───────────────────────────────────────────────────────────────
 
 final chatProvider =
     AutoDisposeStateNotifierProviderFamily<ChatNotifier, ChatState, String>(
@@ -4630,7 +4587,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _inputCtrl.addListener(_onInputChanged);
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _globalListener = ref.read(globalChatListenerProvider);
       _globalListener.activeChatUserId = widget.otherUserId;
@@ -4659,9 +4615,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
   void _onInputChanged() {
     final composing = _inputCtrl.text.trim().isNotEmpty;
-    if (composing != _isComposing) {
-      setState(() => _isComposing = composing);
-    }
+    if (composing != _isComposing) setState(() => _isComposing = composing);
     ref.read(chatProvider(widget.otherUserId).notifier).sendTyping(composing);
     _typingTimer?.cancel();
     if (composing) {
@@ -4673,8 +4627,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
   void _scrollToBottom({bool animated = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (!_scrollCtrl.hasClients) return;
+      if (!mounted || !_scrollCtrl.hasClients) return;
       if (animated) {
         _scrollCtrl.animateTo(
           _scrollCtrl.position.maxScrollExtent,
@@ -4697,8 +4650,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     setState(() => _isComposing = false);
     _scrollToBottom();
   }
-
-  // ── Attachment picker ──────────────────────────────────────────────────────
 
   void _showAttachmentOptions() {
     showModalBottomSheet(
@@ -4767,15 +4718,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         maxHeight: 1920,
       );
       if (picked == null) return;
-      final file = File(picked.path);
       if (!mounted) return;
       HapticFeedback.lightImpact();
       await ref
           .read(chatProvider(widget.otherUserId).notifier)
-          .sendAttachment(file);
+          .sendAttachment(File(picked.path));
       _scrollToBottom(animated: true);
     } catch (e) {
-      developer.log('[ChatScreen] pickImage error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -4790,8 +4739,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       }
     }
   }
-
-  // ── Reply helper ───────────────────────────────────────────────────────────
 
   void _triggerReply(ChatMessage msg) {
     ref.read(chatProvider(widget.otherUserId).notifier).setReply(msg);
@@ -4808,14 +4755,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       if ((prev?.messages.length ?? 0) < next.messages.length) {
         _scrollToBottom(animated: true);
       }
-
       if ((prev?.isLoadingHistory ?? false) && !next.isLoadingHistory) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            if (_scrollCtrl.hasClients) {
-              _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
-            }
+            if (!mounted || !_scrollCtrl.hasClients) return;
+            _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
           });
         });
       }
@@ -4826,17 +4770,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       appBar: _buildAppBar(state),
       body: Column(
         children: [
-          _buildStatusBanner(state),
+          // ── FIX 1: NO status banner at all — connection is fully silent ──
           Expanded(child: _buildMessageList(state)),
           if (state.isTyping) _buildTypingIndicator(),
           if (state.replyingTo != null) _buildReplyBanner(state.replyingTo!),
-          _buildInputBar(state),
+          _buildInputBar(),
         ],
       ),
     );
   }
 
-  // ── Reply banner ───────────────────────────────────────────────────────────
+  // ── Reply banner (above input bar) ────────────────────────────────────────
 
   Widget _buildReplyBanner(ChatMessage replyingTo) {
     final senderLabel = replyingTo.isMine ? 'You' : widget.otherUserName;
@@ -4844,7 +4788,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         replyingTo.hasAttachment && replyingTo.text.isEmpty
             ? '📎 Attachment'
             : replyingTo.text;
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
@@ -4921,16 +4864,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       ),
       titleSpacing: 0,
       title: GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (context) =>
-                      SpecificUserProfilePage(userId: widget.otherUserId),
+        onTap:
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder:
+                    (context) =>
+                        SpecificUserProfilePage(userId: widget.otherUserId),
+              ),
             ),
-          );
-        },
         child: Row(
           children: [
             Stack(
@@ -4987,7 +4929,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                     letterSpacing: -0.2,
                   ),
                 ),
-                _buildConnectionStatus(state),
+                // ── FIX 1: Always show "Active now" / "Online" — no "Reconnecting" ──
+                Text(
+                  widget.isOnline ? 'Active now' : 'Online',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF2ECC71),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ],
             ),
           ],
@@ -5020,115 +4970,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     );
   }
 
-  Widget _buildConnectionStatus(ChatState state) {
-    switch (state.wsStatus) {
-      case WsStatus.connected:
-        return Text(
-          widget.isOnline ? 'Active now' : 'Online',
-          style: const TextStyle(
-            fontSize: 12,
-            color: Color(0xFF2ECC71),
-            fontWeight: FontWeight.w500,
-          ),
-        );
-      case WsStatus.connecting:
-        return const Text(
-          'Connecting...',
-          style: TextStyle(fontSize: 12, color: Colors.orange),
-        );
-      case WsStatus.disconnected:
-      case WsStatus.error:
-        return const Text(
-          'Reconnecting...',
-          style: TextStyle(fontSize: 12, color: Colors.red),
-        );
-    }
-  }
-
-  // ── Status banner ──────────────────────────────────────────────────────────
-
-  Widget _buildStatusBanner(ChatState state) {
-    if (state.wsStatus == WsStatus.connected) return const SizedBox.shrink();
-
-    Color color;
-    String label;
-    IconData icon;
-    switch (state.wsStatus) {
-      case WsStatus.connecting:
-        color = Colors.orange;
-        label = 'Connecting...';
-        icon = Icons.wifi_find_rounded;
-        break;
-      case WsStatus.error:
-        color = Colors.red.shade600;
-        label = state.error ?? 'Connection error';
-        icon = Icons.wifi_off_rounded;
-        break;
-      default:
-        color = Colors.grey.shade600;
-        label = 'Disconnected';
-        icon = Icons.wifi_off_rounded;
-    }
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      color: color.withOpacity(0.08),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                color: color,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          if (state.wsStatus == WsStatus.error)
-            GestureDetector(
-              onTap:
-                  () =>
-                      ref
-                          .read(chatProvider(widget.otherUserId).notifier)
-                          .reconnect(),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  'Retry',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
   // ── Message list ───────────────────────────────────────────────────────────
 
   Widget _buildMessageList(ChatState state) {
-    if (state.isLoadingHistory) {
-      return _buildHistorySkeleton();
-    }
-
-    if (state.messages.isEmpty) {
-      return _buildEmptyState();
-    }
+    if (state.isLoadingHistory) return _buildHistorySkeleton();
+    if (state.messages.isEmpty) return _buildEmptyState();
 
     return RefreshIndicator(
       onRefresh:
@@ -5143,18 +4989,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
           final prev = i > 0 ? state.messages[i - 1] : null;
           final next =
               i < state.messages.length - 1 ? state.messages[i + 1] : null;
-
           final showTime =
               prev == null ||
               msg.timestamp.difference(prev.timestamp).inMinutes > 5;
           final isFirstInGroup = prev == null || prev.isMine != msg.isMine;
           final isLastInGroup = next == null || next.isMine != msg.isMine;
 
-          // ── Wrap every bubble with swipe-to-reply ──────────────────────
           return Column(
             children: [
               if (showTime) _buildTimeLabel(msg.timestamp),
+              // ── FIX 2: pass isMine so swipe direction is correct ────────
               _SwipeToReply(
+                isMine: msg.isMine,
                 onReply: () => _triggerReply(msg),
                 child: _MessageBubble(
                   message: msg,
@@ -5244,13 +5090,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     final now = DateTime.now();
     String label;
     if (now.difference(dt).inDays == 0) {
-      final h = dt.hour.toString().padLeft(2, '0');
-      final m = dt.minute.toString().padLeft(2, '0');
-      label = '$h:$m';
+      label =
+          '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     } else {
       label = '${dt.day}/${dt.month}/${dt.year}';
     }
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Center(
@@ -5272,8 +5116,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       ),
     );
   }
-
-  // ── Typing indicator ───────────────────────────────────────────────────────
 
   Widget _buildTypingIndicator() {
     return Padding(
@@ -5310,9 +5152,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     );
   }
 
-  // ── Input bar ──────────────────────────────────────────────────────────────
-
-  Widget _buildInputBar(ChatState state) {
+  Widget _buildInputBar() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -5453,14 +5293,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// _SwipeToReply — swipe right on any message to trigger reply
+// FIX 2: _SwipeToReply — correct direction per message side
+// Received messages (left side)  → swipe RIGHT  (positive dx)
+// Sent messages    (right side)  → swipe LEFT   (negative dx)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _SwipeToReply extends StatefulWidget {
   final Widget child;
   final VoidCallback onReply;
+  final bool isMine; // true = own message (right-aligned)
 
-  const _SwipeToReply({required this.child, required this.onReply});
+  const _SwipeToReply({
+    required this.child,
+    required this.onReply,
+    required this.isMine,
+  });
 
   @override
   State<_SwipeToReply> createState() => _SwipeToReplyState();
@@ -5472,10 +5319,7 @@ class _SwipeToReplyState extends State<_SwipeToReply>
   bool _triggered = false;
   late AnimationController _ctrl;
 
-  /// How far the user must drag before reply is triggered
   static const double _kThreshold = 56.0;
-
-  /// Maximum visual offset while dragging
   static const double _kMaxDrag = 72.0;
 
   @override
@@ -5495,24 +5339,29 @@ class _SwipeToReplyState extends State<_SwipeToReply>
 
   void _onDragUpdate(DragUpdateDetails details) {
     if (_ctrl.isAnimating) return;
-    // Only allow rightward drag (positive dx)
-    final newDx = (_dx + details.delta.dx).clamp(0.0, _kMaxDrag);
+
+    double newDx;
+    if (widget.isMine) {
+      // Own message: swipe LEFT (negative delta)
+      newDx = (_dx + details.delta.dx).clamp(-_kMaxDrag, 0.0);
+    } else {
+      // Received message: swipe RIGHT (positive delta)
+      newDx = (_dx + details.delta.dx).clamp(0.0, _kMaxDrag);
+    }
     setState(() => _dx = newDx);
 
-    // Haptic + flag once threshold is crossed
-    if (!_triggered && _dx >= _kThreshold) {
+    if (!_triggered && _dx.abs() >= _kThreshold) {
       _triggered = true;
       HapticFeedback.mediumImpact();
     }
   }
 
-  void _onDragEnd(DragEndDetails details) {
+  void _onDragEnd(DragEndDetails _) {
     if (_triggered) widget.onReply();
     _triggered = false;
     _springBack();
   }
 
-  /// Animate the bubble back to x=0 with a spring feel
   void _springBack() {
     final startDx = _dx;
     final anim = Tween<double>(
@@ -5527,8 +5376,7 @@ class _SwipeToReplyState extends State<_SwipeToReply>
 
   @override
   Widget build(BuildContext context) {
-    // progress goes 0→1 as user drags toward threshold
-    final progress = (_dx / _kThreshold).clamp(0.0, 1.0);
+    final progress = (_dx.abs() / _kThreshold).clamp(0.0, 1.0);
 
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
@@ -5537,12 +5385,12 @@ class _SwipeToReplyState extends State<_SwipeToReply>
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Slide the bubble
           Transform.translate(offset: Offset(_dx, 0), child: widget.child),
 
-          // Reply icon that fades + scales in as you drag
+          // Icon appears on the trailing side of the swipe
           Positioned(
-            left: 6,
+            left: widget.isMine ? null : 6,
+            right: widget.isMine ? 6 : null,
             top: 0,
             bottom: 0,
             child: Center(
@@ -5574,110 +5422,7 @@ class _SwipeToReplyState extends State<_SwipeToReply>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// _AttachOption
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _AttachOption extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _AttachOption({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: 28),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade700,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// _ShimmerBox
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _ShimmerBox extends StatefulWidget {
-  final double width;
-  final double height;
-  final double radius;
-  const _ShimmerBox({
-    required this.width,
-    required this.height,
-    required this.radius,
-  });
-
-  @override
-  State<_ShimmerBox> createState() => _ShimmerBoxState();
-}
-
-class _ShimmerBoxState extends State<_ShimmerBox>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _anim;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    )..repeat(reverse: true);
-    _anim = Tween<double>(begin: 0.4, end: 1.0).animate(_ctrl);
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _anim,
-      child: Container(
-        width: widget.width,
-        height: widget.height,
-        decoration: BoxDecoration(
-          color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(widget.radius),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// _MessageBubble
+// _MessageBubble — FIX 3: clean attachment + slim reply preview
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _MessageBubble extends StatelessWidget {
@@ -5686,8 +5431,8 @@ class _MessageBubble extends StatelessWidget {
   final bool isLastInGroup;
   final String otherAvatar;
   final String otherName;
-  final Future<bool> Function(String messageId, String deleteType) onDelete;
-  final void Function(ChatMessage msg) onReply;
+  final Future<bool> Function(String, String) onDelete;
+  final void Function(ChatMessage) onReply;
 
   const _MessageBubble({
     required this.message,
@@ -5699,217 +5444,9 @@ class _MessageBubble extends StatelessWidget {
     required this.onReply,
   });
 
-  void _showMessageOptions(BuildContext context) {
-    final isMine = message.isMine;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder:
-          (_) => Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  margin: const EdgeInsets.symmetric(vertical: 12),
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 4,
-                  ),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      message.hasAttachment && message.text.isEmpty
-                          ? '📎 Attachment'
-                          : message.text,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Divider(height: 1),
-
-                // Delete for me
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.delete_outline_rounded,
-                      color: Colors.orange.shade700,
-                      size: 20,
-                    ),
-                  ),
-                  title: const Text(
-                    'Delete for me',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: Text(
-                    'Only removes it from your view',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                  ),
-                  onTap: () async {
-                    Navigator.pop(context);
-                    await _confirmAndDelete(context, 'for_me');
-                  },
-                ),
-
-                if (isMine)
-                  ListTile(
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade50,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.delete_forever_rounded,
-                        color: Colors.red.shade600,
-                        size: 20,
-                      ),
-                    ),
-                    title: const Text(
-                      'Delete for everyone',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Text(
-                      'Removes it for all participants',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade500,
-                      ),
-                    ),
-                    onTap: () async {
-                      Navigator.pop(context);
-                      await _confirmAndDelete(context, 'for_everyone');
-                    },
-                  ),
-
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-    );
-  }
-
-  Future<void> _confirmAndDelete(
-    BuildContext context,
-    String deleteType,
-  ) async {
-    final label = deleteType == 'for_everyone' ? 'everyone' : 'you';
-    final confirm =
-        await showDialog<bool>(
-          context: context,
-          builder:
-              (_) => AlertDialog(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                title: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade50,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.delete_outline_rounded,
-                        color: Colors.red.shade600,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Delete Message',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                content: Text(
-                  'This message will be deleted for $label.',
-                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-                ),
-                actionsPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: Text(
-                      'Cancel',
-                      style: TextStyle(color: Colors.grey.shade600),
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade600,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: const Text(
-                      'Delete',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-              ),
-        ) ??
-        false;
-
-    if (!confirm || !context.mounted) return;
-
-    final success = await onDelete(message.id, deleteType);
-    if (!success && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Failed to delete message'),
-          backgroundColor: Colors.red.shade600,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
-  }
+  /// Image-only message: no colored bubble, just the image
+  bool get _isImageOnly =>
+      message.isImage && message.text.isEmpty && !message.hasReply;
 
   @override
   Widget build(BuildContext context) {
@@ -5977,7 +5514,14 @@ class _MessageBubble extends StatelessWidget {
     ),
   );
 
+  // ── Sent bubble ─────────────────────────────────────────────────────────
+
   Widget _sentBubble(BuildContext context) {
+    // FIX 3: Image-only → bare image with timestamp overlay
+    if (_isImageOnly) {
+      return _imageBubble(context, isMine: true);
+    }
+
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 260),
       child: Container(
@@ -5996,7 +5540,7 @@ class _MessageBubble extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: _kOrange.withAlpha(25),
+              color: _kOrange.withOpacity(0.25),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -6004,9 +5548,14 @@ class _MessageBubble extends StatelessWidget {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
           children: [
             if (message.hasReply) _replyPreview(isMine: true),
-            if (message.hasAttachment) _attachmentWidget(context, isMine: true),
+            // Image with text below it (not covering the image)
+            if (message.hasAttachment && message.isImage)
+              _inlineImage(context, isMine: true),
+            if (message.hasAttachment && !message.isImage)
+              _filePill(isMine: true),
             if (message.text.isNotEmpty)
               Text(
                 message.text,
@@ -6038,7 +5587,13 @@ class _MessageBubble extends StatelessWidget {
     );
   }
 
+  // ── Received bubble ──────────────────────────────────────────────────────
+
   Widget _receivedBubble(BuildContext context) {
+    if (_isImageOnly) {
+      return _imageBubble(context, isMine: false);
+    }
+
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 260),
       child: Container(
@@ -6061,10 +5616,13 @@ class _MessageBubble extends StatelessWidget {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             if (message.hasReply) _replyPreview(isMine: false),
-            if (message.hasAttachment)
-              _attachmentWidget(context, isMine: false),
+            if (message.hasAttachment && message.isImage)
+              _inlineImage(context, isMine: false),
+            if (message.hasAttachment && !message.isImage)
+              _filePill(isMine: false),
             if (message.text.isNotEmpty)
               Text(
                 message.text,
@@ -6089,54 +5647,81 @@ class _MessageBubble extends StatelessWidget {
     );
   }
 
-  // ── Reply preview inside bubble ────────────────────────────────────────────
+  // ── FIX 3: bare image bubble (no colored container behind it) ─────────────
+  Widget _imageBubble(BuildContext context, {required bool isMine}) {
+    final url = message.attachmentUrl!;
+    final isLocal = !url.startsWith('http');
 
-  Widget _replyPreview({required bool isMine}) {
-    // ── FIX: never show "Unknown" ──────────────────────────────────────────
-    // repliedToSenderName is null when the user replies to a fresh received
-    // message (optimistic bubble). Fall back to:
-    //   • otherName  — if the current (outer) message is mine  → I replied to them
-    //   • 'You'      — if the current (outer) message is theirs → they replied to me
-    final senderName =
-        (message.repliedToSenderName?.isNotEmpty == true)
-            ? message.repliedToSenderName!
-            : (message.isMine ? otherName : 'You');
+    final radius = BorderRadius.only(
+      topLeft: Radius.circular(isMine || isFirstInGroup ? 18 : 4),
+      topRight: Radius.circular(!isMine || isFirstInGroup ? 18 : 4),
+      bottomLeft: Radius.circular(isMine || isLastInGroup ? 18 : 4),
+      bottomRight: Radius.circular(!isMine || isLastInGroup ? 4 : 18),
+    );
 
-    final replyText = message.repliedToText ?? '';
-    final previewText = replyText.isEmpty ? '📎 Attachment' : replyText;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: isMine ? Colors.white.withOpacity(0.25) : Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(10),
-        border: Border(
-          left: BorderSide(color: isMine ? Colors.white : _kOrange, width: 3),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return GestureDetector(
+      onTap: () => _openImageFullScreen(context, url, isLocal),
+      child: Stack(
         children: [
-          Text(
-            senderName,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: isMine ? Colors.white : _kOrange,
+          ClipRRect(
+            borderRadius: radius,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: 220,
+                maxHeight: 260,
+                minWidth: 140,
+                minHeight: 100,
+              ),
+              child:
+                  isLocal
+                      ? Image.file(
+                        File(url),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _imageError(),
+                      )
+                      : CachedNetworkImage(
+                        imageUrl: url,
+                        fit: BoxFit.cover,
+                        placeholder:
+                            (_, __) => Container(
+                              width: 200,
+                              height: 160,
+                              color: Colors.grey.shade200,
+                              child: const Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: _kOrange,
+                                ),
+                              ),
+                            ),
+                        errorWidget: (_, __, ___) => _imageError(),
+                      ),
             ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            previewText,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 12,
-              color:
-                  isMine
-                      ? Colors.white.withOpacity(0.85)
-                      : Colors.grey.shade600,
+          // Timestamp + status overlay at bottom right
+          Positioned(
+            bottom: 6,
+            right: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.45),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _timeLabel(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  if (isMine) ...[const SizedBox(width: 3), _statusIconWhite()],
+                ],
+              ),
             ),
           ),
         ],
@@ -6144,64 +5729,69 @@ class _MessageBubble extends StatelessWidget {
     );
   }
 
-  // ── Attachment widget ──────────────────────────────────────────────────────
+  Widget _imageError() => Container(
+    width: 140,
+    height: 100,
+    color: Colors.grey.shade200,
+    child: const Icon(Icons.broken_image_rounded, color: Colors.grey, size: 32),
+  );
 
-  Widget _attachmentWidget(BuildContext context, {required bool isMine}) {
+  // ── FIX 3: inline image inside a text bubble (mixed content) ─────────────
+  Widget _inlineImage(BuildContext context, {required bool isMine}) {
     final url = message.attachmentUrl!;
     final isLocal = !url.startsWith('http');
-
-    if (message.isImage) {
-      return GestureDetector(
-        onTap: () => _openImageFullScreen(context, url, isLocal),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 6),
-            constraints: const BoxConstraints(
-              maxWidth: 220,
-              maxHeight: 200,
-              minWidth: 120,
-              minHeight: 80,
-            ),
-            child:
-                isLocal
-                    ? Image.file(
-                      File(url),
-                      fit: BoxFit.cover,
-                      errorBuilder:
-                          (_, __, ___) => _attachmentErrorWidget(isMine),
-                    )
-                    : CachedNetworkImage(
-                      imageUrl: url,
-                      fit: BoxFit.cover,
-                      placeholder:
-                          (_, __) => Container(
-                            width: 180,
-                            height: 140,
-                            color:
-                                isMine
-                                    ? Colors.white.withOpacity(0.2)
-                                    : Colors.grey.shade200,
-                            child: const Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: _kOrange,
-                              ),
+    return GestureDetector(
+      onTap: () => _openImageFullScreen(context, url, isLocal),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 6),
+          constraints: const BoxConstraints(
+            maxWidth: 200,
+            maxHeight: 180,
+            minWidth: 100,
+            minHeight: 80,
+          ),
+          child:
+              isLocal
+                  ? Image.file(
+                    File(url),
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _imageError(),
+                  )
+                  : CachedNetworkImage(
+                    imageUrl: url,
+                    fit: BoxFit.cover,
+                    placeholder:
+                        (_, __) => Container(
+                          width: 180,
+                          height: 140,
+                          color:
+                              isMine
+                                  ? Colors.white.withOpacity(0.2)
+                                  : Colors.grey.shade200,
+                          child: const Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: _kOrange,
                             ),
                           ),
-                      errorWidget:
-                          (_, __, ___) => _attachmentErrorWidget(isMine),
-                    ),
-          ),
+                        ),
+                    errorWidget: (_, __, ___) => _imageError(),
+                  ),
         ),
-      );
-    }
+      ),
+    );
+  }
 
+  // ── FIX 3: slim file pill ─────────────────────────────────────────────────
+  Widget _filePill({required bool isMine}) {
+    final url = message.attachmentUrl!;
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: isMine ? Colors.white.withOpacity(0.2) : Colors.grey.shade100,
+        color: isMine ? Colors.white.withOpacity(0.18) : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
@@ -6209,17 +5799,17 @@ class _MessageBubble extends StatelessWidget {
         children: [
           Icon(
             Icons.insert_drive_file_rounded,
-            size: 22,
+            size: 18,
             color: isMine ? Colors.white : _kOrange,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           Flexible(
             child: Text(
               url.split('/').last,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 12,
                 color: isMine ? Colors.white : Colors.black87,
                 fontWeight: FontWeight.w500,
               ),
@@ -6230,15 +5820,52 @@ class _MessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _attachmentErrorWidget(bool isMine) {
+  // ── FIX 3: slim Messenger-style reply preview ─────────────────────────────
+  Widget _replyPreview({required bool isMine}) {
+    final senderName =
+        (message.repliedToSenderName?.isNotEmpty == true)
+            ? message.repliedToSenderName!
+            : (message.isMine ? otherName : 'You');
+    final replyText = message.repliedToText ?? '';
+    final previewText = replyText.isEmpty ? '📎 Attachment' : replyText;
+
     return Container(
-      width: 120,
-      height: 80,
-      color: isMine ? Colors.white.withOpacity(0.2) : Colors.grey.shade200,
-      child: Icon(
-        Icons.broken_image_rounded,
-        color: isMine ? Colors.white60 : Colors.grey,
-        size: 32,
+      margin: const EdgeInsets.only(bottom: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        // Semi-transparent tint, NOT a solid block
+        color: isMine ? Colors.black.withOpacity(0.12) : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(8),
+        // border: Border(
+        //   left: BorderSide(
+        //     color: isMine ? Colors.white.withOpacity(0.7) : _kOrange,
+        //     width: 2.5,
+        //   ),
+        // ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            senderName,
+            style: TextStyle(
+              fontSize: 11,
+              //fontWeight: FontWeight.w700,
+              color: isMine ? Colors.white.withAlpha(100) : _kOrange,
+            ),
+          ),
+          const SizedBox(height: 1),
+          Text(
+            previewText,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              color: isMine ? Colors.white : Colors.white,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -6271,9 +5898,8 @@ class _MessageBubble extends StatelessWidget {
   }
 
   String _timeLabel() {
-    final h = message.timestamp.hour.toString().padLeft(2, '0');
-    final m = message.timestamp.minute.toString().padLeft(2, '0');
-    return '$h:$m';
+    return '${message.timestamp.hour.toString().padLeft(2, '0')}:'
+        '${message.timestamp.minute.toString().padLeft(2, '0')}';
   }
 
   Widget _statusIcon() {
@@ -6309,17 +5935,354 @@ class _MessageBubble extends StatelessWidget {
         );
     }
   }
+
+  /// White version for overlay on image
+  Widget _statusIconWhite() {
+    switch (message.status) {
+      case MessageStatus.sending:
+        return const SizedBox(
+          width: 10,
+          height: 10,
+          child: CircularProgressIndicator(
+            strokeWidth: 1.5,
+            color: Colors.white70,
+          ),
+        );
+      case MessageStatus.sent:
+        return const Icon(Icons.check_rounded, size: 11, color: Colors.white70);
+      case MessageStatus.delivered:
+        return const Icon(
+          Icons.done_all_rounded,
+          size: 11,
+          color: Colors.white70,
+        );
+      case MessageStatus.read:
+        return const Icon(
+          Icons.done_all_rounded,
+          size: 11,
+          color: Colors.lightBlueAccent,
+        );
+      case MessageStatus.failed:
+        return const Icon(
+          Icons.error_outline_rounded,
+          size: 11,
+          color: Colors.redAccent,
+        );
+    }
+  }
+
+  void _showMessageOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder:
+          (_) => Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 4,
+                  ),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      message.hasAttachment && message.text.isEmpty
+                          ? '📎 Attachment'
+                          : message.text,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Divider(height: 1),
+                // Reply
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: _kOrangeLight,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.reply_rounded,
+                      color: _kOrange,
+                      size: 20,
+                    ),
+                  ),
+                  title: const Text(
+                    'Reply',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    onReply(message);
+                  },
+                ),
+                // Delete for me
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.delete_outline_rounded,
+                      color: Colors.orange.shade700,
+                      size: 20,
+                    ),
+                  ),
+                  title: const Text(
+                    'Delete for me',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await _confirmAndDelete(context, 'for_me');
+                  },
+                ),
+                if (message.isMine)
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.delete_forever_rounded,
+                        color: Colors.red.shade600,
+                        size: 20,
+                      ),
+                    ),
+                    title: const Text(
+                      'Delete for everyone',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await _confirmAndDelete(context, 'for_everyone');
+                    },
+                  ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+    );
+  }
+
+  Future<void> _confirmAndDelete(
+    BuildContext context,
+    String deleteType,
+  ) async {
+    final label = deleteType == 'for_everyone' ? 'everyone' : 'you';
+    final confirm =
+        await showDialog<bool>(
+          context: context,
+          builder:
+              (_) => AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                title: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.delete_outline_rounded,
+                        color: Colors.red.shade600,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Delete Message',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                content: Text(
+                  'This message will be deleted for $label.',
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade600,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Delete',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+        ) ??
+        false;
+
+    if (!confirm || !context.mounted) return;
+    final success = await onDelete(message.id, deleteType);
+    if (!success && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Failed to delete message'),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// _MiniAvatar
+// Supporting widgets (unchanged)
 // ─────────────────────────────────────────────────────────────────────────────
+
+class _AttachOption extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+  const _AttachOption({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 28),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade700,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ShimmerBox extends StatefulWidget {
+  final double width;
+  final double height;
+  final double radius;
+  const _ShimmerBox({
+    required this.width,
+    required this.height,
+    required this.radius,
+  });
+  @override
+  State<_ShimmerBox> createState() => _ShimmerBoxState();
+}
+
+class _ShimmerBoxState extends State<_ShimmerBox>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _anim;
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+    _anim = Tween<double>(begin: 0.4, end: 1.0).animate(_ctrl);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => FadeTransition(
+    opacity: _anim,
+    child: Container(
+      width: widget.width,
+      height: widget.height,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(widget.radius),
+      ),
+    ),
+  );
+}
 
 class _MiniAvatar extends StatelessWidget {
   final String avatar;
   final String name;
   const _MiniAvatar({required this.avatar, required this.name});
-
   @override
   Widget build(BuildContext context) {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
@@ -6354,13 +6317,8 @@ class _MiniAvatar extends StatelessWidget {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// _TypingDots
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _TypingDots extends StatefulWidget {
   const _TypingDots();
-
   @override
   State<_TypingDots> createState() => _TypingDotsState();
 }
@@ -6369,7 +6327,6 @@ class _TypingDotsState extends State<_TypingDots>
     with TickerProviderStateMixin {
   late final List<AnimationController> _ctrls;
   late final List<Animation<double>> _anims;
-
   @override
   void initState() {
     super.initState();
@@ -6389,7 +6346,6 @@ class _TypingDotsState extends State<_TypingDots>
               ).animate(CurvedAnimation(parent: c, curve: Curves.easeInOut)),
             )
             .toList();
-
     for (int i = 0; i < 3; i++) {
       Future.delayed(Duration(milliseconds: i * 160), () {
         if (mounted) _ctrls[i].repeat(reverse: true);
@@ -6399,9 +6355,7 @@ class _TypingDotsState extends State<_TypingDots>
 
   @override
   void dispose() {
-    for (final c in _ctrls) {
-      c.dispose();
-    }
+    for (final c in _ctrls) c.dispose();
     super.dispose();
   }
 

@@ -436,11 +436,11 @@ class _TrueInstantDrawerState extends ConsumerState<TrueInstantDrawer> {
             title: 'Shop',
             onTap: _goToEcommerce,
           ),
-          _QuickMenuItem(
-            icon: Icons.psychology_rounded,
-            title: 'Eliza ChatBot',
-            onTap: _goToEliza,
-          ),
+          // _QuickMenuItem(
+          //   icon: Icons.psychology_rounded,
+          //   title: 'Eliza ChatBot',
+          //   onTap: _goToEliza,
+          // ),
           _QuickMenuItem(
             icon: Icons.event_available,
             title: 'Events',
@@ -499,7 +499,7 @@ class _TrueInstantDrawerState extends ConsumerState<TrueInstantDrawer> {
       child: UserProfileScreen(userId: AppData().currentUserId ?? ''),
     ),
   );
-  void _goToEliza() => _quickNavigate(() => ElizaChatScreen());
+  //void _goToEliza() => _quickNavigate(() => ElizaChatScreen());
   void _goToEvents() => _quickNavigate(() => EventsHomePage());
   void _goToElearning() => _quickNavigate(() => const CourseListScreen());
   void _goToEcommerce() => _quickNavigate(() => const ShopPage());
