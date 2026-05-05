@@ -1,8 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
-import 'package:innovator/Innovator/App_data/App_data.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:innovator/Innovator/provider/notifcation_list_screen_provider.dart';
 import 'package:innovator/Innovator/screens/chatrrom/screen/chatscreen.dart';
 import 'package:innovator/ecommerce/screens/Shop/Shop_Page.dart';
 import 'package:innovator/innovator_home.dart';
@@ -10,53 +9,32 @@ import 'package:innovator/Innovator/screens/show_Specific_Profile/Show_Specific_
 import 'package:intl/intl.dart';
 import 'package:innovator/Innovator/screens/Feed/post_detail_screen.dart';
 
-const String _kBaseUrl = 'http://36.253.137.34:8005';
-
-class NotificationListScreen extends StatefulWidget {
+class NotificationListScreen extends ConsumerStatefulWidget {
   const NotificationListScreen({super.key});
 
   @override
-  State<NotificationListScreen> createState() => _NotificationListScreenState();
+  ConsumerState<NotificationListScreen> createState() =>
+      _NotificationListScreenState();
 }
 
-class _NotificationListScreenState extends State<NotificationListScreen>
+class _NotificationListScreenState extends ConsumerState<NotificationListScreen>
     with TickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
-  List<NotificationModel> notifications = [];
-  bool isLoading = false;
-  bool isLoadingMore = false;
-  String? nextCursor;
-  bool hasMore = true;
-  bool isDeletingAll = false;
+
   String _selectedFilter = 'all';
 
-  late AnimationController _fabAnimationController;
   late AnimationController _headerAnimationController;
-  late Animation<double> _fabAnimation;
   late Animation<Offset> _headerSlideAnimation;
 
   @override
   void initState() {
     super.initState();
-    fetchNotifications();
     _scrollController.addListener(_scrollListener);
 
-    _fabAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
     _headerAnimationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-
-    _fabAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _fabAnimationController,
-        curve: Curves.elasticOut,
-      ),
-    );
-
     _headerSlideAnimation = Tween<Offset>(
       begin: const Offset(0, -1),
       end: Offset.zero,
@@ -66,223 +44,91 @@ class _NotificationListScreenState extends State<NotificationListScreen>
         curve: Curves.easeOutBack,
       ),
     );
-
     _headerAnimationController.forward();
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) _fabAnimationController.forward();
-    });
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
-    _fabAnimationController.dispose();
     _headerAnimationController.dispose();
     super.dispose();
   }
 
   void _scrollListener() {
+    final state = ref.read(notificationProvider);
     if (_scrollController.position.pixels ==
             _scrollController.position.maxScrollExtent &&
-        hasMore &&
-        !isLoadingMore) {
-      fetchMoreNotifications();
+        state.hasMore &&
+        !state.isLoadingMore) {
+      ref.read(notificationProvider.notifier).fetchMoreNotifications();
     }
   }
 
-  Future<void> fetchNotifications() async {
-    if (isLoading) return;
-    if (!mounted) return;
-    setState(() => isLoading = true);
-
-    try {
-      final token = AppData().accessToken;
-      if (token == null) throw Exception('No authentication token found');
-
-      final response = await http.get(
-        Uri.parse('$_kBaseUrl/api/notifications/'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> jsonList = jsonDecode(response.body);
-        if (!mounted) return;
-        setState(() {
-          notifications =
-              jsonList.map((j) => NotificationModel.fromJson(j)).toList();
-          hasMore = false;
-          nextCursor = null;
-        });
-      } else {
-        throw Exception(
-          'Failed to fetch notifications: ${response.statusCode}',
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      // _showErrorSnackbar('Error fetching notifications');
-    } finally {
-      if (!mounted) return;
-      setState(() => isLoading = false);
+  void _navigateToNotificationDetails(NotificationModel notification) {
+    if (!notification.isRead) {
+      ref.read(notificationProvider.notifier).markAsRead(notification.id);
     }
-  }
 
-  Future<void> fetchMoreNotifications() async {
-    if (isLoadingMore || !hasMore || nextCursor == null) return;
-    if (!mounted) return;
-    setState(() => isLoadingMore = true);
+    final type = notification.type.toLowerCase();
+    final title = (notification.title ?? '').toLowerCase();
+    final message = notification.message.toLowerCase();
+    final isReelRelated =
+        message.contains('your reel') || title.contains('reel');
 
-    try {
-      final token = AppData().accessToken;
-      if (token == null) throw Exception('No authentication token found');
-
-      final response = await http.get(
-        Uri.parse('$_kBaseUrl/api/notifications/?cursor=$nextCursor'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> jsonList = jsonDecode(response.body);
-        if (!mounted) return;
-        setState(() {
-          notifications.addAll(
-            jsonList.map((j) => NotificationModel.fromJson(j)),
-          );
-          hasMore = jsonList.isNotEmpty;
-          nextCursor = null;
-        });
-      } else {
-        throw Exception(
-          'Failed to fetch more notifications: ${response.statusCode}',
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      // _showErrorSnackbar('Error fetching more notifications');
-    } finally {
-      if (!mounted) return;
-      setState(() => isLoadingMore = false);
-    }
-  }
-
-  Future<void> markAsRead(String notificationId) async {
-    try {
-      final token = AppData().accessToken;
-      if (token == null) throw Exception('No authentication token found');
-
-      final response = await http.post(
-        Uri.parse('$_kBaseUrl/api/notifications/$notificationId/mark-as-read/'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        setState(() {
-          final index = notifications.indexWhere((n) => n.id == notificationId);
-          if (index != -1) {
-            notifications[index] = notifications[index].copyWith(isRead: true);
-          }
-        });
-      } else {
-        throw Exception(
-          'Failed to mark notification as read: ${response.statusCode}',
-        );
-      }
-    } catch (e) {
-      //_showErrorSnackbar('Error marking notification as read');
-    }
-  }
-
-  Future<void> markAllAsRead() async {
-    try {
-      final token = AppData().accessToken;
-      if (token == null) throw Exception('No authentication token found');
-
-      final response = await http.post(
-        Uri.parse('$_kBaseUrl/api/notifications/mark-all-as-read/'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        final unreadCount = notifications.where((n) => !n.isRead).length;
-        if (unreadCount > 0) {
-          setState(() {
-            notifications =
-                notifications.map((n) => n.copyWith(isRead: true)).toList();
-          });
-          _showSuccessSnackbar('All notifications marked as read');
-        } else {
-          _showInfoSnackbar('No unread notifications to mark');
-        }
-      } else {
-        throw Exception('Failed to mark all as read: ${response.statusCode}');
-      }
-    } catch (e) {
-      //_showErrorSnackbar('Error marking all notifications as read');
-    }
-  }
-
-  Future<void> deleteNotification(String notificationId) async {
-    try {
-      final token = AppData().accessToken;
-      if (token == null) throw Exception('No authentication token found');
-
-      final response = await http.delete(
-        Uri.parse('$_kBaseUrl/api/notifications/$notificationId/'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        setState(
-          () => notifications.removeWhere((n) => n.id == notificationId),
-        );
-        _showSuccessSnackbar('Notification deleted');
-      } else {
-        throw Exception(
-          'Failed to delete notification: ${response.statusCode}',
-        );
-      }
-    } catch (e) {
-      //_showErrorSnackbar('Error deleting notification');
-    }
-  }
-
-  void _navigateToNotificationDetails(NotificationModel notification) async {
-    if (!notification.isRead) markAsRead(notification.id);
-
-    switch (notification.type.toLowerCase()) {
-      case 'like':
-      case 'comment':
-      case 'share':
-      case 'mention':
+    switch (type) {
+      case 'system':
         if (notification.relatedPostId != null) {
           _navigateToSpecificFeedPost(
             notification.relatedPostId!,
-            action: notification.type.toLowerCase(),
+            action: isReelRelated ? 'reel' : 'post',
           );
-        } else {
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (_) => Homepage()),
-            (route) => false,
-          );
+        } else if (notification.senderId != null) {
+          _navigateToProfile(notification.senderId!);
         }
         break;
 
-      // ← FIX 1: add 'chat_message' alongside 'message'
+      case 'like':
+        if (notification.relatedPostId != null) {
+          _navigateToSpecificFeedPost(
+            notification.relatedPostId!,
+            action: 'like',
+          );
+        } else if (notification.senderId != null) {
+          _navigateToProfile(notification.senderId!);
+        }
+        break;
+
+      case 'comment':
+      case 'comment_reply':
+        if (notification.relatedPostId != null) {
+          _navigateToSpecificFeedPost(
+            notification.relatedPostId!,
+            action: 'comment',
+          );
+        } else if (notification.senderId != null) {
+          _navigateToProfile(notification.senderId!);
+        }
+        break;
+
+      case 'repost':
+        if (notification.relatedPostId != null) {
+          _navigateToSpecificFeedPost(
+            notification.relatedPostId!,
+            action: 'share',
+          );
+        } else if (notification.senderId != null) {
+          _navigateToProfile(notification.senderId!);
+        }
+        break;
+
       case 'message':
       case 'chat_message':
       case 'new_message':
         _navigateToChat(notification);
         break;
 
-      case 'friend_request':
       case 'follow':
+      case 'friend_request':
         if (notification.senderId != null) {
           _navigateToProfile(notification.senderId!);
         }
@@ -293,6 +139,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
         break;
 
       default:
+        debugPrint('⚠️ Unhandled notification type: ${notification.type}');
         break;
     }
   }
@@ -311,11 +158,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
   }
 
   void _navigateToChat(NotificationModel notification) {
-    if (notification.senderId == null || notification.senderId!.isEmpty) {
-      //_showErrorSnackbar('Unable to open chat: sender not found');
-      return;
-    }
-
+    if (notification.senderId == null || notification.senderId!.isEmpty) return;
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -339,33 +182,44 @@ class _NotificationListScreenState extends State<NotificationListScreen>
     );
   }
 
-  List<NotificationModel> get filteredNotifications {
+  List<NotificationModel> _filterNotifications(List<NotificationModel> all) {
     switch (_selectedFilter) {
       case 'unread':
-        return notifications.where((n) => !n.isRead).toList();
+        return all.where((n) => !n.isRead).toList();
       case 'messages':
-        return notifications
-            .where((n) => n.type.toLowerCase() == 'message')
+        return all
+            .where(
+              (n) => [
+                'message',
+                'chat_message',
+                'new_message',
+              ].contains(n.type.toLowerCase()),
+            )
             .toList();
       case 'interactions':
-        return notifications
+        return all
             .where(
               (n) => [
                 'like',
                 'comment',
+                'comment_reply',
                 'share',
                 'mention',
+                'system',
+                'repost',
               ].contains(n.type.toLowerCase()),
             )
             .toList();
       default:
-        return notifications;
+        return all;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final displayed = filteredNotifications;
+    // Watch provider — rebuild whenever notifications change.
+    final state = ref.watch(notificationProvider);
+    final displayed = _filterNotifications(state.notifications);
 
     return Material(
       child: Scaffold(
@@ -374,9 +228,17 @@ class _NotificationListScreenState extends State<NotificationListScreen>
           elevation: 0,
           scrolledUnderElevation: 0,
           backgroundColor: Colors.white,
-          title: const Text(
-            'Notifications',
-            style: TextStyle(color: Colors.black87),
+          title: Row(
+            children: [
+              const Text(
+                'Notifications',
+                style: TextStyle(color: Colors.black87),
+              ),
+              if (state.unreadCount > 0) ...[
+                const SizedBox(width: 8),
+                _UnreadBadge(count: state.unreadCount),
+              ],
+            ],
           ),
           leading: IconButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -387,7 +249,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
               iconColor: Colors.black87,
               color: Colors.white,
               itemBuilder:
-                  (context) => [
+                  (_) => [
                     const PopupMenuItem(
                       value: 'mark_all_read',
                       child: Text('Mark all as read'),
@@ -400,11 +262,13 @@ class _NotificationListScreenState extends State<NotificationListScreen>
               onSelected: (value) {
                 switch (value) {
                   case 'mark_all_read':
-                    markAllAsRead();
+                    _markAllAsRead(state);
                     break;
                   case 'refresh':
                     HapticFeedback.mediumImpact();
-                    fetchNotifications();
+                    ref
+                        .read(notificationProvider.notifier)
+                        .fetchNotifications();
                     break;
                 }
               },
@@ -416,7 +280,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
             _buildFilterChips(),
             Expanded(
               child:
-                  isLoading
+                  state.isLoading
                       ? const Center(
                         child: CircularProgressIndicator(
                           valueColor: AlwaysStoppedAnimation<Color>(
@@ -426,13 +290,26 @@ class _NotificationListScreenState extends State<NotificationListScreen>
                       )
                       : displayed.isEmpty
                       ? _buildEmptyState()
-                      : _buildNotificationList(displayed),
+                      : _buildNotificationList(displayed, state),
             ),
           ],
         ),
       ),
     );
   }
+
+  void _markAllAsRead(NotificationState state) {
+    final unreadCount = state.unreadCount;
+    if (unreadCount == 0) {
+      _showInfoSnackbar('No unread notifications to mark');
+      return;
+    }
+    // Provider marks all read → badge drops to 0 instantly in FloatingMenu
+    ref.read(notificationProvider.notifier).markAllAsRead();
+    _showSuccessSnackbar('All notifications marked as read');
+  }
+
+  // ── Filter chips ──────────────────────────────────────────────────────────
 
   Widget _buildFilterChips() {
     return Container(
@@ -465,11 +342,10 @@ class _NotificationListScreenState extends State<NotificationListScreen>
         margin: const EdgeInsets.only(right: 10),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? Color.fromRGBO(244, 135, 6, 1) : Colors.white,
+          color: isSelected ? const Color(0xFFF48706) : Colors.white,
           borderRadius: BorderRadius.circular(25),
           border: Border.all(
-            color:
-                isSelected ? Color.fromRGBO(244, 135, 6, 1) : Colors.grey.shade300,
+            color: isSelected ? const Color(0xFFF48706) : Colors.grey.shade300,
           ),
           boxShadow:
               isSelected
@@ -494,14 +370,19 @@ class _NotificationListScreenState extends State<NotificationListScreen>
     );
   }
 
-  Widget _buildNotificationList(List<NotificationModel> displayed) {
+  Widget _buildNotificationList(
+    List<NotificationModel> displayed,
+    NotificationState state,
+  ) {
     return ListView.separated(
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: displayed.length + (hasMore ? 1 : 0),
+      itemCount: displayed.length + (state.hasMore ? 1 : 0),
       separatorBuilder: (_, __) => const Divider(height: 0, indent: 72),
       itemBuilder: (context, index) {
-        if (index == displayed.length) return _buildLoadMoreIndicator();
+        if (index == displayed.length) {
+          return _buildLoadMoreIndicator(state);
+        }
         return _buildNotificationTile(displayed[index]);
       },
     );
@@ -527,15 +408,20 @@ class _NotificationListScreenState extends State<NotificationListScreen>
       ),
       confirmDismiss: (direction) async {
         if (direction == DismissDirection.startToEnd) {
-          if (!notification.isRead) markAsRead(notification.id);
-          return false;
+          if (!notification.isRead) {
+            // Provider call → badge updates in FloatingMenu immediately
+            ref.read(notificationProvider.notifier).markAsRead(notification.id);
+          }
+          return false; // don't dismiss the tile
         } else {
           return await _showDeleteConfirmation();
         }
       },
       onDismissed: (direction) {
         if (direction == DismissDirection.endToStart) {
-          deleteNotification(notification.id);
+          ref
+              .read(notificationProvider.notifier)
+              .deleteNotification(notification.id);
         }
       },
       child: ListTile(
@@ -562,6 +448,7 @@ class _NotificationListScreenState extends State<NotificationListScreen>
                       )
                       : null,
             ),
+            // Unread dot on avatar
             if (!notification.isRead)
               Positioned(
                 top: 0,
@@ -683,17 +570,21 @@ class _NotificationListScreenState extends State<NotificationListScreen>
     );
   }
 
-  Widget _buildLoadMoreIndicator() {
+  Widget _buildLoadMoreIndicator(NotificationState state) {
     return Container(
       padding: const EdgeInsets.all(20),
       child: Center(
         child:
-            isLoadingMore
+            state.isLoadingMore
                 ? const CircularProgressIndicator(
                   valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFF48706)),
                 )
                 : ElevatedButton(
-                  onPressed: fetchMoreNotifications,
+                  onPressed:
+                      () =>
+                          ref
+                              .read(notificationProvider.notifier)
+                              .fetchMoreNotifications(),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: const Color(0xFFF48706),
@@ -736,24 +627,6 @@ class _NotificationListScreenState extends State<NotificationListScreen>
           ),
     );
     return result ?? false;
-  }
-
-  void _showErrorSnackbar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.error_outline, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: Colors.red[600],
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
-      ),
-    );
   }
 
   void _showSuccessSnackbar(String message) {
@@ -808,11 +681,18 @@ class _NotificationListScreenState extends State<NotificationListScreen>
     switch (type.toLowerCase()) {
       case 'message':
       case 'chat_message':
+      case 'new_message':
         return Icons.chat_bubble_outline;
       case 'comment':
         return Icons.mode_comment_outlined;
+      case 'comment_reply':
+        return Icons.reply_outlined;
       case 'like':
         return Icons.favorite_outline;
+      case 'system':
+        return Icons.notifications_outlined;
+      case 'repost':
+        return Icons.repeat;
       case 'friend_request':
         return Icons.person_add_outlined;
       case 'mention':
@@ -830,11 +710,18 @@ class _NotificationListScreenState extends State<NotificationListScreen>
     switch (type.toLowerCase()) {
       case 'message':
       case 'chat_message':
+      case 'new_message':
         return 'Message';
       case 'comment':
         return 'Comment';
+      case 'comment_reply':
+        return 'Reply';
       case 'like':
-        return 'Like';
+        return 'Reaction';
+      case 'system':
+        return 'New Activity';
+      case 'repost':
+        return 'Share';
       case 'friend_request':
         return 'Friend Request';
       case 'mention':
@@ -847,28 +734,30 @@ class _NotificationListScreenState extends State<NotificationListScreen>
         return type;
     }
   }
+}
 
-  // String _getNotificationTypeLabel(String type) {
-  //   switch (type.toLowerCase()) {
-  //     case 'message':
-  //     case 'chat_message': // ← ADD
-  //       return 'Message';
-  //     case 'comment':
-  //       return 'Comment';
-  //     case 'like':
-  //       return 'Like';
-  //     case 'friend_request':
-  //       return 'Friend Request';
-  //     case 'mention':
-  //       return 'Mention';
-  //     case 'share':
-  //       return 'Share';
-  //     case 'follow':
-  //       return 'Follow';
-  //     default:
-  //       return type;
-  //   }
-  // }
+class _UnreadBadge extends StatelessWidget {
+  final int count;
+  const _UnreadBadge({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.red,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        count > 99 ? '99+' : count.toString(),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
 }
 
 class NotificationModel {
@@ -884,7 +773,7 @@ class NotificationModel {
   final bool isRead;
   final String createdAt;
 
-  NotificationModel({
+  const NotificationModel({
     required this.id,
     this.userId,
     this.senderId,
