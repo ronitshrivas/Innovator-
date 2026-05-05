@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:innovator/research/model/research_model.dart';
 import 'package:intl/intl.dart';
 
-class ResearchPaperCard extends StatelessWidget {
+class ResearchPaperCard extends ConsumerStatefulWidget {
   final ResearchPaperModel paper;
   const ResearchPaperCard({super.key, required this.paper});
 
+  @override
+  ConsumerState<ResearchPaperCard> createState() => _ResearchPaperCardState();
+}
+
+class _ResearchPaperCardState extends ConsumerState<ResearchPaperCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -24,12 +30,12 @@ class ResearchPaperCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [  
+          children: [
             Row(
               children: [
                 Expanded(
                   child: Text(
-                    paper.title,
+                    widget.paper.title,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -48,7 +54,7 @@ class ResearchPaperCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    paper.type.toUpperCase(),
+                    widget.paper.type.toUpperCase(),
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
@@ -59,9 +65,9 @@ class ResearchPaperCard extends StatelessWidget {
                 ),
               ],
             ),
-    
+
             const SizedBox(height: 6),
-    
+
             Row(
               children: [
                 Icon(
@@ -71,18 +77,18 @@ class ResearchPaperCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  paper.email,
+                  widget.paper.email,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
             ),
-    
-            if (paper.description.isNotEmpty) ...[
+
+            if (widget.paper.description.isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(
-                paper.description,
+                widget.paper.description,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
@@ -90,15 +96,14 @@ class ResearchPaperCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ],
-    
+
             const SizedBox(height: 12),
             const Divider(height: 1),
             const SizedBox(height: 12),
-    
+
             Row(
               children: [
-      
-                if (paper.isPaid)
+                if (widget.paper.isPaid)
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
@@ -118,7 +123,7 @@ class ResearchPaperCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 2),
                         Text(
-                          NumberFormat('#,###').format(paper.price),
+                          NumberFormat('#,###').format(widget.paper.price),
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -132,7 +137,7 @@ class ResearchPaperCard extends StatelessWidget {
                 // Text(paper.status.toUpperCase()),
                 const Spacer(),
                 Text(
-                  DateFormat('MMM d, yyyy').format(paper.createdAt),
+                  DateFormat('MMM d, yyyy').format(widget.paper.createdAt),
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),

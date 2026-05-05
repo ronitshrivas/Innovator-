@@ -65,8 +65,7 @@ class _HomepageState extends ConsumerState<Homepage>
         break;
     }
   }
-
-  // ── Everything below is IDENTICAL to your original ─────────────────────
+ 
 
   Future<void> _checkForUpdate() async {
     try {

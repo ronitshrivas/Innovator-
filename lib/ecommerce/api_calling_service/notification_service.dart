@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:innovator/ecommerce/core/constants/api_constants.dart';
 import 'package:innovator/ecommerce/core/constants/network/base_api_service.dart';
-import 'package:innovator/ecommerce/core/constants/network/dio_client.dart';
 import 'package:innovator/ecommerce/model/notification_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

@@ -562,7 +562,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                   ],
                                 ),
                                 TextButton(
-                                  onPressed: () => Get.to(Forgot_PWD()),
+                                  onPressed:
+                                      () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (_) =>
+                                                  const ForgotPasswordScreen(),
+                                        ),
+                                      ),
                                   child: const Text(
                                     'Forgot Password?',
                                     style: TextStyle(

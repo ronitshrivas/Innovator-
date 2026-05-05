@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:innovator/Innovator/Authorization/Login.dart';
-import 'package:innovator/Innovator/Authorization/OTP_Validation.dart';
+import 'package:innovator/Innovator/Authorization/otp.dart';
 import 'package:innovator/Innovator/constant/api_constants.dart';
 import 'package:innovator/Innovator/constant/app_colors.dart';
 import 'package:innovator/Innovator/helper/dialogs.dart';

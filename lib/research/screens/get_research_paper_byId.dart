@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:innovator/research/core/widget/research_detail_skeleton.dart';
 import 'package:innovator/research/model/research_detail_model.dart';
 import 'package:innovator/research/provider/research_provider.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
@@ -36,10 +37,38 @@ class ResearchDetailScreen extends ConsumerWidget {
         scrolledUnderElevation: 0,
         backgroundColor: _kCard,
         elevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_ios, size: 20, color: _kText),
-        ),
+
+        // leading: IconButton(
+        //   onPressed: () => Navigator.pop(context),
+        //   icon: const Icon(Icons.arrow_back_ios, size: 20, color: _kText),
+        // ),
+        leading:
+            Navigator.canPop(context)
+                ? Container(
+                  margin: const EdgeInsets.only(
+                    left: 16,
+                    top: 10,
+                    bottom: 10,
+                    right: 4,
+                  ),
+
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    shape: BoxShape.rectangle,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _kBorder),
+                  ),
+                  child: IconButton(
+                    onPressed: () => Navigator.pop(context),
+
+                    icon: Icon(
+                      Icons.arrow_back_ios,
+                      color: Colors.black,
+                      size: 20,
+                    ),
+                  ),
+                )
+                : null,
         title: const Text(
           'Paper Details',
           style: TextStyle(
@@ -81,10 +110,14 @@ class ResearchDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     ResearchDetailState state,
   ) {
+    // if (state.isLoading && state.data == null) {
+    //   return const Center(
+    //     child: CircularProgressIndicator(color: _kBlue, strokeWidth: 2.5),
+    //   );
+    // }
+
     if (state.isLoading && state.data == null) {
-      return const Center(
-        child: CircularProgressIndicator(color: _kBlue, strokeWidth: 2.5),
-      );
+      return const ResearchDetailSkeleton();
     }
 
     if (state.error != null && state.data == null) {
