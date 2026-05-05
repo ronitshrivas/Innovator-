@@ -1,6 +1,6 @@
 class ResearchApi {
   // static const String baseUrl = 'http://36.253.137.34:8004/api';
-  static const String baseUrl = 'https://research-orpin-omega.vercel.app';
+  static const String baseUrl = 'https://api.meta-tronix.com';
   static const String getResearchPaper = '$baseUrl/research';
   static String getResearchPaperById(int researchId) =>
       '$baseUrl/research/$researchId';

@@ -27,14 +27,17 @@ class ApiConstants {
   static const String login = '$authBase/sso/login/';
 
   //verify email
-  static const String verifyEmail = '$authBase/verify-email';
 
   // Resend Verification OTP Endpoints
   static const String resendVerificationOTP =
       '$authBase/resend-verification-otp';
 
   //Forgot password Endpoints
-  static const String forgotPassword = '$authBase/forgot-password';
+  static const String forgotPassword = '$authBase/forgot-password/';
+  static const String verifyOtp = '$authBase/forgot-password/verify/';
+  static const String resetPassword =
+      '$authBase/forgot-password/reset-password/';
+  static const String resendOtp = '$authBase/resend-otp/';
 
   //Send OTP Endpoints
   static const String sendOTP = '$authBase/send-otp';

@@ -95,91 +95,113 @@ class _ResearchListScreenState extends ConsumerState<ResearchListScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(researchListProvider);
 
-    return Scaffold(
-      backgroundColor: _kBg,
-      appBar: AppBar(
-        scrolledUnderElevation: 0,
-        backgroundColor: _kCard,
-        elevation: 0,
-        leading:
-            Navigator.canPop(context)
-                ? IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: Icon(Icons.arrow_back_ios),
-                )
-                : null,
-        title: const Text(
-          'Research Papers',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: _kText,
-          ),
-        ),
-        centerTitle: false,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(0.5),
-          child: Container(height: 0.5, color: _kBorder),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: GestureDetector(
-              onTap: () => UploadResearchPaperSheet.show(context),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: Color.fromRGBO(244, 135, 6, 1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.upload_rounded, size: 16, color: Colors.white),
-                    SizedBox(width: 6),
-                    Text(
-                      'Upload',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
+    return SafeArea(
+      top: false,
+      child: Scaffold(
+        backgroundColor: _kBg,
+        appBar: AppBar(
+          scrolledUnderElevation: 0,
+          backgroundColor: _kCard,
+          elevation: 0,
+          leading:
+              Navigator.canPop(context)
+                  ? Container(
+                    margin: const EdgeInsets.only(
+                      left: 16,
+                      top: 10,
+                      bottom: 10,
+                      right: 4,
+                    ),
+
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      shape: BoxShape.rectangle,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _kBorder),
+                    ),
+                    child: IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(
+                        Icons.arrow_back_ios,
+                        color: Colors.black,
+                        size: 20,
                       ),
                     ),
-                  ],
+                  )
+                  : null,
+          title: const Text(
+            'Research Papers',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: _kText,
+            ),
+          ),
+          centerTitle: false,
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(0.5),
+            child: Container(height: 0.5, color: _kBorder),
+          ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: GestureDetector(
+                onTap: () => UploadResearchPaperSheet.show(context),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Color.fromRGBO(244, 135, 6, 1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.upload_rounded, size: 16, color: Colors.white),
+                      SizedBox(width: 6),
+                      Text(
+                        'Upload',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Container(
-            color: _kCard,
-            child: _SearchFilterBar(
-              searchCtrl: _searchCtrl,
-              selType: _selType,
-              selStatus: _selStatus,
-              onTypeChanged: (v) {
-                setState(() => _selType = v);
-                _applyFilters();
-              },
-              onStatusChanged: (v) {
-                setState(() => _selStatus = v);
-                _applyFilters();
-              },
-              onSearchSubmitted: (_) => _applyFilters(),
-              onSearchCleared: () {
-                _searchCtrl.clear();
-                _applyFilters();
-              },
+          ],
+        ),
+        body: Column(
+          children: [
+            Container(
+              color: _kCard,
+              child: _SearchFilterBar(
+                searchCtrl: _searchCtrl,
+                selType: _selType,
+                selStatus: _selStatus,
+                onTypeChanged: (v) {
+                  setState(() => _selType = v);
+                  _applyFilters();
+                },
+                onStatusChanged: (v) {
+                  setState(() => _selStatus = v);
+                  _applyFilters();
+                },
+                onSearchSubmitted: (_) => _applyFilters(),
+                onSearchCleared: () {
+                  _searchCtrl.clear();
+                  _applyFilters();
+                },
+              ),
             ),
-          ),
-          Expanded(child: _buildBody(state)),
-        ],
+            Expanded(child: _buildBody(state)),
+          ],
+        ),
       ),
     );
   }

@@ -37,10 +37,38 @@ class ResearchDetailScreen extends ConsumerWidget {
         scrolledUnderElevation: 0,
         backgroundColor: _kCard,
         elevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_ios, size: 20, color: _kText),
-        ),
+
+        // leading: IconButton(
+        //   onPressed: () => Navigator.pop(context),
+        //   icon: const Icon(Icons.arrow_back_ios, size: 20, color: _kText),
+        // ),
+        leading:
+            Navigator.canPop(context)
+                ? Container(
+                  margin: const EdgeInsets.only(
+                    left: 16,
+                    top: 10,
+                    bottom: 10,
+                    right: 4,
+                  ),
+
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    shape: BoxShape.rectangle,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _kBorder),
+                  ),
+                  child: IconButton(
+                    onPressed: () => Navigator.pop(context),
+
+                    icon: Icon(
+                      Icons.arrow_back_ios,
+                      color: Colors.black,
+                      size: 20,
+                    ),
+                  ),
+                )
+                : null,
         title: const Text(
           'Paper Details',
           style: TextStyle(
