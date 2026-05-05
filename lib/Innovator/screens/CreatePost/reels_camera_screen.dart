@@ -1,24 +1,3 @@
-// ─── reels_camera_screen.dart ────────────────────────────────────────────────
-// Place at: lib/Innovator/screens/CreatePost/reels_camera_screen.dart
-//
-// FIXES APPLIED:
-// 1. ✅ Instant camera open — permissions checked BEFORE navigating to screen
-// 2. ✅ ResolutionPreset.medium for instant preview (no lag)
-// 3. ✅ Permission.status check first (no dialog if already granted)
-// 4. ✅ Camera init fires immediately in initState (no await blocking UI)
-// 5. ✅ All setState() guarded with mounted checks (no dispose crashes)
-// 6. ✅ Music auto-plays during recording, stops on stop
-// 7. ✅ Camera preview fills screen correctly (no stretch)
-//
-// HOW TO USE:
-//   Instead of: Navigator.push(...ReelsCameraScreen())
-//   Use:        ReelsCameraScreen.openWithPermissions(context)
-//
-//   This static method requests permissions BEFORE pushing the route,
-//   so by the time the screen opens, permissions are already granted
-//   and the camera starts instantly — exactly like Instagram.
-// ─────────────────────────────────────────────────────────────────────────────
-
 import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:camera/camera.dart';
@@ -37,14 +16,6 @@ const _kPrimary = Color.fromRGBO(244, 135, 6, 1);
 class ReelsCameraScreen extends ConsumerStatefulWidget {
   const ReelsCameraScreen({super.key});
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // STATIC HELPER — Call this instead of Navigator.push directly.
-  // It checks/requests permissions BEFORE the screen opens so the camera
-  // starts instantly (no lag, no loading indicator on first open).
-  //
-  // Usage:
-  //   onTap: () => ReelsCameraScreen.openWithPermissions(context),
-  // ─────────────────────────────────────────────────────────────────────────
   static Future<void> openWithPermissions(BuildContext context) async {
     // 1. Check current status (instant — no dialog)
     var camStatus = await Permission.camera.status;
@@ -81,6 +52,7 @@ class ReelsCameraScreen extends ConsumerStatefulWidget {
 
 class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
     with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+  bool _micEnabled = true;
   List<CameraDescription> _cameras = [];
   CameraController? _ctrl;
   bool _ready = false;
@@ -98,7 +70,6 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
   late AnimationController _pulse;
   late Animation<double> _pulseAnim;
 
-  // ── Music player ──────────────────────────────────────────────────────────
   final AudioPlayer _musicPlayer = AudioPlayer();
   bool _musicPlaying = false;
 
@@ -113,17 +84,9 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
       duration: const Duration(milliseconds: 900),
     )..repeat(reverse: true);
     _pulseAnim = Tween(begin: 1.0, end: 1.10).animate(_pulse);
-
-    // Fire camera init immediately — does NOT await, so UI renders right away.
-    // Permissions are already granted (caller used openWithPermissions),
-    // so _initCams skips permission checks and goes straight to camera open.
     _initCams();
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // INIT CAMS — skips permission dialog (already handled by openWithPermissions)
-  // Falls back gracefully if called directly (e.g. hot reload / deep link).
-  // ─────────────────────────────────────────────────────────────────────────
   Future<void> _initCams() async {
     try {
       // Fast status check only — no dialog, no delay
@@ -159,15 +122,11 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // INIT CONTROLLER
-  // Uses ResolutionPreset.medium for fastest open time.
-  // Medium gives near-instant preview; quality is still excellent for reels.
-  // ─────────────────────────────────────────────────────────────────────────
-  Future<void> _initCtrl(CameraDescription d) async {
+  Future<void> _initCtrl(CameraDescription d, {bool enableAudio = true}) async {
     final old = _ctrl;
     if (mounted) setState(() => _ready = false);
     _ctrl = null;
+    _micEnabled = enableAudio; // ← track it here
 
     try {
       await old?.dispose();
@@ -175,8 +134,8 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
 
     final controller = CameraController(
       d,
-      ResolutionPreset.medium, // ← KEY FIX: medium opens ~3× faster than high
-      enableAudio: true,
+      ResolutionPreset.veryHigh,
+      enableAudio: enableAudio,
       imageFormatGroup: ImageFormatGroup.jpeg,
     );
 
@@ -184,17 +143,13 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
 
     try {
       await controller.initialize();
-
       if (!mounted) {
         await controller.dispose();
         _ctrl = null;
         return;
       }
-
-      // These are fast after initialize() — safe to await
       await controller.setFocusMode(FocusMode.auto);
       await controller.setExposureMode(ExposureMode.auto);
-
       if (mounted) setState(() => _ready = true);
     } catch (e) {
       debugPrint('ctrl init error: $e');
@@ -235,9 +190,6 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
     super.dispose();
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // FLIP CAMERA
-  // ─────────────────────────────────────────────────────────────────────────
   Future<void> _flip() async {
     if (_cameras.length < 2 || _recording) return;
     if (!mounted) return;
@@ -255,9 +207,6 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // FLASH
-  // ─────────────────────────────────────────────────────────────────────────
   Future<void> _toggleFlash() async {
     if (_ctrl == null || !_ready) return;
     final next = _flash == FlashMode.off ? FlashMode.torch : FlashMode.off;
@@ -269,9 +218,6 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // GALLERY PICKER
-  // ─────────────────────────────────────────────────────────────────────────
   Future<void> _pickGallery() async {
     final v = await ImagePicker().pickVideo(
       source: ImageSource.gallery,
@@ -288,9 +234,6 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // RECORD BUTTON TAP
-  // ─────────────────────────────────────────────────────────────────────────
   void _handleRecordTap() {
     if (_recording) {
       _stopRec();
@@ -318,16 +261,20 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
     });
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // START RECORDING + play music
-  // ─────────────────────────────────────────────────────────────────────────
   Future<void> _startRec() async {
+    final hasMusic = ref.read(reelsProvider).selectedMusic != null;
+
+    // If music is selected, reinitialize camera WITHOUT mic audio
+    if (hasMusic && _micEnabled) {
+      await _initCtrl(_cameras[_isFront ? 1 : 0], enableAudio: false);
+      if (!_ready || _ctrl == null) return;
+    }
+
     final ctrl = _ctrl;
     if (ctrl == null || !ctrl.value.isInitialized || !_ready) return;
 
     try {
       await ctrl.startVideoRecording();
-
       if (!mounted) return;
       setState(() {
         _recording = true;
@@ -336,7 +283,6 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
         _showSpeed = false;
       });
 
-      // Auto-play music when recording starts (Instagram behaviour)
       final selectedMusic = ref.read(reelsProvider).selectedMusic;
       if (selectedMusic != null && selectedMusic.audioUrl.isNotEmpty) {
         try {
@@ -362,9 +308,6 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // STOP RECORDING + stop music
-  // ─────────────────────────────────────────────────────────────────────────
   Future<void> _stopRec() async {
     _recTimer?.cancel();
     final ctrl = _ctrl;
@@ -372,12 +315,14 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
 
     try {
       final f = await ctrl.stopVideoRecording();
-
       if (!mounted) return;
       setState(() => _recording = false);
 
       await _musicPlayer.stop();
       if (mounted) setState(() => _musicPlaying = false);
+
+      // Restore mic audio for next recording session
+      await _initCtrl(_cameras[_isFront ? 1 : 0], enableAudio: true);
 
       ref.read(reelsProvider.notifier).setVideo(f.path);
       Navigator.push(
@@ -395,9 +340,6 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
   String _fmt(int s) =>
       '${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}';
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // CAMERA PREVIEW — fills screen without stretch (Instagram style)
-  // ─────────────────────────────────────────────────────────────────────────
   Widget _buildCameraPreview() {
     if (!_ready || _ctrl == null || !_ctrl!.value.isInitialized) {
       return const Center(
@@ -414,9 +356,6 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // BUILD
-  // ─────────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final rs = ref.watch(reelsProvider);
@@ -433,10 +372,8 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
         body: Stack(
           fit: StackFit.expand,
           children: [
-            // ── Camera preview ──────────────────────────────────────────────
             Positioned.fill(child: _buildCameraPreview()),
 
-            // ── Recording progress bar (top) ────────────────────────────────
             if (_recording)
               Positioned(
                 top: 0,
@@ -450,7 +387,6 @@ class _ReelsCameraScreenState extends ConsumerState<ReelsCameraScreen>
                 ),
               ),
 
-            // ── TOP BAR ────────────────────────────────────────────────────
             Positioned(
               top: safeTop + 8,
               left: 12,

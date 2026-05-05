@@ -30,13 +30,14 @@ class _ReelsMusicScreenState extends ConsumerState<ReelsMusicScreen>
   // Language/category filters
   static const List<String> _filters = [
     'All',
-    'Hindi',
-    'Punjabi',
-    'English',
-    'Tamil',
-    'Telugu',
-    'Bengali',
-    'Kannada',
+    'Trending',
+    'Nepali',
+    'Pop',
+    'Hip-Hop',
+    'Romantic',
+    'Party',
+    'Chill',
+    'Indie',
   ];
 
   @override
@@ -61,13 +62,13 @@ class _ReelsMusicScreenState extends ConsumerState<ReelsMusicScreen>
 
   List<ReelsMusicTrack> _filtered(List<ReelsMusicTrack> all) {
     var list = all;
-    if (_activeFilter != 'All') {
+    if (_activeFilter != 'All' && _activeFilter != 'Trending') {
+      final q = _activeFilter.toLowerCase();
       list =
           list
               .where(
                 (t) =>
-                    t.language.toLowerCase() == _activeFilter.toLowerCase() ||
-                    t.genre.toLowerCase() == _activeFilter.toLowerCase(),
+                    t.genre.toLowerCase() == q || t.language.toLowerCase() == q,
               )
               .toList();
     }

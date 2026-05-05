@@ -662,6 +662,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                           },
                           child: CircleAvatar(
                             radius: 60,
+
                             backgroundColor: const Color.fromRGBO(
                               235,
                               111,

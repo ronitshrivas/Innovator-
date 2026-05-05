@@ -1,12 +1,3 @@
-// ─── reels_preview_screen.dart ───────────────────────────────────────────────
-// Place at: lib/Innovator/screens/CreatePost/reels_preview_screen.dart
-//
-// FIXES:
-// 1. Video preview stretch/squish → correct AspectRatio + BoxFit.cover
-// 2. Music plays properly during preview
-// 3. Upload sends BOTH video + music_url to backend (no ffmpeg needed)
-// ─────────────────────────────────────────────────────────────────────────────
-
 import 'dart:convert';
 import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
@@ -59,7 +50,6 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(reelsProvider.notifier).setRecordedVideo(widget.videoPath);
 
-      // FIX: Auto-play the selected music when preview opens (like Instagram)
       final selectedMusic = ref.read(reelsProvider).selectedMusic;
       if (selectedMusic != null && selectedMusic.audioUrl.isNotEmpty) {
         _startMusicPlayback(selectedMusic);
@@ -72,7 +62,6 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
     _videoCtrl = ctrl;
     await ctrl.initialize();
 
-    // Guard: ensure video has valid dimensions before rendering
     if (ctrl.value.size.isEmpty) {
       debugPrint('Video size is empty after initialize!');
       return;
@@ -213,24 +202,19 @@ class _ReelsPreviewScreenState extends ConsumerState<ReelsPreviewScreen>
     final ReelsMusicTrack? selectedMusic =
         ref.read(reelsProvider).selectedMusic;
 
-    // ✅ Get the ProviderContainer — survives navigation
     final container = ProviderScope.containerOf(context);
 
-    // ✅ Stop music before navigating
     await _musicPlayer?.stop();
 
-    // ✅ Set uploading true BEFORE navigating
     container.read(postUploadingProvider.notifier).state = true;
     container.read(postUploadMessageProvider.notifier).state = null;
 
-    // ✅ Reset reels state and navigate immediately
     ref.read(reelsProvider.notifier).reset();
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const Homepage()),
       (route) => false,
     );
 
-    // ✅ Upload runs after navigation using container (not ref)
     try {
       final request = http.MultipartRequest('POST', Uri.parse(_reelsApi));
 
