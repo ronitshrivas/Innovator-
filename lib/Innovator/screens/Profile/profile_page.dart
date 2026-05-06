@@ -486,7 +486,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
   String? _errorMessage;
   bool _postsLoaded = false;
   bool _isLoading = false;
-
+  List<FeedContent> _posts = [];
   late TabController _tabController;
   final UserController _userController = Get.put(UserController());
   final List<FeedContent> _contents = [];
@@ -849,6 +849,13 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                                   ],
                                 ),
                               ),
+                              const SizedBox(width: 40),
+                              _buildStatCard(
+                                '${_contents.length}',
+                                'Posts',
+                                Icons.grid_on,
+                                Colors.orange,
+                              ),
                             ],
                           ),
                     ),
@@ -918,6 +925,52 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
 
         Divider(thickness: 0.8, color: Colors.grey[300]),
       ],
+    );
+  }
+
+  Widget _buildStatCard(
+    String value,
+    String label,
+    IconData icon,
+    Color color, {
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Card(
+        color: AppColors.whitecolor,
+        elevation: 0,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            children: [
+              //Icon(icon, color: color, size: 16),
+              //const SizedBox(height: 5),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+              //const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color:
+                      Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey[400]
+                          : Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
