@@ -4,6 +4,7 @@ import 'package:innovator/research/core/widget/research_card.dart';
 import 'package:innovator/research/core/widget/research_card_skeleton.dart';
 import 'package:innovator/research/provider/research_provider.dart';
 import 'package:innovator/research/screens/get_research_paper_byId.dart';
+import 'package:innovator/research/screens/my_earning_screen.dart';
 import 'package:innovator/research/screens/upload_research_paper.dart';
 
 const _kBlue = Color(0xFF185FA5);
@@ -137,44 +138,42 @@ class _ResearchListScreenState extends ConsumerState<ResearchListScreen> {
               color: _kText,
             ),
           ),
-          centerTitle: false,
+          centerTitle: true,
+           actions: [
+    GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const MyEarningsScreen()),
+      ),
+      child: Container(
+        margin: const EdgeInsets.only(right: 16),
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [_kBlue, _kBlueMid],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          shape: BoxShape.circle,
+        ),
+        child: const Center(
+          child: Text(
+            'R',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
+            ),
+          ),
+        ),
+      ),
+    ),
+  ],
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(0.5),
             child: Container(height: 0.5, color: _kBorder),
           ),
-          actions: [
-            Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: GestureDetector(
-                onTap: () => UploadResearchPaperSheet.show(context),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Color.fromRGBO(244, 135, 6, 1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.upload_rounded, size: 16, color: Colors.white),
-                      SizedBox(width: 6),
-                      Text(
-                        'Upload',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
         ),
         body: Column(
           children: [
@@ -416,6 +415,12 @@ class _SearchFilterBar extends StatelessWidget {
                       () => onStatusChanged(
                         selStatus == 'pending' ? null : 'pending',
                       ),
+                ),
+
+                _Chip(
+                  label: "Upload",
+                  selected: selType == 'upload',
+                  onTap: () => UploadResearchPaperSheet.show(context),
                 ),
               ],
             ),
